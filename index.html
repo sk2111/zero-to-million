@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tomazon War Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="wordmark" aria-label="Tomazon">
+        <span>tomazon</span>
+        <svg class="smile" viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true"><path d="M62 3 Q36 17 7 6"/><path d="M7 6 L15 3.5 M7 6 L13 12"/></svg>
+      </div>
+      <span class="brand-sub">War Room</span>
+    </div>
+    <div class="chapter"><span class="chapter-num">Chapter 1</span><span class="chapter-title">The 3 AM Call</span></div>
+    <div class="clock" aria-label="Time in the story">
+      <span class="clock-date" id="clockDate">Sat 10 Oct</span>
+      <span class="clock-time" id="clockTime">02:47:13</span>
+      <span class="clock-ampm" id="clockAmpm">AM</span>
+    </div>
+    <div class="mode" role="group" aria-label="Mode">
+      <button type="button" class="mode-btn" id="modeStory" aria-pressed="true">Story</button>
+      <button type="button" class="mode-btn" id="modeFree" aria-pressed="false">Free play</button>
+    </div>
+  </header>
+
+  <section class="story" id="story">
+    <div class="story-main" aria-live="polite">
+      <p class="story-kicker" id="storyKicker"></p>
+      <h1 class="story-title" id="storyTitle"></h1>
+      <div class="story-body" id="storyBody"></div>
+      <div class="story-chips" id="storyChips"></div>
+    </div>
+    <div class="story-side">
+      <div class="scene-progress">
+        <span class="scene-count" id="sceneCount">1 / 14</span>
+        <div class="scene-dots" id="sceneDots"></div>
+      </div>
+      <div class="story-nav">
+        <button type="button" class="btn" id="prevBtn">Back</button>
+        <button type="button" class="btn btn-primary" id="nextBtn">Next</button>
+      </div>
+      <div class="story-tools">
+        <button type="button" class="btn-link" id="overlayBtn" hidden>Show the scene card again</button>
+        <button type="button" class="btn-link" id="notesBtn" aria-expanded="false" aria-controls="notes">Presenter notes <kbd>N</kbd></button>
+      </div>
+    </div>
+    <aside class="notes" id="notes" hidden>
+      <p class="notes-label">Presenter notes</p>
+      <div class="notes-body" id="notesBody"></div>
+    </aside>
+  </section>
+
+  <section class="freebar" id="freebar" hidden>
+    <p><strong>Free play.</strong> Every control is unlocked. Break the server any way you like, then fix it.</p>
+    <button type="button" class="btn" id="backToStory">Back to the story</button>
+  </section>
+
+  <main class="board" id="board">
+
+    <div class="col-main">
+    <section class="panel stage" id="stage" aria-label="Production diagram">
+      <header class="panel-head">
+        <h2>Production</h2>
+        <ul class="legend" id="legend">
+          <li><i class="lg lg-req"></i>Request</li>
+          <li><i class="lg lg-fast"></i>Under 1 s</li>
+          <li><i class="lg lg-slow"></i>1 to 3 s</li>
+          <li><i class="lg lg-crawl"></i>3 to 10 s</li>
+          <li><i class="lg lg-fail"></i>Failed</li>
+          <li class="lg-scale" id="legendScale">1 dot = 1 request</li>
+        </ul>
+      </header>
+      <div class="stage-body" id="stageBody">
+        <canvas id="flow" aria-hidden="true"></canvas>
+        <div class="node browser" id="nodeBrowser">
+          <div class="browser-bar"><i></i><i></i><i></i><span class="url">tomazon.app</span></div>
+          <div class="browser-view" id="browserView"></div>
+          <p class="node-caption">What customers see</p>
+        </div>
+        <div class="node vm" id="nodeVm">
+          <div class="vm-head">
+            <span class="vm-name">tomazon-prod-1</span>
+            <span class="pill" id="vmPill" data-state="ok">Healthy</span>
+          </div>
+          <p class="vm-spec" id="vmSpec">1 vCPU · 512 MB RAM</p>
+          <div class="vm-detail">
+            <ul class="procs">
+              <li><span class="pdot" id="dotNginx" data-state="ok"></span>nginx</li>
+              <li><span class="pdot" id="dotApp" data-state="ok"></span>tomazon-app <span class="proc-meta" id="metaApp">4 workers</span></li>
+              <li><span class="pdot" id="dotDb" data-state="ok"></span>mysqld <span class="proc-meta" id="metaDb">running</span></li>
+            </ul>
+            <div class="vm-mem"><span>RAM</span><div class="mini"><i id="vmRamBar"></i></div><span class="mini-val" id="vmRamText">77%</span></div>
+            <div class="vm-mem"><span>Swap</span><div class="mini"><i id="vmSwapBar"></i></div><span class="mini-val" id="vmSwapText">0%</span></div>
+          </div>
+          <p class="vm-blind">No dashboards. No alerts. You can't see inside this machine. All you have is SSH.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel terminal" id="terminal" aria-label="Terminal">
+      <header class="panel-head">
+        <h2>Terminal</h2>
+        <span class="term-host" id="termHost">you@laptop</span>
+        <span class="term-wait" id="termWait" hidden><span id="termWaitText">waiting</span> <button type="button" class="btn-link" id="termStop">Stop <kbd>Ctrl+C</kbd></button></span>
+      </header>
+      <div class="term-screen" id="termScreen" tabindex="-1">
+        <div class="term-out" id="termOut"></div>
+        <div class="term-htop" id="termHtop" hidden></div>
+        <label class="term-line" id="termLine"><span class="term-prompt" id="termPrompt">you@laptop:~$</span><input id="termInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type a command"></label>
+      </div>
+    </section>
+    </div>
+
+    <section class="panel metrics" id="metrics" aria-label="Monitoring">
+      <header class="panel-head">
+        <h2>Monitoring</h2>
+        <span class="pill" id="statusPill" data-state="ok">Healthy</span>
+      </header>
+      <div class="meters">
+        <div class="meter" id="mCpu"><span class="meter-label">CPU</span><div class="meter-track"><i></i></div><span class="meter-val">0%</span><span class="meter-note"></span></div>
+        <div class="meter" id="mRam"><span class="meter-label">Memory</span><div class="meter-track"><i></i></div><span class="meter-val">0%</span><span class="meter-note"></span></div>
+        <div class="meter" id="mSwap"><span class="meter-label">Swap</span><div class="meter-track"><i></i></div><span class="meter-val">0%</span><span class="meter-note"></span></div>
+        <div class="meter" id="mDisk"><span class="meter-label">Disk busy</span><div class="meter-track"><i></i></div><span class="meter-val">0%</span><span class="meter-note"></span></div>
+      </div>
+      <div class="kpis">
+        <div class="kpi" id="kIn"><span class="kpi-label">Requests in</span><span class="kpi-val">0</span><span class="kpi-unit">per second</span></div>
+        <div class="kpi" id="kOk"><span class="kpi-label">Served OK</span><span class="kpi-val">0</span><span class="kpi-unit">per second</span></div>
+        <div class="kpi" id="kErr"><span class="kpi-label">Failing</span><span class="kpi-val">0%</span><span class="kpi-unit">of requests</span></div>
+        <div class="kpi" id="kP95"><span class="kpi-label">p95 response</span><span class="kpi-val">0 s</span><span class="kpi-unit">95% are faster</span></div>
+        <div class="kpi" id="kOrders"><span class="kpi-label">Orders</span><span class="kpi-val">0</span><span class="kpi-unit">per minute</span></div>
+        <div class="kpi" id="kLoad"><span class="kpi-label">Load average</span><span class="kpi-val">0</span><span class="kpi-unit">on 1 core</span></div>
+      </div>
+      <div class="chart">
+        <div class="chart-head"><h3>Response time, p95</h3><span class="chart-sub">seconds, last 2 minutes</span></div>
+        <div class="chart-box"><canvas id="chartLat" role="img" aria-label="p95 response time over the last two minutes"></canvas><div class="tip" id="tipLat" hidden></div></div>
+      </div>
+      <div class="chart">
+        <div class="chart-head"><h3>Requests per second</h3>
+          <ul class="chart-legend"><li><i class="sw sw-in"></i>Arriving</li><li><i class="sw sw-ok"></i>Served OK</li></ul>
+        </div>
+        <div class="chart-box"><canvas id="chartRps" role="img" aria-label="Requests arriving and served per second over the last two minutes"></canvas><div class="tip" id="tipRps" hidden></div></div>
+      </div>
+      <div class="fog" id="metricsFog" hidden>
+        <div>
+          <p class="fog-title">No monitoring</p>
+          <p>You never set up dashboards or alerts. Tonight, Tom is your monitoring.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel controls" id="controls" aria-label="Controls">
+      <header class="panel-head">
+        <h2>Controls</h2>
+        <span class="cost" id="costLabel">$4 / month</span>
+      </header>
+      <p class="lock-note" id="lockNote" hidden></p>
+      <div class="ctrl" data-ctrl="traffic">
+        <div class="ctrl-top"><label for="traffic">Traffic</label><output id="trafficOut" for="traffic">3 req/s</output></div>
+        <input type="range" id="traffic" min="0" max="1000" step="1" value="300">
+        <div class="ctrl-row">
+          <button type="button" class="btn btn-small" id="viralBtn">Viral reel</button>
+          <button type="button" class="btn btn-small" id="calmBtn">Normal night</button>
+        </div>
+        <p class="ctrl-lock">Unlocks later in the story</p>
+      </div>
+      <div class="ctrl" data-ctrl="vm">
+        <div class="ctrl-top"><label for="vmSize">Server size</label><span class="ctrl-note" id="vmNote"></span></div>
+        <select id="vmSize"></select>
+        <p class="ctrl-hint">Resizing powers the server off for about 12 seconds.</p>
+        <p class="ctrl-lock">Unlocks later in the story</p>
+      </div>
+      <div class="ctrl ctrl-inline" data-ctrl="swap">
+        <label for="swapToggle">Swap file <span class="ctrl-sub">1 GB of disk pretending to be RAM</span></label>
+        <input type="checkbox" id="swapToggle" role="switch" checked>
+        <p class="ctrl-lock">Unlocks later in the story</p>
+      </div>
+      <div class="ctrl" data-ctrl="workers">
+        <div class="ctrl-top"><label for="workers">App max workers</label><output id="workersOut" for="workers">100</output></div>
+        <input type="range" id="workers" min="2" max="200" step="1" value="100">
+        <p class="ctrl-lock">Unlocks later in the story</p>
+      </div>
+      <div class="ctrl" data-ctrl="line">
+        <div class="ctrl-top"><label for="lineMode">When every worker is busy</label></div>
+        <select id="lineMode">
+          <option value="511">Wait in line (up to 511 requests)</option>
+          <option value="20">Turn away fast with 503 (line of 20)</option>
+        </select>
+        <p class="ctrl-lock">Unlocks later in the story</p>
+      </div>
+      <div class="ctrl-pair">
+        <div class="ctrl ctrl-actions" data-ctrl="reboot">
+          <button type="button" class="btn" id="rebootBtn">Reboot server</button>
+          <p class="ctrl-lock">Unlocks later</p>
+        </div>
+        <div class="ctrl ctrl-actions" data-ctrl="speed">
+          <div class="speed" role="group" aria-label="Simulation speed">
+            <span>Speed</span>
+            <button type="button" data-speed="1" aria-pressed="true">1×</button>
+            <button type="button" data-speed="3" aria-pressed="false">3×</button>
+            <button type="button" data-speed="10" aria-pressed="false">10×</button>
+          </div>
+          <p class="ctrl-lock">Unlocks later</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="overlay" id="overlay" hidden>
+      <div class="overlay-inner" id="overlayInner"></div>
+    </div>
+  </main>
+</div>
+
+<script src="js/sim.js"></script>
+<script src="js/flow.js"></script>
+<script src="js/metrics.js"></script>
+<script src="js/terminal.js"></script>
+<script src="js/overlays.js"></script>
+<script src="js/story-ch1.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -11,16 +11,16 @@ ZTM.chapters = [
     summary: 'CPU, processes and threads, memory, disk and network: how each one works, how it behaves under load, and what that means for system design.'
   },
   {
-    n: 2, slug: 'one-server', title: 'One server', users: 1, status: 'planned',
-    question: 'How does a request reach our code and come back?',
-    summary: 'Ship the whole product on a single machine and follow one request from the browser to the database and back.',
+    n: 2, slug: 'one-server', title: 'One server', users: 1, status: 'ready', minutes: 45,
+    question: 'How do you ship a pilot fast, on one machine?',
+    summary: 'Start with a pilot to learn whether people want the product, build it as a monolith, and run it on one small server.',
     topics: ['DNS and domain names', 'HTTP and HTTPS', 'Web server, app server, database on one box', 'The life of a request', 'Deploying and restarting safely']
   },
   {
-    n: 3, slug: 'scale-up', title: 'Scale up, split out', users: 1000, status: 'planned',
-    question: 'The box is getting busy. Bigger box, or more boxes?',
-    summary: 'Vertical scaling, moving the database to its own machine, and the first limits you hit.',
-    topics: ['Vertical scaling and its ceiling', 'Separating the database', 'Connection pooling', 'Backups and restore drills', 'Single points of failure']
+    n: 3, slug: 'scale-up', title: 'Scale up, split out', users: 1000, status: 'ready', minutes: 30,
+    question: 'How do you give the app and the database room to grow?',
+    summary: 'Move the database to its own server, then choose the right kind of instance for the app and for the database.',
+    topics: ['Scaling up, and its ceiling', 'Splitting the app and the database onto their own servers', 'Choosing instance types for CPU-bound and I/O-bound work', 'Your own PostgreSQL, or Amazon RDS', 'Connection pooling', 'Removing the single point of failure']
   },
   {
     n: 4, slug: 'scale-out', title: 'Scale out', users: 10000, status: 'planned',

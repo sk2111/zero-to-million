@@ -25,8 +25,8 @@ without internet the fonts fall back to Segoe UI.
 | # | Chapter | Starts at | Status |
 |---|---|---|---|
 | 1 | Fundamentals | 0 users | Written |
-| 2 | One server | 1 | Planned |
-| 3 | Scale up, split out | 1K | Planned |
+| 2 | One server | 1 | Written |
+| 3 | Scale up, split out | 1K | Started |
 | 4 | Scale out | 10K | Planned |
 | 5 | Make it fast | 100K | Planned |
 | 6 | Do it later | 1M | Planned |
@@ -44,6 +44,16 @@ in practice, to what it means for system design.
 | Network | How networks work |
 | Putting it together | What's inside a server · Latency numbers · Measuring performance · How much can one server handle? · Recap |
 
+Chapter 2 has 5 pages: Start with a pilot · Start with a monolith · The first architecture
+(one t4g.nano server in AWS Mumbai running Nginx, FastAPI and PostgreSQL, with a step-through of
+one request and a 512 MB memory budget) · Watching the pilot · When the pilot succeeds (growth to
+1,000 users, diagnosing the overloaded server, why everything on one machine is a time bomb).
+
+Chapter 3 so far has 3 pages: Give the database its own server (a live two-server diagram, what
+changes, how to move the data) · The new cost: network round trips (N+1 queries, query structure,
+pooling with PgBouncer) · The right instance for each job (instance families, the app tuned
+for CPU, the database on r + EBS, storage-optimised NVMe or RDS, and sizing for 1,000 users).
+
 ## Files
 
 ```
@@ -51,6 +61,8 @@ index.html               the shell: sidebar, top bar, page area
 css/style.css            all styles, light and dark
 js/chapters.js           the roadmap: every chapter's title, users, status, planned topics
 js/ch1-fundamentals.js   Chapter 1's pages (HTML in template strings)
+js/ch2-one-server.js     Chapter 2's pages
+js/ch3-scale-up.js       Chapter 3's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

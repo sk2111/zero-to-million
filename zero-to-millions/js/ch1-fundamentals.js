@@ -592,7 +592,7 @@ CPU(s):                  8
             <li><strong>Try ARM.</strong> Graviton instances are often cheaper for the same throughput, but every binary,
             base image and native library you use needs an ARM64 build.</li>
             <li><strong>Be careful with burstable types.</strong> The <code>t</code> family is fine for development and low,
-            spiky traffic, but steady production load spends the CPU credits and then runs slowly.</li>
+            spiky traffic. Steady production load spends the CPU credits, and then the server either slows down or, in unlimited mode (the default for t3 and t4g), keeps going and adds to the bill.</li>
           </ol>
         </aside>
 

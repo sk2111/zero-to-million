@@ -266,6 +266,341 @@ window.ZTM = window.ZTM || {};
     bindTips(el);
   };
 
+  /* ---------- Chapter 2: the pilot on one AWS server, and one request through it ---------- */
+
+  /* Icons are drawn here in the style of AWS architecture diagrams (a coloured
+     square per service category with a white glyph); they are not AWS's own artwork. */
+  var G = {
+    user: '<circle cx="16" cy="11" r="5"/><path d="M6 27c0-6 4.5-9 10-9s10 3 10 9"/>',
+    dns: '<circle cx="16" cy="16" r="9"/><path d="M7 16h18M16 7c3 3 3 15 0 18M16 7c-3 3-3 15 0 18"/>',
+    ip: '<path d="M16 26s-7-7-7-12a7 7 0 0 1 14 0c0 5-7 12-7 12z"/><circle cx="16" cy="14" r="2.5"/>',
+    shield: '<path d="M16 6l9 3v6c0 6-4 10-9 12-5-2-9-6-9-12V9z"/><path d="M12 16l3 3 5-6"/>',
+    chip: '<rect x="10" y="10" width="12" height="12" rx="1.5"/><path d="M13 6v4M16 6v4M19 6v4M13 22v4M16 22v4M19 22v4M6 13h4M6 16h4M6 19h4M22 13h4M22 16h4M22 19h4"/>',
+    proxy: '<path d="M7 12h14M17 8l4 4-4 4M25 20H11M15 16l-4 4 4 4"/>',
+    bolt: '<path d="M18 5l-9 13h7l-2 9 9-13h-7z"/>',
+    db: '<ellipse cx="16" cy="9" rx="8" ry="3"/><path d="M8 9v14c0 1.7 3.6 3 8 3s8-1.3 8-3V9M8 16c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    disk: '<rect x="7" y="9" width="18" height="14" rx="2"/><path d="M11 13h10M11 17h6"/><circle cx="21" cy="19" r="1"/>',
+    snap: '<path d="M8 12h4l2-3h4l2 3h4v11H8z"/><circle cx="16" cy="17" r="3.5"/>'
+  };
+  function icon(g, cat) {
+    return '<span class="ic ' + cat + '" aria-hidden="true"><svg viewBox="0 0 32 32">' + G[g] + '</svg></span>';
+  }
+
+  /* A live architecture diagram: parts laid out in HTML, wires drawn between them
+     in SVG from where the parts really sit, a request dot that flows along the
+     wires, and a step-through. spec: { html, wires, request, steps }. */
+  var archSeq = 0;
+  function archNode(id, g, cat, title, sub) {
+    return '<div class="nd" data-p="' + id + '">' + icon(g, cat) + '<b>' + title + '</b><span>' + sub + '</span></div>';
+  }
+  function liveArch(el, spec) {
+    var WIRES = spec.wires, REQUEST = spec.request, STEPS = spec.steps, head = 'arHead' + (++archSeq);
+    el.innerHTML =
+      '<div class="ar2">' +
+        '<svg class="ar2-wires" aria-hidden="true"><defs><marker id="' + head + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs><g class="wires"></g><g class="labels"></g><circle class="pkt" r="5" cx="-20" cy="-20"/></svg>' +
+        spec.html +
+      '</div>' +
+      '<div class="pt-controls"><button type="button" class="btn-sm" data-next>Follow a request</button><span class="pt-count"></span></div>' +
+      '<p class="readout" aria-live="polite"></p>';
+
+    var box = el.querySelector('.ar2'), svg = el.querySelector('.ar2-wires'), wiresG = svg.querySelector('.wires'),
+        labelsG = svg.querySelector('.labels'), pkt = svg.querySelector('.pkt');
+    var out = el.querySelector('.readout'), count = el.querySelector('.pt-count'), btn = el.querySelector('[data-next]');
+    var paths = {}, k = -1, run = 0;
+
+    /* Draw each wire from the edge of one part to the edge of the next. */
+    function layout() {
+      var b = box.getBoundingClientRect();
+      svg.setAttribute('width', b.width); svg.setAttribute('height', b.height);
+      svg.setAttribute('viewBox', '0 0 ' + b.width + ' ' + b.height);
+      function r(id) {
+        var q = box.querySelector('[data-p="' + id + '"]').getBoundingClientRect();
+        return { l: q.left - b.left, r: q.right - b.left, t: q.top - b.top, b: q.bottom - b.top, cx: (q.left + q.right) / 2 - b.left, cy: (q.top + q.bottom) / 2 - b.top };
+      }
+      var w = '', lab = '';
+      WIRES.forEach(function (x) {
+        var A = r(x[1]), B = r(x[2]), d, lx, ly;
+        if (x[3] === 'h') {
+          var x1 = A.r + 3, x2 = B.l - 3, mx = (x1 + x2) / 2;
+          d = Math.abs(A.cy - B.cy) < 2 ? 'M' + x1 + ' ' + A.cy + 'H' + x2 : 'M' + x1 + ' ' + A.cy + 'H' + mx + 'V' + B.cy + 'H' + x2;
+          lx = x1 + 6; ly = A.cy - 8;
+        } else {
+          var y1 = A.b + 3, y2 = B.t - 3, my = (y1 + y2) / 2;
+          d = Math.abs(A.cx - B.cx) < 2 ? 'M' + A.cx + ' ' + y1 + 'V' + y2 : 'M' + A.cx + ' ' + y1 + 'V' + my + 'H' + B.cx + 'V' + y2;
+          lx = Math.max(A.cx, B.cx) + 8; ly = my + 4;
+        }
+        /* requests go both ways; a backup (one-way) is marked with a fifth flag */
+        var oneWay = !!x[5];
+        w += '<path data-w="' + x[0] + '" class="wire' + (oneWay ? ' slow' : '') + '" d="' + d + '"' + (oneWay ? '' : ' marker-start="url(#' + head + ')"') + ' marker-end="url(#' + head + ')"/>';
+        if (x[4]) lab += '<text x="' + lx + '" y="' + ly + '">' + x[4] + '</text>';
+      });
+      wiresG.innerHTML = w; labelsG.innerHTML = lab;
+      paths = {};
+      wiresG.querySelectorAll('path').forEach(function (p) { paths[p.getAttribute('data-w')] = p; });
+      highlight();
+    }
+
+    /* Move the request dot along a list of wires, forwards (0) or backwards (1). */
+    function animate(seq, then) {
+      var my = ++run;
+      if (reduceMotion || !seq.length) { pkt.setAttribute('cx', -20); if (then) then(); return; }
+      var i = 0, t0 = null;
+      function frame(ts) {
+        if (my !== run || !el.isConnected) return;
+        var p = paths[seq[i][0]]; if (!p) return;
+        var len = p.getTotalLength(), dur = Math.max(260, len * 2.2);
+        if (t0 === null) t0 = ts;
+        var f = Math.min(1, (ts - t0) / dur), at = seq[i][1] ? len * (1 - f) : len * f;
+        var pt = p.getPointAtLength(at);
+        pkt.setAttribute('cx', pt.x); pkt.setAttribute('cy', pt.y);
+        pkt.classList.toggle('back', !!seq[i][1]);
+        if (f >= 1) { i++; t0 = null; if (i >= seq.length) { if (then) then(); return; } }
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    }
+    function live() {   /* idle: a request every couple of seconds */
+      var my = run + 1;
+      animate(REQUEST, function () { setTimeout(function () { if (my === run && k === -1 && el.isConnected) live(); }, 900); });
+    }
+
+    function highlight() {
+      var s = STEPS[k], wires = s ? s.run.map(function (x) { return x[0]; }) : [];
+      box.classList.toggle('stepping', !!s);
+      box.querySelectorAll('[data-p]').forEach(function (n) { n.classList.toggle('on', !!s && s.on.indexOf(n.getAttribute('data-p')) >= 0); });
+      wiresG.querySelectorAll('path').forEach(function (p) { p.classList.toggle('on', wires.indexOf(p.getAttribute('data-w')) >= 0); });
+    }
+    function draw() {
+      var s = STEPS[k];
+      highlight();
+      if (!s) {
+        count.textContent = '';
+        out.innerHTML = 'Live traffic: each dot is one request, orange on its way in and teal on its way back. Press <strong>Follow a request</strong> to go through it step by step.';
+        btn.textContent = 'Follow a request';
+        live();
+        return;
+      }
+      count.textContent = 'Step ' + (k + 1) + ' of ' + STEPS.length + ': ' + s.t;
+      out.innerHTML = s.say;
+      btn.textContent = k === STEPS.length - 1 ? 'Back to live traffic' : 'Next step';
+      animate(s.run);
+    }
+    btn.addEventListener('click', function () { k = k === STEPS.length - 1 ? -1 : k + 1; draw(); });
+
+    layout();
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(function () { layout(); }).observe(box);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  }
+
+  /* Chapter 2: the pilot, everything on one server. */
+  W['pilot-arch'] = function (el) {
+    var node = archNode;
+    liveArch(el, {
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'eip', 'h', 'HTTPS'],
+        ['fw', 'eip', 'sg', 'v', ''],
+        ['ng', 'sg', 'nginx', 'h', ''],
+        ['app', 'nginx', 'app', 'h', ''],
+        ['sql', 'app', 'db', 'h', ''],
+        ['io', 'db', 'disk', 'v', ''],
+        ['bak', 'disk', 'snap', 'v', 'daily', true]
+      ],
+      request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['sql', 0], ['sql', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
+      steps: [
+        { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
+          say: '<strong>Find the server.</strong> The browser asks DNS for <code>app.example.com</code>. Route 53 answers with the server’s Elastic IP. The answer is cached, so this happens rarely.' },
+        { on: ['users', 'eip', 'sg', 'nginx'], run: [['in', 0], ['fw', 0], ['ng', 0]], t: '~40 ms: 2 round trips to Mumbai',
+          say: '<strong>Connect.</strong> The browser opens a connection to the Elastic IP. The security group lets port 443 through, and Nginx completes the TCP and TLS handshakes.' },
+        { on: ['nginx', 'app'], run: [['app', 0]], t: 'microseconds',
+          say: '<strong>Hand over.</strong> Nginx forwards the request to a FastAPI worker over <code>localhost</code>. It never leaves the machine.' },
+        { on: ['app', 'db', 'disk'], run: [['sql', 0], ['sql', 1]], t: '~5 ms of work, ~1 ms per query',
+          say: '<strong>Do the work.</strong> FastAPI runs the endpoint and queries PostgreSQL, also over <code>localhost</code>: no network round trip. If the data isn’t in RAM, PostgreSQL reads it from the disk.' },
+        { on: ['nginx', 'app', 'users'], run: [['app', 1], ['ng', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
+          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. First request: about 85 ms in all. Later requests on the same connection skip DNS and the handshakes: about 25 ms.' }
+      ],
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Users', 'in Bangalore') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+          '<div class="ar2-vpc"><p class="ar2-k">VPC, public subnet</p>' +
+            '<div class="ar2-row">' +
+              '<div class="ar2-edge">' +
+                node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
+                node('sg', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
+              '</div>' +
+              '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'EC2 t4g.nano: 2 vCPUs, 512 MB. Inside, everything talks over localhost.</p>' +
+                '<div class="ar2-sw">' +
+                  node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443') +
+                  node('app', 'bolt', 'c-sw', 'FastAPI', '2 workers') +
+                  node('db', 'db', 'c-sw', 'PostgreSQL', 'on localhost') +
+                '</div>' +
+                '<div class="ar2-disk">' + node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '20 GB') + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ar2-bak">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
+        '</div>'
+    });
+  };
+
+  /* Chapter 3: the app and the database on servers of their own. */
+  W['split-live'] = function (el) {
+    var node = archNode;
+    liveArch(el, {
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'eip', 'h', 'HTTPS'],
+        ['fw', 'eip', 'sga', 'v', ''],
+        ['ng', 'sga', 'nginx', 'h', ''],
+        ['app', 'nginx', 'app', 'h', ''],
+        ['net', 'app', 'sgd', 'v', 'private network, port 5432'],
+        ['sql', 'sgd', 'db', 'h', ''],
+        ['io', 'db', 'disk', 'h', ''],
+        ['bak', 'disk', 'snap', 'v', 'daily', true]
+      ],
+      request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['net', 0], ['sql', 0], ['sql', 1], ['net', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
+      steps: [
+        { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
+          say: '<strong>Find the server.</strong> DNS still points <code>app.example.com</code> at the Elastic IP, now attached to the app server.' },
+        { on: ['users', 'eip', 'sga', 'nginx'], run: [['in', 0], ['fw', 0], ['ng', 0]], t: '~40 ms: 2 round trips to Mumbai',
+          say: '<strong>Connect.</strong> The browser connects to the Elastic IP. The app server’s security group lets port 443 through, and Nginx completes the TCP and TLS handshakes.' },
+        { on: ['nginx', 'app'], run: [['app', 0]], t: 'microseconds',
+          say: '<strong>Hand over.</strong> Nginx forwards the request to a FastAPI worker over <code>localhost</code>, as before.' },
+        { on: ['app', 'sgd', 'db'], run: [['net', 0], ['sql', 0]], t: '~0.2–0.5 ms per round trip',
+          say: '<strong>Cross the network.</strong> FastAPI sends the query to the database server over the private network, reusing a pooled connection. The database’s security group accepts port 5432 only from the app server, so nothing else can reach it.' },
+        { on: ['db', 'disk'], run: [['io', 0], ['io', 1], ['sql', 1], ['net', 1]], t: 'usually straight from RAM',
+          say: '<strong>Answer from RAM.</strong> With 16 GB, PostgreSQL’s working set now fits in its cache, so most queries never touch the disk. The rows travel back to FastAPI.' },
+        { on: ['app', 'nginx', 'users'], run: [['app', 1], ['ng', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
+          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. The new network hop costs well under a millisecond per query, and both servers now have room to spare.' }
+      ],
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Users', 'in Bangalore and beyond') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1, one zone</p>' +
+          '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
+            '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
+              '<div class="ar2-row">' +
+                '<div class="ar2-edge ar3-edge">' +
+                  node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
+                  node('sga', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
+                '</div>' +
+                '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'App server: EC2 c7g.large, 2 vCPUs, 4 GB</p>' +
+                  '<div class="ar3-two">' +
+                    node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443') +
+                    node('app', 'bolt', 'c-sw', 'FastAPI', '2 workers, pooled connections') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private"><p class="ar2-k">Private subnet: no public address</p>' +
+              '<div class="ar2-row">' +
+                '<div class="ar2-edge ar3-edge">' + node('sgd', 'shield', 'c-sec', 'Security group', '5432 from the app server only') + '</div>' +
+                '<div class="ar2-ec2 ar3-db"><p class="ar2-k">' + icon('db', 'c-db') + 'Database server: EC2 r7g.large, 2 vCPUs, 16 GB</p>' +
+                  '<div class="ar3-two">' +
+                    node('db', 'db', 'c-sw', 'PostgreSQL', 'most data cached in RAM') +
+                    node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ar2-bak">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
+        '</div>'
+    });
+  };
+
+  /* ---------- Chapter 2: before and after splitting the app and the database ---------- */
+
+  W['split-arch'] = function (el) {
+    function nd(g, cat, title, sub) {
+      return '<div class="nd">' + icon(g, cat) + '<b>' + title + '</b><span>' + sub + '</span></div>';
+    }
+    el.innerHTML =
+      '<div class="sa">' +
+        '<div class="sa-col"><p class="sa-h">Today: one server</p>' +
+          '<div class="sa-srv sa-mixed"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'EC2 t4g.nano: 2 vCPUs, 512 MB</p>' +
+            '<div class="sa-nodes">' + nd('proxy', 'c-sw', 'Nginx', 'HTTPS') + nd('bolt', 'c-sw', 'FastAPI', 'uses CPU') + nd('db', 'c-sw', 'PostgreSQL', 'needs RAM and disk') + '</div>' +
+            '<p class="sa-tag bad">Both fight over the same 2 vCPUs, 512 MB and disk</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="sa-to" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>' +
+        '<div class="sa-col"><p class="sa-h">Next: a server each</p>' +
+          '<div class="sa-srv"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'App server: EC2 c7g, compute-optimised</p>' +
+            '<div class="sa-nodes">' + nd('proxy', 'c-sw', 'Nginx', 'HTTPS') + nd('bolt', 'c-sw', 'FastAPI', 'more workers') + '</div>' +
+            '<p class="sa-tag">Tuned for CPU-bound work: cores to spare</p>' +
+          '</div>' +
+          '<div class="sa-link"><span class="sa-line" aria-hidden="true"></span>private network, same zone: well under 1 ms per query</div>' +
+          '<div class="sa-srv sa-db"><p class="ar2-k">' + icon('db', 'c-db') + 'Database server: EC2 r7g, or Amazon RDS</p>' +
+            '<div class="sa-nodes">' + nd('db', 'c-sw', 'PostgreSQL', 'in a private subnet') + nd('disk', 'c-sto', 'EBS gp3', 'IOPS bought to match') + '</div>' +
+            '<p class="sa-tag">Tuned for I/O-bound work: RAM for the cache, a fast disk</p>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  };
+
+  /* ---------- Chapter 3: what the network hop costs per request ---------- */
+
+  W['query-latency'] = function (el) {
+    var WHERE = [
+      { value: 'local', label: 'Same server', rtt: 0.03 },
+      { value: 'zone', label: 'Same zone', rtt: 0.4 },
+      { value: 'az', label: 'Another zone', rtt: 1.2 }
+    ];
+    var WORK = 0.3, CONN = 3;   /* ms of database work per query; ms to open a new connection */
+    var st = { n: 20, where: 'zone', conn: false };
+    el.innerHTML =
+      '<div class="calc">' +
+        '<div class="w-field"><label for="qlN">Queries per request</label><input type="range" id="qlN" min="1" max="60" value="' + st.n + '"><output for="qlN"></output></div>' +
+        '<div class="w-field"><span class="lbl">Where the database is</span><span class="ql-where"></span></div>' +
+        '<label class="ql-check"><input type="checkbox" id="qlC"> Open a new connection for every request (no pool)</label>' +
+      '</div>' +
+      legend([['net', 'Network round trips'], ['dbw', 'Database work'], ['conn', 'Opening a connection']]) +
+      '<div class="wf ql-rows"></div>' +
+      '<p class="readout" aria-live="polite"></p>' +
+      '<p class="w-note">Assumes small, indexed queries (about 0.3 ms of work each) and about 3 ms to open a new PostgreSQL connection.</p>';
+    el.querySelector('.ql-where').appendChild(segmented('Where the database is', WHERE, st.where, function (v) { st.where = v; draw(); }));
+    el.querySelector('#qlN').addEventListener('input', function (e) { st.n = +e.target.value; draw(); });
+    el.querySelector('#qlC').addEventListener('change', function (e) { st.conn = e.target.checked; draw(); });
+    var rowsEl = el.querySelector('.ql-rows'), out = el.querySelector('.readout');
+
+    function row(name, segs, max) {
+      var t = 0, cells = '';
+      segs.forEach(function (s) {
+        if (s[2] <= 0) return;
+        cells += '<span class="wf-seg ' + s[0] + '" style="left:' + (t / max * 100) + '%;width:' + (s[2] / max * 100) + '%" tabindex="0" data-tip="<b>' +
+          esc(s[1]) + '</b><br>' + fmtMs(s[2]) + '"><span class="seg-label">' + esc(s[1]) + '</span></span>';
+        t += s[2];
+      });
+      return '<div class="wf-row"><span class="wf-name">' + name + '</span><span class="wf-track">' + cells + '</span><span class="wf-total">' + fmtMs(t) + '</span></div>';
+    }
+    function draw() {
+      var rtt = WHERE.filter(function (w) { return w.value === st.where; })[0].rtt, n = st.n, c = st.conn ? CONN : 0;
+      var a = [['conn', 'connect', c], ['net', 'round trips', n * rtt], ['dbw', 'work', n * WORK]];
+      var b = [['conn', 'connect', c], ['net', 'round trips', Math.min(n, 2) * rtt], ['dbw', 'work', n * WORK]];
+      var ta = c + n * rtt + n * WORK, tb = c + Math.min(n, 2) * rtt + n * WORK, max = Math.max(ta, tb, 1);
+      el.querySelector('#qlN + output').textContent = n;
+      rowsEl.innerHTML = row('As written: ' + n + ' quer' + (n === 1 ? 'y' : 'ies'), a, max) + row('Same data in ' + Math.min(n, 2) + ' quer' + (Math.min(n, 2) === 1 ? 'y' : 'ies'), b, max);
+      fitLabels(rowsEl);
+      var msg = n + ' quer' + (n === 1 ? 'y' : 'ies') + ' to a database ' + (st.where === 'local' ? 'on the same server' : st.where === 'zone' ? 'in the same zone' : 'in another zone') +
+        ' cost <strong>' + fmtMs(ta) + '</strong> per request, ' + fmtMs(n * rtt) + ' of it just on the network. ';
+      if (st.where === 'local') msg += 'On the same server, round trips are almost free, which is why the pilot never noticed them.';
+      else msg += 'Fetching the same data in ' + Math.min(n, 2) + ' takes <strong>' + fmtMs(tb) + '</strong>: the database does the same work, but the round trips disappear.';
+      if (st.conn) msg += ' Opening a new connection adds ' + CONN + ' ms to every request; a pool removes it.';
+      out.innerHTML = msg;
+    }
+    bindTips(el);
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(rowsEl); }).observe(rowsEl);
+  };
+
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */
 
   W['percentile-strip'] = function (el) {

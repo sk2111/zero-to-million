@@ -22,6 +22,7 @@
   --tip: #3d55c9;
   --tip-soft: #eef1fc;
   --chip-ink: #ffffff;     /* text on a filled teal or indigo chip */
+  --b-db-ink: #ffffff;
   /* pipeline stages: one blue ramp, light to dark, because the stages are in order */
   --st0: #86b6ef; --st1: #3987e5; --st2: #1c5cab; --st3: #0d366b;
   --st-t0: #0f1522; --st-t1: #0f1522; --st-t2: #ffffff; --st-t3: #ffffff;
@@ -61,6 +62,7 @@
   --tip: #9aabff;
   --tip-soft: #1b2142;
   --chip-ink: #0b1018;
+  --b-db-ink: #0b1018;
   --st0: #9ec5f4; --st1: #5598e7; --st2: #2a78d6; --st3: #184f95;
   --st-t0: #0b1018; --st-t1: #0b1018; --st-t2: #ffffff; --st-t3: #ffffff;
   --c-cpu: #d95926;
@@ -476,6 +478,88 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .pct-label.l99::after { right: 0; }
 .pct-axis { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.78rem; color: var(--muted); }
 
+/* ---------- Chapter 2: the pilot architecture and its memory budget ---------- */
+
+.ar2 { position: relative; display: grid; grid-template-columns: 10.5rem minmax(0, 1fr); gap: 2.6rem; align-items: start; }
+.ar2-wires { position: absolute; left: 0; top: 0; z-index: 1; overflow: visible; pointer-events: none; }
+.ar2-wires .wire { fill: none; stroke: var(--ink-2); stroke-width: 1.5; opacity: 0.55; transition: stroke 0.2s, opacity 0.2s; }
+.ar2-wires .wire.slow { stroke-dasharray: 4 4; }
+.ar2-wires .wire.on { stroke: var(--accent); stroke-width: 2.5; opacity: 1; }
+.ar2-wires marker path { fill: var(--ink-2); }
+.ar2-wires text { font-size: 11px; font-weight: 600; fill: var(--muted); paint-order: stroke; stroke: var(--sheet); stroke-width: 4px; }
+.ar2-wires .pkt { fill: var(--c-cpu); stroke: var(--sheet); stroke-width: 2; }
+.ar2-wires .pkt.back { fill: var(--accent); }
+.nd { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.55rem 0.5rem 0.6rem; border: 1px solid var(--rule-2); border-radius: 10px; background: var(--sheet); text-align: center; font-size: 0.78rem; line-height: 1.25; transition: opacity 0.2s, box-shadow 0.2s; }
+.nd b { font-size: 0.86rem; }
+.nd span { color: var(--ink-2); }
+.ic { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; margin-bottom: 0.25rem; border-radius: 7px; }
+.ic svg { width: 1.55rem; height: 1.55rem; fill: none; stroke: #ffffff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.c-user { background: #232f3e; }
+.c-net { background: #8c4fff; }
+.c-sec { background: #dd344c; }
+.c-cpu { background: #ed7100; }
+.c-sto { background: #7aa116; }
+.c-sw { background: #3b4a5f; }
+.ar2-k { display: flex; align-items: center; margin: 0 0 0.7rem; font-size: 0.76rem; font-weight: 600; color: var(--muted); }
+.ar2-k .ic { display: inline-grid; width: 1.5rem; height: 1.5rem; margin: 0 0.45rem 0 0; border-radius: 5px; }
+.ar2-k .ic svg { width: 1.05rem; height: 1.05rem; }
+.ar2-left { display: flex; flex-direction: column; gap: 3rem; padding-top: 4.6rem; }
+.ar2-region { padding: 0.7rem 0.9rem 0.9rem; border: 2px solid var(--ink-2); border-radius: 12px; }
+.ar2-vpc { padding: 0.6rem 0.8rem 0.9rem; border: 1.5px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+.ar2-row { display: flex; align-items: flex-start; gap: 2.6rem; }
+.ar2-edge { display: flex; flex-direction: column; gap: 2.4rem; flex: none; width: 8.2rem; padding-top: 2.4rem; }
+.ar2-ec2 { flex: 1; min-width: 0; padding: 0.6rem 0.8rem 0.8rem; border: 2px solid #ed7100; border-radius: 10px; background: var(--sheet); }
+.ar2-sw, .ar2-disk { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.4rem; }
+.ar2-disk { margin-top: 2.2rem; }
+.ar2-disk .nd { grid-column: 3; }
+.ar2-bak { display: flex; justify-content: flex-end; margin-top: 2.2rem; padding-right: 1.6rem; }
+.ar2-bak .nd { width: 9rem; }
+.ar3-subnet { padding: 0.5rem 0.7rem 0.8rem; border: 1px solid var(--rule-2); border-radius: 8px; background: var(--sheet); }
+.ar3-subnet + .ar3-subnet { margin-top: 2.6rem; }
+.ar3-private { background: var(--paper); }
+.ar3-private > .ar2-k { justify-content: flex-end; }
+.ar2 .ar3-edge { padding-top: 0; }
+.ar3-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.4rem; }
+.ar2-ec2.ar3-db { border-color: #c925d1; }
+.ar2.stepping .nd { opacity: 0.35; }
+.ar2.stepping .nd.on { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+
+.budget { display: flex; gap: 2px; max-width: 50rem; height: 2.2rem; margin: 1rem 0 0.6rem; }
+.budget span { display: grid; place-items: center; min-width: 4px; flex-basis: 0; font-size: 0.78rem; color: var(--on-fill); }
+.budget span:last-child { border-radius: 0 4px 4px 0; }
+.b-os { background: var(--rule-2); }
+.b-db { background: var(--c-disk); }
+.budget .b-db { color: var(--b-db-ink); }
+.b-app { background: var(--c-cpu); }
+.b-ng { background: var(--c-net); }
+.b-free { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.budget-legend { max-width: 50rem; }
+.over-wrap { position: relative; max-width: 50rem; padding-top: 2.8rem; }
+.over-wrap .budget { margin-top: 0; }
+.over-zone { position: absolute; right: 0; bottom: 0; height: 2.2rem; background: repeating-linear-gradient(45deg, rgba(208, 59, 59, 0.42) 0 6px, transparent 6px 12px); border-radius: 0 4px 4px 0; }
+.over-mark { position: absolute; top: 0; bottom: 0; transform: translateX(-100%); border-right: 2px solid var(--ink); padding-right: 0.5rem; text-align: right; white-space: nowrap; font-size: 0.8rem; line-height: 1.25; }
+.budget.over .b-app { justify-items: start; padding-left: 0.6rem; }
+.over-mark b { display: block; color: var(--ink); }
+.over-mark span { color: #b42b2b; font-weight: 600; }
+
+/* ---------- Chapter 2: before and after the split ---------- */
+
+.sa { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 1.2rem; align-items: center; }
+.sa-col { display: flex; flex-direction: column; }
+.sa-h { margin: 0 0 0.6rem; font-size: 0.86rem; font-weight: 700; color: var(--ink); }
+.sa-srv { padding: 0.6rem 0.8rem 0.7rem; border: 2px solid #ed7100; border-radius: 10px; background: var(--sheet); }
+.sa-db { border-color: #c925d1; }
+.sa-mixed { background: rgba(208, 59, 59, 0.06); }
+.sa-nodes { display: flex; gap: 0.5rem; }
+.sa-nodes .nd { flex: 1 1 0; min-width: 0; }
+.sa-tag { margin: 0.6rem 0 0; font-size: 0.8rem; font-weight: 600; color: var(--accent); }
+.sa-tag.bad { color: #b42b2b; }
+.sa-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0 0.35rem 1.4rem; font-size: 0.78rem; color: var(--muted); }
+.sa-line { flex: none; width: 2px; height: 1.8rem; background: var(--ink-2); }
+.sa-to { color: var(--muted); }
+.sa-to svg { width: 2rem; height: 2rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.c-db { background: #c925d1; }
+
 /* ---------- 1.1: the server stack ---------- */
 
 .stack { margin: 2.4rem 0 1rem; border: 1px solid var(--rule-2); border-radius: 14px; overflow: hidden; }
@@ -548,6 +632,14 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .wf-seg:last-child { border-right: 0; border-radius: 0 4px 4px 0; }
 .wf-seg.cpu { background: var(--c-cpu); }
 .wf-seg.net { background: var(--c-net); }
+.wf-seg.dbw { background: var(--c-disk); }
+.wf-seg.dbw .seg-label { color: var(--b-db-ink); }
+.wf-seg.conn { background: var(--rule-2); }
+.sw.dbw { background: var(--c-disk); }
+.sw.conn { background: var(--rule-2); }
+.ql-check { display: flex; align-items: center; gap: 0.5rem; align-self: end; font-size: 0.9rem; color: var(--ink-2); }
+.ql-check input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); }
+.ql-rows .wf-row { grid-template-columns: 12rem 1fr 5rem; }
 .wf-total { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* latency ladder */
@@ -773,6 +865,16 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .stack-hw { grid-template-columns: 1fr 1fr; }
   .compile { grid-template-columns: 1fr; }
   .cases { grid-template-columns: 1fr; }
+  .ar2 { grid-template-columns: 1fr; gap: 2rem; }
+  .sa { grid-template-columns: 1fr; }
+  .ar3-two { gap: 1rem; }
+  .sa-to { transform: rotate(90deg); }
+  .ar2-left { flex-direction: row; gap: 2rem; padding-top: 0; }
+  .ar2-left .nd { flex: 1; }
+  .ar2-row { flex-direction: column; gap: 2rem; }
+  .ar2-edge { flex-direction: row; width: auto; gap: 2rem; padding-top: 0; }
+  .ar2-edge .nd { flex: 1; }
+  .ar2-sw, .ar2-disk { gap: 1rem; }
   .ev-conns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ev-row { grid-template-columns: 1fr; }
   .cpu-line { grid-template-columns: repeat(2, 1fr); }

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zero to a Million</title>
+<meta name="description" content="A practical way to scale your system from 0 to a million users.">
+<script>
+  /* Pick the theme before anything paints: the saved choice, else light (it projects better). */
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('ztm-theme'); } catch (e) {}
+    document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="shell" id="shell">
+
+  <aside class="side" id="side" aria-label="Chapters">
+    <a class="side-brand" href="#/">
+      <span class="side-title">Zero to a million</span>
+      <span class="side-sub">A practical scaling workshop</span>
+    </a>
+    <div class="side-head" aria-hidden="true"><span>Users</span><span>Chapter</span></div>
+    <nav class="toc" id="toc"></nav>
+    <div class="side-foot">
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+      <p class="keys"><kbd>←</kbd> <kbd>→</kbd> move between pages<br><kbd>S</kbd> hide or show this sidebar</p>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim" hidden></div>
+
+  <div class="stage">
+    <header class="bar">
+      <button type="button" class="icon-btn" id="sideToggle" aria-controls="side" aria-expanded="true" title="Hide or show chapters (S)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <span class="sr">Chapters</span>
+      </button>
+      <div class="crumb" id="crumb"></div>
+      <div class="pager">
+        <span class="count" id="count"></span>
+        <button type="button" class="icon-btn" id="prevBtn" title="Previous page (←)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span class="sr">Previous page</span></button>
+        <button type="button" class="icon-btn" id="nextBtn" title="Next page (→)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg><span class="sr">Next page</span></button>
+      </div>
+      <div class="progress" aria-hidden="true"><span id="progress"></span></div>
+    </header>
+
+    <main class="page" id="page" tabindex="-1"></main>
+  </div>
+</div>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script src="js/chapters.js"></script>
+<script src="js/ch1-fundamentals.js"></script>
+<script src="js/widgets.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -16,14 +16,18 @@
       this.ctx = canvas.getContext('2d');
       this.data = [];
       this.hover = null;
-      const cs = getComputedStyle(document.documentElement);
-      const v = (n) => cs.getPropertyValue(n).trim();
-      this.c = { grid: v('--line-soft'), base: v('--line'), muted: v('--muted'), ink: v('--ink'), ink2: v('--ink-2'), panel: v('--panel'), mono: v('--font-mono') };
-      this.series = opts.series.map((s) => Object.assign({}, s, { color: v(s.token) }));
+      this.readColors();
       new ResizeObserver(() => { this.size(); this.draw(); }).observe(canvas);
       canvas.addEventListener('pointermove', (e) => { const r = canvas.getBoundingClientRect(); this.hover = e.clientX - r.left; this.draw(); });
       canvas.addEventListener('pointerleave', () => { this.hover = null; this.tip.hidden = true; this.draw(); });
       this.size();
+    }
+
+    readColors() {
+      const cs = getComputedStyle(document.documentElement);
+      const v = (n) => cs.getPropertyValue(n).trim();
+      this.c = { grid: v('--line-soft'), base: v('--line'), muted: v('--muted'), ink: v('--ink'), ink2: v('--ink-2'), panel: v('--panel'), mono: v('--font-mono') };
+      this.series = this.o.series.map((s) => Object.assign({}, s, { color: v(s.token) }));
     }
 
     size() {
@@ -59,7 +63,7 @@
       const Y = (v) => padT + ph - (Math.min(v, yMax) / yMax) * ph;
 
       // gridlines + ticks
-      ctx.font = '500 10.5px ' + c.mono;
+      ctx.font = '500 11.5px ' + c.mono;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       for (let i = 0; i <= 2; i++) {
@@ -185,6 +189,7 @@
     }
 
     clear() { this.lat.set([]); this.rps.set([]); }
+    recolor() { this.lat.readColors(); this.rps.readColors(); this.lat.draw(); this.rps.draw(); }
 
     update(sim, sum, st) {
       const vm = sim.vm, m = sim.memInfo(), down = sim.down > 0;

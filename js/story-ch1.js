@@ -1,273 +1,199 @@
-/* Tomazon War Room · Chapter 1: The 3 AM Call
-   Each scene sets the narration, the presenter notes, which controls are
-   unlocked, and (through `sim`) which moment of the night the simulator shows.
-   Scenes that share a `sim` tag continue the same live simulation. */
+/* Tomazon War Room · Chapter 1: 48 Hours
+   The origin story. Two friends, one idea, a 48-hour MVP, and every choice
+   from language to server. Scenes with a `card` show an interactive card
+   (js/ch1-cards.js) instead of the live board. `hour` drives the 48-hour
+   clock and `decides` the "Your stack" panel. */
 (function () {
   'use strict';
   const TZ = (window.TZ = window.TZ || {});
 
-  // Seconds between launch night (14 Mar, 19:01) and 10 Oct, 02:25.
-  const UPTIME_AT_0225 = 209 * 86400 + 26640;
-
   const sims = {
-    launch: {
-      vm: 'xs', rps: 0.6, clock: '19:30:00', date: 'Sat 14 Mar', ymd: '2026-03-14', uptimeS: 1740, prewarm: 20,
-      term: ['# Launch night. Tomazon is live on one small server.', '# Type help to see what this terminal can do.']
-    },
-    quiet: {
-      vm: 'xs', rps: 3, clock: '21:10:00', date: 'Tue 22 Sep', ymd: '2026-09-22', uptimeS: 191 * 86400 + 7500, prewarm: 40,
-      term: ['# A quiet Tuesday evening, six months after launch.']
-    },
-    incident: {
-      vm: 'xs', rps: 3, ramp: { to: 34, dur: 90, at: 360 }, clock: '02:25:00', date: 'Sat 10 Oct', ymd: '2026-10-10',
-      uptimeS: UPTIME_AT_0225, prewarm: 1320,
-      term: ['# 2:47 AM. Your laptop, balanced on a pillow. Tom is still on the phone.']
-    },
-    xray: {
-      vm: 'xs', rps: 3, clock: '02:25:00', date: 'Sat 10 Oct', ymd: '2026-10-10', uptimeS: UPTIME_AT_0225, prewarm: 10,
-      term: ['# Replay. It is 2:25 AM and everything is still fine.']
-    },
-    fix: {
-      vm: 'xs', rps: 3, ramp: { to: 34, dur: 90, at: 360 }, clock: '02:25:00', date: 'Sat 10 Oct', ymd: '2026-10-10',
-      uptimeS: UPTIME_AT_0225, prewarm: 1800,
-      term: ['# Back to 2:55 AM. The server is still drowning.', '# Use the controls, or log in and try things: ssh root@tomazon.app']
-    },
-    green: {
-      vm: 'l', rps: 34, clock: '04:02:00', date: 'Sat 10 Oct', ymd: '2026-10-10', uptimeS: 640, prewarm: 60,
-      term: ['# 4:02 AM. Resized to 2 vCPU and 4 GB. Tomazon is back.']
-    },
-    morning: {
-      vm: 'l', rps: 9, clock: '09:14:00', date: 'Sat 10 Oct', ymd: '2026-10-10', uptimeS: 19700, prewarm: 30,
-      term: ['# 9:14 AM. You slept for four hours.']
+    fresh: {
+      fresh: true, vm: 'xs', rps: 0, dns: false, freshHost: true,
+      clock: '18:20:00', date: 'Sat 14 Mar', ymd: '2026-03-14', uptimeS: 70, prewarm: 2,
+      term: ['# Saturday 14 March, 6:20 PM. Hour 47 of 48.', '# Your new server is ready at 203.0.113.42. Tom is refreshing the dashboard.']
     }
   };
 
+  const stack = [
+    { key: 'language', label: 'Language', value: 'Python' },
+    { key: 'framework', label: 'Web framework', value: 'FastAPI' },
+    { key: 'orm', label: 'Talking to the DB', value: 'SQLAlchemy (ORM)' },
+    { key: 'dbkind', label: 'Kind of database', value: 'Relational' },
+    { key: 'db', label: 'Database', value: 'PostgreSQL' },
+    { key: 'cloud', label: 'Cloud', value: 'DigitalOcean' },
+    { key: 'server', label: 'Server', value: '1 vCPU · 512 MB · Bangalore' }
+  ];
+
   const scenes = [
     {
-      id: 'launch', sim: 'launch',
-      kicker: 'Prologue · Saturday 14 March, 7:30 PM',
-      title: 'Meet Tomazon',
-      body: '<p>You\'ve shipped side projects before. A habit tracker nobody kept up with. A recipe app your mom opened twice. This one feels different.</p>' +
-        '<p>Your college friend <b>Tom</b> has the business plan. You wrote the code. Together you built <b>Tomazon</b>, an online store for everything from A to T. Tonight it goes live.</p>',
-      overlay: { kind: 'storefront' },
-      notes: '<p>Set the scene and introduce the two characters: you, the engineer, and Tom, the founder who will call at 3 AM.</p>' +
-        '<p>Ask the room: <b>who has put something in production on a single server?</b> What size did you pick, and why?</p>'
+      id: 'world', card: { kind: 'world' }, clock: ['Wed 11 Mar', '23:30'],
+      kicker: 'Prologue',
+      title: 'A world without online shopping',
+      body: '<p>In our world, someone started selling books from a website in 1995, and the rest is history. This story happens in a slightly different world. It has smartphones, Instagram and cloud servers. But nobody, anywhere, has thought of selling things online.</p><p>Not yet.</p>',
+      notes: '<p>Set the premise with a smile: everything modern exists except online shopping. That lets us use today\'s tools while living through the decisions the first online stores had to make.</p>' +
+        '<p>Ask the room: <b>if you had to build online shopping from nothing, what would you need?</b> Collect answers. You\'ll need them in the 48-hour scene.</p>'
     },
     {
-      id: 'one-box', sim: 'launch',
-      kicker: 'Launch night · 7:45 PM',
-      title: 'The whole company on one $4 server',
-      body: '<p>Everything runs on a single virtual machine with <b>1 vCPU and 512 MB of RAM</b>. nginx answers the web traffic, the Tomazon app builds the pages, and MySQL keeps the orders. It\'s the cheapest option on the pricing page, and it\'s plenty.</p>' +
-        '<p>Friends sign up. Tom\'s uncle buys a toaster. Each white dot is a request going in. Each green dot is a fast answer coming back.</p>',
-      notes: '<p>Walk the diagram left to right: the customer\'s browser, requests going in on the top lane, answers coming back on the bottom lane. Green means under a second.</p>' +
-        '<p>Point at the three processes sharing one box. Ask: <b>what\'s the single point of failure here?</b> (All of it. One machine, one disk, one database.)</p>' +
-        '<p>Point at the memory bar on the server: a nearly idle server already uses about three quarters of its RAM, just for MySQL, the app and the operating system.</p>'
+      id: 'idea', card: {
+        kind: 'dialogue', place: 'Hostel room 214 · Wednesday, 11:40 PM',
+        lines: [
+          ['tom', 'What if every shop in town put their stuff on a website?'],
+          ['you', 'Like a catalog?'],
+          ['tom', 'A catalog you can order from. From your phone. At 2 AM.'],
+          ['you', 'Who orders things at 2 AM?'],
+          ['tom', 'Everyone. Once it exists.'],
+          ['you', 'So shops upload their products. With a price.'],
+          ['tom', 'Uncle Ramesh has a shop. He\'d do it. Probably.'],
+          ['you', 'And people just press Order? No payments?'],
+          ['tom', 'Cash on delivery. Keep it simple.'],
+          ['tom', 'I\'m calling it Tomazon.'],
+          ['you', 'Why Tom—'],
+          ['tom', 'Everything from A to T.'],
+          ['you', 'What comes after T?'],
+          ['tom', 'Version 2.']
+        ]
+      }, clock: ['Wed 11 Mar', '23:40'],
+      kicker: 'Wednesday 11 March · 11:40 PM',
+      title: 'Tom has an idea',
+      body: '<p>Exams are over. The Maggi is getting cold. Your friend Tom has been staring at the ceiling for ten minutes.</p>',
+      notes: '<p>Let the conversation play (it plays itself; Pause and Next line are under the chat). Point out the 2 AM line: it comes back in Chapter 2.</p>' +
+        '<p>Ask: <b>is this a good idea?</b> Then: <b>how would you find out, without spending six months building it?</b></p>'
     },
     {
-      id: 'quiet', sim: 'quiet',
-      kicker: 'Six months later · Tuesday 22 September',
-      title: 'Quiet, steady growth',
-      body: '<p>Tomazon grows slowly. On a busy evening the server handles about <b>3 requests a second</b>, and memory sits around three quarters full.</p>' +
-        '<p>Nobody looks at graphs, because there are no graphs. You never set up monitoring. It works, so why would you?</p>',
-      notes: '<p>Plant the seed: no monitoring, no alerts. It pays off in a few minutes.</p>' +
-        '<p>Ask: <b>is 77% memory a problem?</b> Not by itself. The real question is headroom: how much extra traffic could this box absorb before something gives? Nobody knows. Neither did you.</p>'
+      id: 'mvp', card: { kind: 'mvp' }, clock: ['Wed 11 Mar', '23:58'],
+      kicker: 'Wednesday · 11:58 PM',
+      title: 'Not a small product. An experiment.',
+      body: '<p>You both want to start building everything. Then you remember the one useful line from the startup club talk: an MVP is not a smaller, buggier version of your final product. It\'s an experiment. Its job isn\'t money or users. Its job is to find out whether your idea is true.</p>',
+      notes: '<p>Read the hypothesis out loud. The success number matters: decide what "it worked" means <b>before</b> you build, or you\'ll call anything a success.</p>' +
+        '<p>Click both outcomes. If the idea is wrong, you lost a weekend, not six months. That\'s the whole point of an MVP.</p>'
     },
     {
-      id: 'call', sim: 'incident', blind: true,
-      kicker: 'Saturday 10 October · 2:47 AM',
-      title: 'Your phone is buzzing',
-      body: '<p>It\'s 2:47 in the morning. The phone on your nightstand is lighting up the whole room. It\'s Tom.</p>' +
-        '<p>From here on, the diagram and the monitoring panel are dark. That\'s what you actually had that night.</p>',
-      overlay: { kind: 'phone' },
-      notes: '<p>Let it ring for a few seconds before you press Accept. Press Decline once if you want a laugh: Tom calls again.</p>' +
-        '<p>After the call, ask the room: <b>it\'s 2:47 AM and the site is down. What is the first thing that goes through your head?</b> Collect the answers. You\'ll use them in the next scene.</p>'
+      id: 'scope', card: { kind: 'scope' }, hour: 0, clock: ['Thu 12 Mar', '19:00'],
+      kicker: 'Thursday 12 March · 7:00 PM · Hour 0 of 48',
+      title: '48 hours',
+      body: '<p>You agree on a deadline: <b>48 hours</b>, starting now. Tom wants everything. Pick what goes into the experiment. Every feature costs hours, and the clock is already running.</p>',
+      notes: '<p>Let the room vote features in and out. The four that test the hypothesis are locked in. Everything else has to justify itself.</p>' +
+        '<p>Payments is the classic trap: cash on delivery tests the same hypothesis for zero hours. Ask: <b>which of these features would change what we learn?</b> (Almost none.)</p>'
     },
     {
-      id: 'suspects', sim: 'incident', blind: true,
-      kicker: '2:48 AM',
-      title: 'Hacked? DDoS? Is the cloud down?',
-      body: '<p>Your brain lists every disaster at once. Each suspect has a quick check, and some checks are much cheaper than others. Without even logging in, what can you rule out from your laptop?</p>',
-      overlay: { kind: 'suspects' },
-      chips: ['dig tomazon.app', 'ping tomazon.app', 'curl -I https://tomazon.app'],
-      notes: '<p>Have the room vote on which suspect to check first. Good on-call engineers test the <b>cheapest</b> idea first.</p>' +
-        '<ul><li><code>dig</code> answers instantly: DNS is fine and the domain hasn\'t expired.</li>' +
-        '<li><code>ping</code> answers in about 40 ms: the machine is up and the network is fine. The kernel answers ping by itself, so ping works even when every program on the box is stuck.</li>' +
-        '<li><code>curl</code> hangs for 10 seconds and times out: the website isn\'t answering.</li></ul>' +
-        '<p>So it\'s not DNS and not the cloud provider\'s network. It\'s something on the machine itself.</p>'
+      id: 'stack', card: { kind: 'stack' }, hour: 0.3, clock: ['Thu 12 Mar', '19:20'],
+      kicker: 'Thursday · 7:20 PM',
+      title: 'Choosing your tools',
+      body: '<p>Before the first line of code, you need a <b>tech stack</b>: the layers your app is built from. Each layer answers one question. Click a layer to see what it does. The dot on the right is a request travelling down the stack and the answer coming back up.</p>',
+      notes: '<p>This is the map for the next decisions. The panel on the right fills in as you go.</p>' +
+        '<p>Make the point early: for an MVP, the best choice at almost every layer is the boring one you already know.</p>'
     },
     {
-      id: 'ssh', sim: 'incident', blind: true,
-      kicker: '2:49 AM',
-      title: 'Knock knock',
-      body: '<p>You open a terminal and type the command you\'ve typed a hundred times. Normally you\'re in before you finish blinking.</p>',
-      chips: ['ssh root@tomazon.app'],
-      notes: '<p>Run it and let the silence sit while the cursor blinks. Don\'t fill it.</p>' +
-        '<p>Ask: <b>why would SSH itself be slow?</b> The SSH server has to start a new process for your session and give it memory. If the machine can\'t do that quickly, even the front door is jammed.</p>' +
-        '<p>When the login banner appears, point at it: system load around 100 on a single core, memory 99%, swap 96%.</p>'
+      id: 'language', card: { kind: 'language' }, hour: 0.6, decides: 'language', clock: ['Thu 12 Mar', '19:35'],
+      kicker: 'Thursday · 7:35 PM',
+      title: 'Which language?',
+      body: '<p>Python, JavaScript, Java, Go, Ruby, Rust. Any of them could build Tomazon. Click each one to hear you and Tom argue about it, then decide.</p>',
+      notes: '<p>For an MVP, the best language is the one you already know. The speed that matters is how fast you learn whether the idea works, not how fast the code runs.</p>' +
+        '<p>Ask the seniors: <b>when would you pick Go or Java instead?</b> (A team that already knows it, very high throughput, a big codebase that benefits from strict types.)</p>'
     },
     {
-      id: 'htop', sim: 'incident', blind: true,
-      kicker: '2:50 AM',
-      title: 'What is this machine doing?',
-      body: '<p>You\'re in, barely. Every command takes seconds to answer. You run the first thing every engineer runs.</p>',
-      chips: ['htop'],
-      notes: '<p>Read the screen together:</p><ul>' +
-        '<li><b>CPU</b> is pinned at 100%, and much of it is red. Red is kernel time, not your app.</li>' +
-        '<li>The busiest process isn\'t Tomazon. It\'s <b>kswapd0</b>, the kernel thread that moves memory pages between RAM and disk.</li>' +
-        '<li><b>Mem</b> is full. <b>Swp</b> (swap) is nearly full.</li>' +
-        '<li><b>Load average</b> around 100 on a 1-core machine: about 100 processes waiting for the CPU or the disk.</li>' +
-        '<li>Lots of processes in state <b>D</b>: stuck waiting on the disk. You can\'t even kill a process while it\'s in D.</li></ul>' +
-        '<p>Press <kbd>q</kbd> to leave htop.</p>'
+      id: 'framework', card: { kind: 'framework' }, hour: 1.2, decides: 'framework', clock: ['Thu 12 Mar', '20:10'],
+      kicker: 'Thursday · 8:10 PM',
+      title: 'A language is not enough',
+      body: '<p>Python on its own can answer a web request, but you\'d write all the plumbing by hand: reading the URL, checking every input, turning results into JSON. A <b>framework</b> does the plumbing so you only write the Tomazon parts. Compare the two, then send each one a bad request.</p>',
+      notes: '<p>Send <code>{"product_id": "abc"}</code> in both tabs. Plain Python crashes with a 500. FastAPI answers with a clear 422, because the type hints double as input checking.</p>' +
+        '<p>Be fair to the others: Django is even more "batteries included" (admin panel, ORM and logins built in). Flask is minimal. FastAPI is the modern middle: small, fast, with validation and API docs for free.</p>'
     },
     {
-      id: 'evidence', sim: 'incident', blind: true,
-      kicker: '2:52 AM',
-      title: 'Follow the evidence',
-      body: '<p>The machine is drowning in memory demand. But whose? Who are all these visitors, and what has the kernel been complaining about?</p>',
-      chips: ['tail /var/log/nginx/access.log', 'free -m', 'dmesg | tail', 'journalctl -u tomazon-app'],
-      notes: '<p>The access log is the twist. Look at the requests: real phones, <b>Instagram</b> as the referrer, almost everyone opening the same product page. Status <b>499</b> means the customer gave up and closed the tab before the server answered.</p>' +
-        '<p><b>This isn\'t an attack. It\'s success.</b> From the server\'s side, a DDoS and a viral moment look almost the same.</p>' +
-        '<p><code>dmesg</code> shows hung-task warnings: processes stuck on the disk for over two minutes. <code>journalctl</code> shows the app killing its own workers for taking longer than 30 seconds.</p>'
+      id: 'orm', card: { kind: 'orm' }, hour: 2, decides: 'orm', clock: ['Thu 12 Mar', '21:00'],
+      kicker: 'Thursday · 9:00 PM',
+      title: 'Talking to the database',
+      body: '<p>Your code needs to ask the database things like "which products does shop 7 sell?". You could glue SQL strings together yourself, or use an <b>ORM</b> (object-relational mapper) that turns Python into SQL for you. Type a store ID, then try something sneaky.</p>',
+      notes: '<p>This is <b>SQL injection</b>, still one of the most common security holes on the web. An ORM sends the value separately from the query (a parameter), so a value can never turn into code.</p>' +
+        '<p>For the seniors: an ORM isn\'t magic. It can still produce slow queries. That\'s a problem for a later chapter.</p>'
     },
     {
-      id: 'aha', sim: 'incident', blind: true,
-      kicker: '2:53 AM',
-      title: '512 megabytes',
-      body: '<p>Then you notice the number in the corner of htop: <b>Mem 512M</b>. Your phone has 8 GB. Your laptop has 16. Tomazon, a store with customers on three continents, is running on less memory than a phone from 2012.</p>',
-      overlay: { kind: 'bars' },
-      notes: '<p>This is the punchline. Not hackers. Not a DDoS. <b>Capacity.</b> Most outages are boring.</p>' +
-        '<p>Ask: <b>was 512 MB the wrong choice on launch day?</b> No. It was right for launch. It became wrong slowly and silently, because nobody was watching. The mistake wasn\'t the size. It was flying blind.</p>'
+      id: 'data', card: { kind: 'datamodel' }, hour: 3.5, decides: 'dbkind', clock: ['Thu 12 Mar', '22:30'],
+      kicker: 'Thursday · 10:30 PM',
+      title: 'Where does the data live?',
+      body: '<p>Shops, products and orders have to live somewhere that survives a reboot. Two big families: <b>relational</b> databases, like giant, strict, linked spreadsheets, and <b>non-relational</b> ones, like folders of flexible documents.</p>',
+      notes: '<p>Run "Rename a shop" in both views: one row versus hundreds of copies. Then "A product with odd fields": documents win on flexibility.</p>' +
+        '<p>Ask: <b>for a shop, what matters more: flexibility or correctness?</b> (Correctness. Stock and money must never be wrong.)</p>'
     },
     {
-      id: 'xray', sim: 'xray', unlock: ['traffic', 'speed'],
-      kicker: 'Replay with the lights on',
-      title: 'What actually happened',
-      body: '<p>Let\'s rewind to 2:25 AM and replay the night with the view you didn\'t have. The diagram and the monitoring are back on. Traffic is normal: 3 requests a second.</p>' +
-        '<p>Press <b>Viral reel</b>, or drag the <b>Traffic</b> slider yourself, and watch what happens inside the machine.</p>',
-      notes: '<p><b>Predict before you click.</b> Ask the room: "Traffic goes from 3 to 34 requests a second. What happens to response time?"</p>' +
-        '<p>Then drag the slider slowly instead: 3, then 10, 15, 18. Watch the p95 chart. Response time barely moves, then bends upward as the CPU nears 100%. That\'s queueing: near full utilization, a little more load means a lot more waiting.</p>' +
-        '<p>Somewhere around 19 to 20 requests a second, the machine falls off a cliff. Not gradually: a cliff. The next scene explains why.</p>' +
-        '<p>Use 3× or 10× speed to get through the slow parts.</p>'
+      id: 'acid', card: { kind: 'acid' }, hour: 4.2, decides: 'dbkind', clock: ['Thu 12 Mar', '23:15'],
+      kicker: 'Thursday · 11:15 PM',
+      title: 'ACID: why shops need transactions',
+      body: '<p>One protein shaker left. Two customers press Buy at the same moment. Or the server loses power halfway through an order. What happens to your data? Run both experiments with transactions <b>off</b>, then <b>on</b>.</p>',
+      notes: '<p>The race is about <b>Isolation</b>. The power cut is about <b>Atomicity</b>. Then explain the other two letters: <b>Consistency</b> (rules like "stock never below zero" always hold) and <b>Durability</b> (once it says "Order placed", it survives a crash, because it\'s written to disk first).</p>' +
+        '<p>This is why e-commerce, banking and bookings live on relational databases.</p>'
     },
     {
-      id: 'spiral', sim: 'xray', unlock: ['traffic', 'speed'],
-      kicker: 'Why it fell off a cliff',
-      title: 'The death spiral',
-      body: '<p>Servers don\'t slow down gently. Once requests start waiting, every waiting request holds memory, full memory spills onto the disk, and the disk makes everything wait even longer.</p>',
-      overlay: { kind: 'loop' },
-      notes: '<p>This loop is the most important idea in the session. Walk around it one station at a time.</p>' +
-        '<p><b>Little\'s Law</b>: requests in flight = arrival rate × time each one takes. Ask a junior to do the math: 3 a second × 0.2 s = 0.6 requests in flight. 34 a second × 10 s = 340 in flight. The app caps itself at 100 workers of about 11 MB each: 1.1 GB, on a 0.5 GB machine.</p>' +
-        '<p>For the seniors: once the spiral starts, lowering traffic doesn\'t fix it. Try it in the sim: let it thrash, then drag traffic back to 3. It stays broken. That\'s a <b>metastable failure</b>: the trigger is gone but the system stays stuck in the bad state. Only a reboot or more capacity gets it out.</p>'
+      id: 'postgres', card: { kind: 'dbpick' }, hour: 5.1, decides: 'db', clock: ['Fri 13 Mar', '00:05'],
+      kicker: 'Friday 13 March · 12:05 AM',
+      title: 'PostgreSQL or MySQL?',
+      body: '<p>Both are free, fast and run some of the biggest sites in the world. Tom suggests a third option.</p>',
+      notes: '<p>Be fair to MySQL: it would have been a perfectly good choice. PostgreSQL wins here on JSONB for odd product fields, strictness about bad data, and extensions like PostGIS for "shops near me" later.</p>' +
+        '<p>Excel is the joke, but ask: <b>why exactly can\'t a spreadsheet be our database?</b> (Many writers at once, transactions, size.)</p>'
     },
     {
-      id: 'fix', sim: 'fix', unlock: ['traffic', 'vm', 'swap', 'workers', 'line', 'reboot', 'speed'],
-      kicker: 'Back to 2:55 AM',
-      title: 'Make it stop',
-      body: '<p>The incident is still running and Tom is still on the line. You have options. Try them one at a time and watch the diagram and the graphs:</p>' +
-        '<p><b>Reboot</b> the server. Turn <b>swap off</b>. Lower <b>max workers</b> and <b>turn away</b> what doesn\'t fit. Or <b>resize</b> the server.</p>',
-      chips: ['ssh root@tomazon.app', 'systemctl restart tomazon-app', 'dmesg | tail'],
-      notes: '<p>Let the room drive. What they will find:</p><ul>' +
-        '<li><b>Reboot</b>: about 15 seconds of downtime, then it falls over again within half a minute. Rebooting doesn\'t add capacity. Restarting the app does the same thing, faster.</li>' +
-        '<li><b>Swap off</b>: no more thrashing and SSH is instant, but now the kernel\'s OOM killer shoots MySQL. Customers see "Error establishing a database connection". MySQL restarts, and it happens again. Run <code>dmesg | tail</code> to see the kill.</li>' +
-        '<li><b>Max workers 8 + turn away fast</b>: the server stays healthy and serves what it can, about 22 a second. Everyone else gets a quick 503 instead of a 10-second hang. That\'s <b>load shedding</b>.</li>' +
-        '<li><b>Resize to 2 vCPU · 4 GB</b>: about 12 seconds of downtime, then it just works, for $20 more a month.</li></ul>' +
-        '<p>Ask: <b>which would you do at 3 AM?</b> (Usually: resize now, fix the worker limits tomorrow, add monitoring this week.)</p>'
+      id: 'cloud', card: { kind: 'cloud' }, hour: 46.5, decides: 'cloud', clock: ['Sat 14 Mar', '17:30'],
+      kicker: 'Saturday 14 March · 5:30 PM · Hour 46',
+      title: 'Where will it run?',
+      body: '<p>Forty-six hours in. The code works on your laptop. The deadline is 7 PM. Now Tomazon needs a computer that\'s always on, with a public address. Three clouds and one very bad idea.</p>',
+      notes: '<p>AWS and Google Cloud are more powerful, and everything you learn there is valuable. But for one server, today, simplicity wins. Be fair: AWS Lightsail is AWS\'s own simple option.</p>' +
+        '<p>Ask: <b>what would make you move to AWS later?</b> (Managed databases, more regions, a team that knows it, credits.)</p>'
     },
     {
-      id: 'green', sim: 'green', unlock: ['traffic', 'vm', 'swap', 'workers', 'line', 'reboot', 'speed'],
-      kicker: 'Saturday · 4:02 AM',
-      title: 'Green again',
-      body: '<p>You resized to <b>2 vCPU and 4 GB</b>. The bill went from $4 to $24 a month. Pages load in a fraction of a second and orders are flowing again.</p>' +
-        '<p>Before going back to bed you add one thing: an alert that pages you when memory goes above 80%. Next time, a graph wakes you up. Not Tom.</p>',
-      overlay: { kind: 'lessons' },
-      notes: '<p>Go through the takeaways. Then ask the seniors: <b>what\'s still wrong with this setup?</b></p><ul>' +
-        '<li>It\'s still one machine. If it dies, Tomazon dies.</li>' +
-        '<li>The app and the database still fight over the same CPU and memory.</li>' +
-        '<li>Nobody has mentioned backups. Ever.</li>' +
-        '<li>Max workers is still 100. The next spike just needs to be bigger.</li></ul>'
+      id: 'droplet', card: { kind: 'droplet' }, hour: 47.1, decides: 'server', clock: ['Sat 14 Mar', '18:05'],
+      kicker: 'Saturday · 6:05 PM · Hour 47',
+      title: 'Create the server',
+      body: '<p>Four choices and a button: where it lives, what it runs, how big it is, and how you\'ll log in. The real form looks different, but it asks exactly these questions.</p>',
+      notes: '<p>Point at the size: <b>512 MB, $4 a month</b>. Zero users, zero revenue: this is the responsible choice. Ask the room to remember the number. It comes back in Chapter 2.</p>' +
+        '<p>Bangalore because the customers are nearby: every request makes a round trip, and distance is time.</p>'
     },
     {
-      id: 'next', sim: 'morning', unlock: ['traffic', 'vm', 'swap', 'workers', 'line', 'reboot', 'speed'],
-      kicker: 'Saturday · 9:14 AM',
-      title: 'One more thing',
-      body: '<p>Tom slept well. You didn\'t. Your phone buzzes again.</p>',
-      overlay: { kind: 'chat' },
-      notes: '<p>Cliffhanger into chapter 2.</p>' +
-        '<p>Ask: <b>the new server tops out around 42 requests a second. Ten times last night is 340. What\'s your plan for Saturday?</b> Buy a 32-core machine? What\'s the biggest machine you can buy, and what happens when it needs a kernel patch in the middle of the sale?</p>' +
-        '<p>That\'s chapter 2: The Big Sale.</p>'
+      id: 'ssh', sim: 'fresh', hour: 47.3,
+      kicker: 'Saturday · 6:20 PM · Hour 47',
+      title: 'Hello, server',
+      body: '<p>A computer in Bangalore now has your name on it and a public IP address: <b>203.0.113.42</b>. Nothing runs on it yet except Ubuntu and the front door you\'re about to knock on: <b>SSH</b>.</p>',
+      chips: ['ssh root@203.0.113.42', 'yes'],
+      notes: '<p>The first time you connect, SSH asks whether you trust this machine\'s fingerprint. It\'s checking that nobody is pretending to be your server. Type <code>yes</code>.</p>' +
+        '<p>Point at the login banner: memory usage around 20%. Ubuntu alone uses about 100 MB of your 512. On the left, the browser says "refused": nothing is listening for web traffic yet.</p>' +
+        '<p>Fun fact: within minutes of creating any server, bots from around the world start knocking on it, trying passwords. That\'s why you picked an SSH key.</p>'
+    },
+    {
+      id: 'deploy', sim: 'fresh', hour: 47.5,
+      kicker: 'Saturday · 6:31 PM · Hour 47',
+      title: 'Ship it',
+      body: '<p>Three steps between you and a live website: install the software, fetch your code, and run the deploy script you wrote at 4 AM. Watch the server card on the left as each piece arrives.</p>',
+      chips: ['apt install -y nginx postgresql python3-venv', 'git clone https://github.com/tom-and-you/tomazon.git', 'cd tomazon && ./deploy.sh'],
+      notes: '<p>After <code>apt</code> finishes, the browser shows "Welcome to nginx!": the web server works but has nothing to serve yet. PostgreSQL appears using about 170 MB.</p>' +
+        '<p>The deploy script installs the Python packages, creates the tables (migrations), gets an HTTPS certificate, and starts the app. Look at the memory bar: about three quarters of the 512 MB is gone before a single customer arrives.</p>'
+    },
+    {
+      id: 'live', sim: 'fresh', ensureLive: true, clockJump: '19:01:00', hour: 48,
+      kicker: 'Saturday · 7:01 PM · Hour 48',
+      title: 'Tomazon is live',
+      body: '<p>Tom opens tomazon.app on his phone. It loads. He sends the link to every shopkeeper he knows, and to Uncle Ramesh. Each white dot on the left is a request going in; each green dot is a fast answer coming back.</p>',
+      overlay: { kind: 'launch' },
+      notes: '<p>Celebrate. Then walk the diagram: the browser, requests on the top lane, answers on the bottom lane, and one small box running everything.</p>' +
+        '<p>Ask: <b>what\'s the single point of failure here?</b> (All of it: one machine, one disk, one database.)</p>' +
+        '<p>Tease Chapter 2: six months later, at 2 AM, your phone rings.</p>'
     }
   ];
 
   const content = {
     products: [
-      { name: 'Protein Shaker, Leak-Proof (mostly)', price: '₹99', rating: '★★★★½', reviews: '12,408', icon: 'shaker', bg: '#ffe4dc', badge: 'Bestseller' },
-      { name: 'Rubber Duck for Debugging, Senior Edition', price: '₹249', rating: '★★★★★', reviews: '3,112', icon: 'duck', bg: '#e0f2fe' },
-      { name: 'Mechanical Keyboard That Wakes the Neighbours', price: '₹3,499', rating: '★★★★', reviews: '891', icon: 'keyboard', bg: '#ede9fe' },
-      { name: 'Mug: "It Works On My Machine"', price: '₹349', rating: '★★★★½', reviews: '5,630', icon: 'mug', bg: '#fef3c7' },
-      { name: 'USB-C Cable That Works on the First Try', price: '₹599', rating: '★★★', reviews: '77', icon: 'cable', bg: '#dcfce7', badge: 'Rare find' },
-      { name: 'Headphones for Open-Plan Offices', price: '₹2,199', rating: '★★★★', reviews: '2,045', icon: 'headphones', bg: '#f1f5f9' }
+      { name: 'Protein Shaker, Leak-Proof (mostly)', price: '₹99', rating: '★★★★½', reviews: '12', icon: 'shaker', bg: '#ffe4dc', badge: 'New', shop: 'Sharma General Store' },
+      { name: 'Rubber Duck for Debugging, Senior Edition', price: '₹249', rating: '★★★★★', reviews: '3', icon: 'duck', bg: '#e0f2fe', shop: 'Sharma General Store' },
+      { name: 'Mechanical Keyboard That Wakes the Neighbours', price: '₹3,499', rating: '★★★★', reviews: '1', icon: 'keyboard', bg: '#ede9fe', shop: 'Ravi Electronics' },
+      { name: 'Mug: "It Works On My Machine"', price: '₹349', rating: '★★★★½', reviews: '7', icon: 'mug', bg: '#fef3c7', shop: 'Sharma General Store' },
+      { name: 'USB-C Cable That Works on the First Try', price: '₹599', rating: '★★★', reviews: '2', icon: 'cable', bg: '#dcfce7', badge: 'Rare find', shop: 'Ravi Electronics' },
+      { name: 'Headphones for Open-Plan Offices', price: '₹2,199', rating: '★★★★', reviews: '4', icon: 'headphones', bg: '#f1f5f9', shop: 'Ravi Electronics' }
     ],
-    call: {
-      time: '2:47', date: 'Saturday, 10 October', caller: 'Tom', sub: 'Co-founder, Tomazon · mobile',
-      lines: [
-        ['Tom', 'Hey. Hey. Are you awake? Tomazon is down.'],
-        ['Tom', 'Like, completely. The page just keeps loading and then dies.'],
-        ['Tom', 'People are sending me screenshots. Hundreds of them.'],
-        ['Tom', 'Did we get hacked?? Is this a DDoS? Is the cloud down?'],
-        ['You', 'Okay. Okay. Give me five minutes.']
-      ]
-    },
-    suspects: [
-      { title: 'We got hacked', q: 'Someone broke in and took the site down.', how: 'Look for logins you don\'t recognise and processes you didn\'t start.', cmd: 'last', where: 'on the server' },
-      { title: 'It\'s a DDoS attack', q: 'Someone is flooding us with fake traffic.', how: 'Look at who is actually sending the requests.', cmd: 'tail /var/log/nginx/access.log', where: 'on the server' },
-      { title: 'The cloud provider is down', q: 'Our data centre is having a bad night.', how: 'Can you reach the machine at all?', cmd: 'ping tomazon.app', where: 'from your laptop' },
-      { title: 'DNS broke or the domain expired', q: 'tomazon.app no longer points at our server.', how: 'Ask DNS where tomazon.app points.', cmd: 'dig tomazon.app', where: 'from your laptop' },
-      { title: 'My last deploy broke it', q: 'Something I shipped is crashing.', how: 'What changed, and when? The last deploy was Tuesday evening, and the site ran fine for three days after it.', cmd: null },
-      { title: 'The disk is full', q: 'Logs filled the disk and everything stopped.', how: 'Check how much disk space is left.', cmd: 'df -h', where: 'on the server' }
-    ],
-    memory: [
-      { label: 'Your laptop', mb: 16384, value: '16 GB' },
-      { label: 'Your phone', mb: 8192, value: '8 GB' },
-      { label: 'Chrome with 20 tabs open', mb: 3072, value: 'about 3 GB' },
-      { label: 'A phone from 2012', mb: 1024, value: '1 GB' },
-      { label: 'Tomazon\'s only server', mb: 512, value: '512 MB', hero: true }
-    ],
-    loop: {
-      trigger: 'It starts when traffic jumps from 3 to 34 requests a second.',
-      stations: [
-        ['Requests wait longer', 'the CPU is full, the line grows'],
-        ['More requests in flight', 'in flight = rate × wait'],
-        ['Each one holds memory', 'about 11 MB per busy worker'],
-        ['RAM runs out', 'kernel pushes pages to disk'],
-        ['Disk is ~1000× slower', 'than RAM, for every page'],
-        ['Everything slows down', 'even SSH and the kernel']
-      ],
-      worked: [
-        { k: 'A quiet evening', v: '3/s × 0.2 s = 0.6 in flight', n: 'One or two workers busy. Nobody notices.' },
-        { k: 'The reel', v: '34/s × 10 s = 340 in flight', n: 'The app caps itself at 100 workers × 11 MB = 1.1 GB, on a 0.5 GB machine.' }
-      ]
-    },
-    lessons: [
-      ['Most outages are boring', 'Not hackers. Not a DDoS. A server that ran out of room, slowly, while nobody watched.'],
-      ['Servers fall off cliffs', 'Response time stays flat, then explodes as the CPU nears 100%. Past that point, a little more traffic means a lot more waiting.'],
-      ['Slow makes more slow', 'Requests in flight = arrival rate × wait (Little\'s Law). Waiting requests hold memory, and running out of memory makes everything wait longer.'],
-      ['Swap turns a memory problem into a disk problem', 'Disk is about a thousand times slower than RAM. A thrashing server is technically up and practically dead.'],
-      ['The OOM killer usually picks your database', 'With no swap, Linux kills the biggest process to survive. On a small all-in-one server, that\'s MySQL.'],
-      ['No monitoring means your users are your monitoring', 'An alert at 80% memory would have woken you an hour earlier, before a single customer noticed.']
-    ],
-    terms: ['Vertical scaling', 'Capacity planning', 'Little\'s Law', 'Queueing', 'Swap thrashing', 'OOM killer', 'Load shedding', 'Metastable failure', 'Monitoring and alerting'],
-    chat: {
-      who: 'Tom', seen: 'online',
-      messages: [
-        ['Tom', 'You\'re a legend. Slept like a baby.', '9:12 AM'],
-        ['Tom', 'Also: 1,140 orders last night. Even with the outage!!', '9:12 AM'],
-        ['Tom', 'Quick one. Marketing wants to run the Great Tomazon Sale this Saturday. They\'re expecting 10x last night\'s traffic.', '9:13 AM'],
-        ['Tom', 'We\'re fine now, right?', '9:14 AM']
-      ],
-      after: 'Your new server tops out around 42 requests a second. Ten times last night is 340. And it\'s still one machine.',
-      next: 'Chapter 2 · The Big Sale'
+    launch: {
+      order: { title: 'New order #1', item: '2-slice toaster · ₹1,299', from: 'From: Ramesh (Tom\'s uncle) · Cash on delivery' },
+      tracker: [['Shops listed', '3 of 10'], ['Orders', '1 of 30'], ['Days left in the experiment', '14']]
     }
   };
 
-  TZ.STORY = { chapter: 1, title: 'The 3 AM Call', sims, scenes, content };
+  TZ.CHAPTERS = TZ.CHAPTERS || [];
+  TZ.CHAPTERS[0] = { id: 'ch1', number: 1, title: '48 Hours', sims, scenes, stack, content };
 })();

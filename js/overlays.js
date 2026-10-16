@@ -24,12 +24,13 @@
   class Overlays {
     constructor(root, inner, hooks) {
       this.root = root; this.inner = inner; this.hooks = hooks; this.timers = [];
-      this.content = TZ.STORY.content;
+      this.content = {};
     }
 
     get open() { return !this.root.hidden; }
 
-    show(spec) {
+    show(spec, content) {
+      if (content) this.content = content;
       this.clear();
       this.root.hidden = false;
       const fn = this[spec.kind];
@@ -51,7 +52,7 @@
     }
     actions(...buttons) { const d = el('div', 'ov-actions'); buttons.forEach((b) => d.appendChild(b)); return d; }
 
-    storefront() {
+    storefront(spec, cta) {
       const c = this.content;
       const shop = el('div', 'shop');
       shop.innerHTML =
@@ -63,10 +64,26 @@
         '<div class="shop-grid">' + c.products.map((p) =>
           '<div class="product"><div class="product-img" style="background:' + p.bg + '">' + TZ.ICONS[p.icon] + '</div>' +
           (p.badge ? '<span class="badge">' + esc(p.badge) + '</span>' : '') +
-          '<h4>' + esc(p.name) + '</h4><div class="stars">' + p.rating + ' <span>(' + p.reviews + ')</span></div><div class="price">' + p.price + '</div></div>').join('') +
+          '<h4>' + esc(p.name) + '</h4>' + (p.shop ? '<div class="sold-by">Sold by ' + esc(p.shop) + '</div>' : '') + '<div class="stars">' + p.rating + ' <span>(' + p.reviews + ')</span></div><div class="price">' + p.price + '</div></div>').join('') +
         '</div></div>';
       this.inner.appendChild(shop);
-      this.inner.appendChild(this.actions(this.done('Go live')));
+      if (cta !== false) this.inner.appendChild(this.actions(this.done(cta || 'Go live')));
+      return shop;
+    }
+
+    /* Launch night: the live storefront, the first order, and the experiment's scoreboard. */
+    launch() {
+      const L = this.content.launch;
+      this.inner.appendChild(el('h2', 'ov-title', 'tomazon.app is live'));
+      const shop = this.storefront(null, false);
+      shop.style.position = 'relative';
+      const toast = el('div', 'order-toast', '<b>' + esc(L.order.title) + '</b><span>' + esc(L.order.item) + '</span><span class="muted-on-dark">' + esc(L.order.from) + '</span>');
+      toast.hidden = true;
+      shop.appendChild(toast);
+      this.later(1400, () => { toast.hidden = false; });
+      const track = el('div', 'tracker', '<p class="terms-label">The experiment so far</p>' + L.tracker.map(([k, v]) => '<div class="trk"><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>').join(''));
+      this.inner.appendChild(track);
+      this.inner.appendChild(this.actions(this.done('Continue')));
     }
 
     phone() {

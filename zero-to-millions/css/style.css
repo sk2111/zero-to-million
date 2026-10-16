@@ -18,6 +18,7 @@
   --amber: #9a5600;
   --amber-soft: #fbf1e2;
   --amber-mark: #d4870a;   /* amber as a mark (dots), not as text */
+  --hl: #ffe7a8;           /* highlighter behind linked code */
   --c-cpu: #eb6834;
   --c-disk: #2a78d6;
   --c-net: #1baf7a;
@@ -50,6 +51,7 @@
   --amber: #f0a742;
   --amber-soft: #2a2113;
   --amber-mark: #f0a742;
+  --hl: #4d3d14;
   --c-cpu: #d95926;
   --c-disk: #3987e5;
   --c-net: #199e70;
@@ -237,6 +239,7 @@ ol.steps li::before {
 .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.5rem 2.2rem; margin: 2.4rem 0; }
 .fig { padding-top: 0.9rem; border-top: 1px solid var(--rule-2); }
 .fig b { display: block; margin-bottom: 0.35rem; font-size: 1.9rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.fig small { display: block; margin-bottom: 0.25rem; font-size: 0.86rem; font-weight: 600; color: var(--accent); }
 .fig span { display: block; font-size: 0.95rem; color: var(--ink-2); }
 
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4rem; margin: 2.2rem 0; max-width: 56rem; }
@@ -294,6 +297,27 @@ ol.term-note > li::marker { color: var(--term-prompt); }
   background: transparent; font-size: 0.76rem; color: var(--term-dim);
 }
 .copy:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
+
+/* ---------- 1.1: one line of Python down to machine instructions ---------- */
+
+.compile { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.9rem; margin: 1.6rem 0 0.8rem; max-width: 56rem; }
+.cp-panel { min-width: 0; padding: 0.9rem 1.1rem 1rem; border: 1px solid var(--rule-2); border-radius: 12px; background: var(--paper); }
+.cp-machine { grid-column: 1 / -1; border: 0; border-left: 3px solid var(--c-cpu); background: var(--term-bg); color: var(--term-ink); }
+.cp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.2rem 1rem; margin: 0 0 0.6rem; font-size: 0.9rem; }
+.cp-head span { font-size: 0.82rem; color: var(--muted); }
+.cp-machine .cp-head span { color: var(--term-dim); }
+.cp-machine .cp-head code { background: rgba(255, 255, 255, 0.09); color: #fff; }
+.cp-code { margin: 0; overflow-x: auto; font-family: var(--mono); font-size: 0.86rem; line-height: 1.7; }
+.cp-dim { color: var(--muted); }
+.cp-machine .cp-dim { color: var(--term-dim); }
+.cp-arrow { display: grid; place-items: center; color: var(--muted); }
+.cp-arrow svg { width: 1.6rem; height: 1.6rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.compile [data-k] { padding: 0 0.12em; border-radius: 3px; transition: background-color 0.15s; }
+.compile [data-k="mul"] { box-shadow: inset 0 -2px 0 var(--c-cpu); }   /* the step expanded in panel 3 */
+.compile:has([data-k="load"]:hover) [data-k="load"],
+.compile:has([data-k="const"]:hover) [data-k="const"],
+.compile:has([data-k="mul"]:hover) [data-k="mul"],
+.compile:has([data-k="ret"]:hover) [data-k="ret"] { background: var(--hl); }
 
 /* ---------- 1.1: the server stack ---------- */
 
@@ -585,6 +609,8 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .split > div + div { padding: 1.4rem 0 0; border-left: 0; border-top: 1px solid var(--rule); }
   dl.terms > div { grid-template-columns: 1fr; gap: 0.3rem; }
   .stack-hw { grid-template-columns: 1fr 1fr; }
+  .compile { grid-template-columns: 1fr; }
+  .cp-arrow svg { transform: rotate(90deg); }
   .tiles { grid-template-columns: 1fr 1fr; }
   .tile:nth-child(odd) { padding-left: 0; border-left: 0; }
   .tile:nth-child(n + 3) { border-top: 1px solid var(--rule); }

@@ -38,15 +38,73 @@ ZTM.content[1] = {
       html: `
         <ol class="points lede">
           <li>A CPU runs instructions: add two numbers, compare two values, load something from memory, jump to another place in the code.</li>
-          <li>Your Python function, your SQL query and your JSON parser all end up as millions of these tiny steps.</li>
-          <li>How fast a CPU is comes down to two things: how fast each core ticks, and how many cores there are.</li>
+          <li>Your Python function, your SQL query and your JSON parser all end up as millions of these tiny instructions. The example below shows how.</li>
+          <li>How fast a CPU is comes down to two things: its <strong>clock speed</strong> (how many steps each core takes per second) and its <strong>number of cores</strong> (how many of those step-takers work side by side).</li>
+        </ol>
+
+        <h2>From one line of Python to CPU instructions</h2>
+        <div class="compile" role="group" aria-label="One line of Python, the bytecode it becomes, and the machine instructions behind one bytecode step">
+          <div class="cp-panel">
+            <p class="cp-head"><b>1. Your code</b><span>1 line</span></p>
+<pre class="cp-code"><span class="cp-dim">def add_gst(price):</span>
+    <span data-k="ret">return</span> <span data-k="load">price</span> <span data-k="mul">*</span> <span data-k="const">1.18</span></pre>
+          </div>
+          <div class="cp-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+          <div class="cp-panel">
+            <p class="cp-head"><b>2. Python bytecode</b><span>4 steps</span></p>
+<pre class="cp-code"><span data-k="load">LOAD_FAST     price</span>
+<span data-k="const">LOAD_CONST    1.18</span>
+<span data-k="mul">BINARY_OP     *</span>
+<span data-k="ret">RETURN_VALUE</span></pre>
+          </div>
+          <div class="cp-panel cp-machine">
+            <p class="cp-head"><b>3. What the CPU runs for one step, <code>BINARY_OP *</code></b><span>dozens of instructions</span></p>
+<pre class="cp-code">mov     rdi, [rsp+8]         <span class="cp-dim">; get the price object</span>
+cmp     [rdi+8], rbx         <span class="cp-dim">; is it really a float?</span>
+jne     slow_path            <span class="cp-dim">; if not, take the long way round</span>
+movsd   xmm0, [rdi+16]       <span class="cp-dim">; load its value from memory</span>
+mulsd   xmm0, [rsi+16]       <span class="cp-dim">; multiply it by 1.18</span>
+call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Python object</span>
+<span class="cp-dim">…       then reference counting, and fetching the next step</span></pre>
+          </div>
+        </div>
+        <p class="caption">Simplified x86-64. Point at a piece of the code to see where it goes. You can see the bytecode for
+        your own code with <code>python -m dis yourfile.py</code>.</p>
+        <ol class="points">
+          <li>One line of Python became 4 bytecode steps, and each step becomes dozens to hundreds of machine instructions, depending on the types involved.</li>
+          <li>At 3 GHz and about one instruction per tick, a few hundred instructions take about a tenth of a microsecond.</li>
+          <li>Compiled languages such as Go, Rust and C (and Java once its JIT has warmed up) turn the same line into a handful of machine instructions. That’s one reason they run CPU-heavy code 10–100 times faster than standard Python.</li>
+        </ol>
+
+        <h2>The clock: what a “tick” is</h2>
+        <ol class="points">
+          <li>Everything inside a CPU moves in step with a clock, like a metronome that beats billions of times a second.</li>
+          <li>On each beat, or tick, a core moves its instructions one stage further: fetch the next instruction, decode it, execute it, store the result.</li>
+          <li><strong>Clock speed</strong> is the number of ticks per second, measured in gigahertz (GHz). 3 GHz means 3 billion ticks a second, so one tick lasts a third of a nanosecond.</li>
+          <li>Modern cores overlap those stages and work on several instructions at once, so at best a core finishes 4 or more instructions per tick. Real server code averages around 1, because the core often waits for data from memory.</li>
+          <li>Put together: instructions per second ≈ clock speed × instructions per tick × number of cores. 3 GHz × 1 × 8 cores is about 24 billion instructions a second.</li>
         </ol>
 
         <div class="figures">
-          <div class="fig"><b>3 GHz</b><span>3 billion clock ticks a second. One tick is a third of a nanosecond.</span></div>
-          <div class="fig"><b>About 1 per tick</b><span>Instructions per tick that real server code often manages. A core can do 4 or more at peak, but it spends much of its time waiting for memory.</span></div>
-          <div class="fig"><b>4–64 vCPUs</b><span>A typical cloud server. On Intel and AMD instances, one vCPU is half a physical core.</span></div>
+          <div class="fig"><small>Clock speed</small><b>3 GHz</b><span>3 billion ticks a second for each core.</span></div>
+          <div class="fig"><small>Instructions per tick</small><b>About 1</b><span>What real server code often manages. Up to 4 or more at peak.</span></div>
+          <div class="fig"><small>Number of cores</small><b>4–64 vCPUs</b><span>A typical cloud server. On Intel and AMD, one vCPU is half a physical core.</span></div>
         </div>
+
+        <h2>What to look for in a CPU</h2>
+        <table class="data">
+          <thead><tr><th>Parameter</th><th>Typical server value</th><th>What it tells you</th><th>Matters most for</th></tr></thead>
+          <tbody>
+            <tr><td>Clock speed</td><td>2–3.5 GHz base, up to about 4 GHz boost</td><td>Ticks per second for each core. Boost is the top speed when the chip is cool and not fully loaded.</td><td>How long one CPU-heavy request takes</td></tr>
+            <tr><td>Physical cores</td><td>8 to over 100 per chip</td><td>How many things truly run at the same instant</td><td>Throughput: requests served in parallel</td></tr>
+            <tr><td>Threads per core</td><td>1 or 2</td><td>Hyper-threading: one core presenting itself as two, so it can work on a second thread while the first waits for memory</td><td>About 10–30% more throughput, not twice as much</td></tr>
+            <tr><td>vCPUs</td><td>2 to 192+ per cloud instance</td><td>What the cloud bills you for: one hyper-thread on Intel and AMD, a whole core on AWS Graviton</td><td>Comparing instance sizes and prices</td></tr>
+            <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How much work each tick does. A newer core at the same GHz can be 1.5 times faster than one from ten years earlier.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
+            <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much hot data stays right next to the cores</td><td>Databases, caches, anything with a big working set</td></tr>
+            <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which machine instructions the chip understands</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
+            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>Two chips means two groups of memory (NUMA)</td><td>Very large databases</td></tr>
+          </tbody>
+        </table>
 
         <h2>Clock speed stopped growing, so cores multiplied</h2>
         <ol class="points">
@@ -55,16 +113,6 @@ ZTM.content[1] = {
           <li>Chip makers spent their extra transistors on more cores instead.</li>
           <li>That is the root of this whole workshop. One core isn’t getting much faster, so the only way to do more work is in parallel: first more cores, then more machines.</li>
         </ol>
-
-        <h2>Cores, hyper-threads and vCPUs</h2>
-        <dl class="terms">
-          <div><dt>Core</dt><dd>An independent processor with its own execution units and small caches. Eight cores can
-          run eight things at the same instant.</dd></div>
-          <div><dt>Hyper-thread</dt><dd>One core presenting itself as two, so it can work on a second thread while the
-          first is waiting for memory. It adds roughly 10–30% throughput, not 100%. (The general name is SMT.)</dd></div>
-          <div><dt>vCPU</dt><dd>What a cloud provider sells. On Intel and AMD instances it is one hyper-thread, so
-          8 vCPUs is 4 physical cores. On AWS Graviton (ARM), a vCPU is a whole core.</dd></div>
-        </dl>
 
         <h2>A core spends most of its life waiting</h2>
         <p>At 3 GHz, a core can do a lot in the time it takes data to arrive:</p>
@@ -96,8 +144,8 @@ ZTM.content[1] = {
 <span class="o">    21,034,551,201      cycles
     14,302,694,817      instructions       #    0.68  insn per cycle</span></pre>
           <ol class="points term-note">
-            <li>8 vCPUs, but only 4 real cores with 2 threads each.</li>
-            <li>0.68 instructions per cycle: the cores spend much of their “busy” time waiting for memory.</li>
+            <li>8 vCPUs, but only 4 real cores with 2 threads each, running at a 2.9 GHz base clock.</li>
+            <li>0.68 instructions per cycle (per tick): the cores spend much of their “busy” time waiting for memory.</li>
           </ol>
         </figure>
 
@@ -110,6 +158,8 @@ ZTM.content[1] = {
             are already close to busy. The remaining “half” adds only 10–30% more throughput.</li>
             <li><strong>Parallelism buys throughput, not speed.</strong> More cores let you serve more requests at once.
             A request that needs 200 ms of CPU still takes 200 ms, however many cores you buy.</li>
+            <li><strong>Language choice is a capacity decision.</strong> The same CPU-heavy endpoint can need ten times
+            the servers in an interpreted language as in a compiled one. For I/O-bound work, the difference mostly disappears.</li>
           </ol>
         </aside>
 
@@ -448,9 +498,9 @@ LISTEN  97      2048           0.0.0.0:8000        0.0.0.0:*</span></pre>
         </ol>
 
         <div class="figures">
-          <div class="fig"><b>~100 ns</b><span>To read from RAM: 300 ticks of a 3 GHz core.</span></div>
-          <div class="fig"><b>64 bytes</b><span>A cache line. Memory moves in chunks this size, never a byte at a time.</span></div>
-          <div class="fig"><b>8–512 GB</b><span>RAM on a typical server. The largest cloud machines have over 20 TB.</span></div>
+          <div class="fig"><small>Reading from RAM</small><b>~100 ns</b><span>300 ticks of a 3 GHz core.</span></div>
+          <div class="fig"><small>Cache line</small><b>64 bytes</b><span>Memory moves in chunks this size, never a byte at a time.</span></div>
+          <div class="fig"><small>RAM per server</small><b>8–512 GB</b><span>Typical sizes. The largest cloud machines have over 20 TB.</span></div>
         </div>
 
         <h2>The memory hierarchy</h2>
@@ -734,9 +784,9 @@ nvme2n1    0  1.7T Amazon EC2 NVMe Instance Storage</span>
         <p>A crash between step 1 and step 2 loses the data, even though <code>write()</code> reported success.</p>
 
         <div class="figures">
-          <div class="fig"><b>Tens of µs</b><span>An fsync on an enterprise NVMe drive with power-loss protection.</span></div>
-          <div class="fig"><b>~1 ms</b><span>An fsync on a typical cloud volume or consumer SSD.</span></div>
-          <div class="fig"><b>~30 s</b><span>How long Linux may keep a written page in RAM before flushing it.</span></div>
+          <div class="fig"><small>fsync, enterprise NVMe</small><b>Tens of µs</b><span>Drives with power-loss protection can confirm writes almost at once.</span></div>
+          <div class="fig"><small>fsync, cloud volume</small><b>~1 ms</b><span>About the same on a consumer SSD.</span></div>
+          <div class="fig"><small>Write-back delay</small><b>~30 s</b><span>How long Linux may keep a written page in RAM before flushing it to disk.</span></div>
         </div>
 
         <h2>How databases make commits fast and safe</h2>
@@ -843,9 +893,9 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <li>Most web requests are small, so for them latency matters far more than bandwidth.</li>
         </ol>
         <div class="figures">
-          <div class="fig"><b>~5 µs per km</b><span>Light in fibre. 1,000 km means at least 10 ms there and back, whatever your code does.</span></div>
-          <div class="fig"><b>1 Gbps = 125 MB/s</b><span>Networks count bits, disks count bytes. Divide by 8.</span></div>
-          <div class="fig"><b>~200 ms</b><span>A round trip from India to the US east coast.</span></div>
+          <div class="fig"><small>Speed of light in fibre</small><b>~5 µs per km</b><span>1,000 km means at least 10 ms there and back, whatever your code does.</span></div>
+          <div class="fig"><small>Bits and bytes</small><b>1 Gbps = 125 MB/s</b><span>Networks count bits, disks count bytes. Divide by 8.</span></div>
+          <div class="fig"><small>India to US east coast</small><b>~200 ms</b><span>One round trip, there and back.</span></div>
         </div>
 
         <h2>TCP starts slowly</h2>

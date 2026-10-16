@@ -75,7 +75,7 @@
     var ready = chapters.filter(function (c) { return c.status === 'ready'; }).length;
     return '<section class="hero">' +
         '<h1 class="hero-title">Zero to<br>a million</h1>' +
-        '<p class="hero-sub">A practical way to scale your system from 0&nbsp;to a million users.</p>' +
+        '<p class="hero-sub">A practical way to scale your application from 0&nbsp;to a million users.</p>' +
         '<div class="us" data-widget="user-scale"></div>' +
         '<div class="hero-actions"><a class="btn primary" href="#/1">Start chapter 1</a>' +
         '<button type="button" class="btn" data-scroll="roadmap">See all chapters</button></div>' +

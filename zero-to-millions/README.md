@@ -1,6 +1,6 @@
 # Zero to a million
 
-A practical way to scale your system from 0 to a million users. It's a plain
+A practical way to scale your application from 0 to a million users. It's a plain
 chapter-by-chapter walkthrough with no story: a chapter sidebar, readable pages, and a few small
 interactive pieces where a number is easier to feel than to read.
 

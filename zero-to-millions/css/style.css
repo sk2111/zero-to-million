@@ -1,6 +1,6 @@
 /* Zero to a million
-   One family (Archivo) carries the whole page: the wide cuts set headlines,
-   the normal width sets reading text. Teal marks where you are and what to
+   Roboto carries the whole page, chosen for readability on a projector:
+   heavy weights set headlines, the regular weight sets reading text. Teal marks where you are and what to
    do; amber marks what runs out. Chart colours keep one meaning everywhere:
    orange = CPU, blue = disk, aqua = network and waiting. */
 
@@ -30,7 +30,7 @@
   --scrim: rgba(12, 17, 26, 0.42);
   --shadow: rgba(18, 26, 40, 0.16);
 
-  --sans: "Archivo", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --sans: "Roboto", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, Consolas, monospace;
   --side-w: 18.5rem;
   --users-w: 2.6rem;
@@ -99,7 +99,7 @@ strong, b { font-weight: 650; }
   border-right: 1px solid var(--rule);
 }
 .side-brand { display: block; padding: 0 0.4rem; margin-bottom: 2rem; color: var(--ink); text-decoration: none; }
-.side-title { display: block; font-size: 1.45rem; font-weight: 900; font-stretch: 125%; letter-spacing: -0.02em; line-height: 1; }
+.side-title { display: block; font-size: 1.45rem; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
 .side-sub { display: block; margin-top: 0.45rem; font-size: 0.82rem; color: var(--muted); }
 
 .side-head {
@@ -190,22 +190,35 @@ kbd {
 .page-inner > p { margin: 1rem 0; }
 
 h1, h2, h3 { color: var(--ink); }
-.page h2 { margin: 3.2rem 0 1rem; font-size: 1.6rem; font-weight: 750; font-stretch: 112%; letter-spacing: -0.01em; line-height: 1.15; }
-.page h3 { margin: 0 0 0.5rem; font-size: 1.12rem; font-weight: 700; font-stretch: 106%; line-height: 1.3; }
+.page h2 { margin: 3.2rem 0 1rem; font-size: 1.6rem; font-weight: 750; letter-spacing: -0.01em; line-height: 1.15; }
+.page h3 { margin: 0 0 0.5rem; font-size: 1.12rem; font-weight: 700; line-height: 1.3; }
 
 .sec-head { margin-bottom: 2.2rem; }
 .sec-group { display: flex; gap: 0.7rem; margin: 0 0 0.7rem; font-size: 0.95rem; font-weight: 650; color: var(--accent); }
 .sec-group span { font-weight: 400; color: var(--muted); }
 .sec-head h1 {
-  margin: 0; font-size: clamp(2.2rem, 3.6vw, 3.4rem); font-weight: 800; font-stretch: 118%;
-  letter-spacing: -0.02em; line-height: 1.04; max-width: 22ch;
+  margin: 0; font-size: clamp(2.2rem, 3.6vw, 3.4rem); font-weight: 800;
+  letter-spacing: -0.015em; line-height: 1.08; max-width: 24ch;
 }
-.sec-num { font-weight: 300; color: var(--accent); }
+.sec-num { font-weight: 400; color: var(--accent); }
 .sec-sub { margin: 0.8rem 0 0; font-size: 1.28rem; line-height: 1.45; color: var(--ink-2); max-width: 36rem; }
 .lede { font-size: 1.2rem; line-height: 1.55; max-width: 40rem; }
 .page-inner > p.lede { margin: 0 0 2rem; }
 .caption { font-size: 0.92rem; color: var(--muted); }
 .page-inner > p.caption { margin-top: -0.4rem; max-width: 42rem; }
+
+/* Numbered points: the default way text is written on every page. Native
+   markers, so a list that continues after a widget can use start="…". */
+ol.points { margin: 1rem 0; padding-left: 1.75rem; }
+ol.points > li { margin: 0.6rem 0; padding-left: 0.35rem; }
+ol.points > li::marker { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.page-inner > ol.points { max-width: 40rem; }
+.page-inner > ol.lede { max-width: 42rem; margin: 0 0 2rem; }
+ol.points.lede > li { margin: 0.45rem 0; }
+.note ol.points { margin: 0; padding-left: 1.5rem; }
+.note.rule ol.points > li::marker { color: var(--ink-2); }
+.split ol.points { margin: 0; padding-left: 1.5rem; color: var(--ink-2); }
+.split ol.points > li { margin: 0.4rem 0; }
 
 ul.plain { padding-left: 1.2rem; }
 ul.plain li { margin: 0.75rem 0; padding-left: 0.2rem; }
@@ -223,7 +236,7 @@ ol.steps li::before {
 
 .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.5rem 2.2rem; margin: 2.4rem 0; }
 .fig { padding-top: 0.9rem; border-top: 1px solid var(--rule-2); }
-.fig b { display: block; margin-bottom: 0.35rem; font-size: 1.9rem; font-weight: 700; font-stretch: 112%; line-height: 1.1; letter-spacing: -0.01em; }
+.fig b { display: block; margin-bottom: 0.35rem; font-size: 1.9rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
 .fig span { display: block; font-size: 0.95rem; color: var(--ink-2); }
 
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4rem; margin: 2.2rem 0; max-width: 56rem; }
@@ -233,7 +246,7 @@ ol.steps li::before {
 dl.terms { margin: 2rem 0; max-width: 56rem; }
 dl.terms > div { display: grid; grid-template-columns: 11rem 1fr; gap: 1.5rem; padding: 1rem 0; border-top: 1px solid var(--rule); }
 dl.terms > div:last-child { border-bottom: 1px solid var(--rule); }
-dl.terms dt { font-weight: 700; font-stretch: 108%; }
+dl.terms dt { font-weight: 700; }
 dl.terms dd { margin: 0; color: var(--ink-2); }
 
 /* callouts */
@@ -271,6 +284,9 @@ table.use code { white-space: nowrap; }
 .term .o { color: var(--term-out); }
 .term .c { color: var(--term-dim); }
 .term-note { margin: 0.95rem 0 0; padding-top: 0.85rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.95rem; }
+ol.term-note { padding-left: 1.5rem; }
+ol.term-note > li { margin: 0.3rem 0; }
+ol.term-note > li::marker { color: var(--term-prompt); }
 .term-note code { background: rgba(255, 255, 255, 0.09); color: #fff; }
 .copy {
   position: absolute; top: 0.7rem; right: 0.8rem; padding: 0.15rem 0.6rem;
@@ -283,15 +299,15 @@ table.use code { white-space: nowrap; }
 
 .stack { margin: 2.4rem 0 1rem; border: 1px solid var(--rule-2); border-radius: 14px; overflow: hidden; }
 .stack-layer { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 1rem; padding: 0.95rem 1.4rem; border-bottom: 1px solid var(--rule-2); }
-.stack-layer b { font-size: 1.05rem; font-weight: 700; font-stretch: 112%; }
+.stack-layer b { font-size: 1.05rem; font-weight: 700; }
 .stack-layer span { font-size: 0.95rem; color: var(--ink-2); }
 .stack-layer.os { background: var(--accent-soft); }
 .stack-hw { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--rule-2); }
 .hw { display: flex; flex-direction: column; gap: 0.1rem; padding: 1.3rem 1.4rem 1.3rem; background: var(--paper); color: var(--ink); text-decoration: none; }
 .hw:hover { background: var(--sheet); }
-.hw b { font-size: 1.4rem; font-weight: 800; font-stretch: 115%; }
+.hw b { font-size: 1.4rem; font-weight: 800; }
 .hw-what { font-size: 0.95rem; color: var(--ink-2); }
-.hw-time { margin-top: 1.3rem; font-size: 1.65rem; font-weight: 700; font-stretch: 110%; line-height: 1.1; }
+.hw-time { margin-top: 1.3rem; font-size: 1.65rem; font-weight: 700; line-height: 1.1; }
 .hw-unit { font-size: 0.84rem; color: var(--muted); }
 .hw::after {                       /* how far from the CPU, on a log scale */
   content: ""; display: block; height: 4px; width: var(--m, 0%); margin-top: 0.9rem;
@@ -377,7 +393,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 
 /* utilisation chart */
 .ut-read { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.8rem; margin-bottom: 0.6rem; }
-.ut-big { font-size: 2.2rem; font-weight: 800; font-stretch: 112%; line-height: 1.1; }
+.ut-big { font-size: 2.2rem; font-weight: 800; line-height: 1.1; }
 .ut-say { color: var(--ink-2); }
 .chart svg { display: block; max-width: 100%; font-family: var(--sans); }
 .chart .grid { stroke: var(--rule); stroke-width: 1; }
@@ -417,7 +433,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .tile { padding: 1rem 1.2rem 1rem 0; }
 .tile + .tile { padding-left: 1.2rem; border-left: 1px solid var(--rule); }
 .tile span { display: block; font-size: 0.86rem; color: var(--ink-2); }
-.tile b { display: block; font-size: 1.95rem; font-weight: 750; font-stretch: 110%; line-height: 1.15; }
+.tile b { display: block; font-size: 1.95rem; font-weight: 750; line-height: 1.15; }
 .tile small { display: block; font-size: 0.8rem; color: var(--muted); }
 .tile.key b { color: var(--accent); }
 .calc-math { margin: 1.2rem 0 0; padding: 0.85rem 1.05rem; border-radius: 10px; background: var(--paper); font-size: 0.95rem; color: var(--ink-2); }
@@ -435,12 +451,12 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 /* ---------- home ---------- */
 
 .hero { padding: 1.5rem 0 4rem; }
-.hero-title { margin: 0; font-size: clamp(3.4rem, 10vw, 9rem); font-weight: 900; font-stretch: 125%; line-height: 0.9; letter-spacing: -0.035em; }
+.hero-title { margin: 0; font-size: clamp(3.4rem, 10vw, 9rem); font-weight: 900; line-height: 0.92; letter-spacing: -0.03em; }
 .hero-sub { margin: 1.5rem 0 0; max-width: 34rem; text-wrap: balance; font-size: clamp(1.15rem, 1.8vw, 1.6rem); line-height: 1.4; color: var(--ink-2); }
 
 .us { margin: 3.2rem 0 2.6rem; }
 .us-count { display: flex; align-items: baseline; gap: 0.8rem; }
-.us-num { font-size: clamp(2.6rem, 6vw, 5rem); font-weight: 800; font-stretch: 110%; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.us-num { font-size: clamp(2.6rem, 6vw, 5rem); font-weight: 800; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
 .us-unit { font-size: 1.3rem; color: var(--ink-2); }
 .us-rail { position: relative; height: 9rem; margin: 2rem 0.5rem 0; }
 .us-line { position: absolute; left: 0; right: 0; top: 1.7rem; height: 4px; border-radius: 2px; background: var(--rule); }
@@ -487,7 +503,8 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .roadmap { padding: 3rem 0 1rem; border-top: 1px solid var(--rule); }
 .roadmap-head { display: grid; grid-template-columns: 1fr 1.7fr; gap: 1rem 2.5rem; align-items: baseline; }
 .roadmap-head h2 { margin: 0; font-size: 2rem; }
-.roadmap-head p { margin: 0; max-width: 38rem; color: var(--ink-2); }
+.roadmap-head ol { margin: 0; max-width: 38rem; color: var(--ink-2); }
+.roadmap-head ol > li { margin: 0.3rem 0; }
 .rm-list { list-style: none; margin: 2rem 0 0; padding: 0; }
 .rm-list a {
   display: grid; grid-template-columns: 6.5rem 1fr auto; gap: 1.5rem; align-items: center;
@@ -495,10 +512,10 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 }
 .rm-list li:last-child a { border-bottom: 1px solid var(--rule); }
 .rm-list a:hover { background: var(--paper); }
-.rm-users b { display: block; font-size: 1.6rem; font-weight: 800; font-stretch: 115%; line-height: 1; color: var(--accent); }
+.rm-users b { display: block; font-size: 1.6rem; font-weight: 800; line-height: 1; color: var(--accent); }
 .rm-list .planned .rm-users b { color: var(--ink-2); }
 .rm-users small { font-size: 0.78rem; color: var(--muted); }
-.rm-title { display: block; font-size: 1.25rem; font-weight: 700; font-stretch: 108%; line-height: 1.3; }
+.rm-title { display: block; font-size: 1.25rem; font-weight: 700; line-height: 1.3; }
 .rm-n { margin-right: 0.5rem; font-weight: 500; color: var(--muted); }
 .rm-q { display: block; margin-top: 0.15rem; color: var(--ink-2); }
 .rm-status { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
@@ -509,7 +526,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .cover-head { padding: 0.5rem 0 1.5rem; }
 .cover-k { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0 0 0.8rem; font-weight: 650; color: var(--accent); }
 .cover-k span { font-weight: 400; color: var(--muted); }
-.cover-title { margin: 0; font-size: clamp(3rem, 7vw, 6.4rem); font-weight: 900; font-stretch: 125%; line-height: 0.95; letter-spacing: -0.03em; }
+.cover-title { margin: 0; font-size: clamp(3rem, 7vw, 6.4rem); font-weight: 900; line-height: 0.95; letter-spacing: -0.03em; }
 .cover-q { margin: 1rem 0 0; max-width: 32rem; font-size: clamp(1.2rem, 2vw, 1.7rem); line-height: 1.35; color: var(--ink-2); }
 .page-cover .page-inner > p.lede { margin-top: 1.5rem; }
 
@@ -525,16 +542,15 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .sec-list { list-style: none; margin: 1rem 0; padding: 0; max-width: 52rem; border-top: 1px solid var(--rule); }
 .sec-list a { display: grid; grid-template-columns: 3.4rem 1fr; gap: 1rem; padding: 0.95rem 0.6rem; border-bottom: 1px solid var(--rule); color: inherit; text-decoration: none; }
 .sec-list a:hover { background: var(--paper); }
-.sec-n { font-size: 1.1rem; font-weight: 700; font-stretch: 115%; color: var(--accent); }
+.sec-n { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
 .sec-list b { display: block; font-size: 1.08rem; }
 .sec-list a span span { display: block; font-size: 0.94rem; color: var(--ink-2); }
 .cover-time { font-size: 0.95rem; color: var(--muted); }
 
 .planned-box { margin: 2rem 0; padding: 1.3rem 1.6rem; max-width: 44rem; border: 1px solid var(--rule-2); border-radius: 14px; }
 .page .planned-box h2 { margin: 0 0 0.6rem; font-size: 1.2rem; }
-.planned-box ul { margin: 0; padding-left: 1.2rem; }
+.planned-box ol { margin: 0; }
 .planned-box li { margin: 0.4rem 0; }
-.planned-box li::marker { color: var(--accent); }
 .planned-box p { margin: 1rem 0 0; font-size: 0.9rem; color: var(--muted); }
 
 /* ---------- previous / next ---------- */

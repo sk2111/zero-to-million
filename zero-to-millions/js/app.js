@@ -81,9 +81,11 @@
         '<button type="button" class="btn" data-scroll="roadmap">See all chapters</button></div>' +
       '</section>' +
       '<section class="roadmap" id="roadmap">' +
-        '<div class="roadmap-head"><h2>The chapters</h2>' +
-        '<p>Each chapter starts where the last one stopped. We add a new piece to the system only when the current design runs out of room, ' +
-        'and we look at the numbers that tell us it has. ' + ready + ' of ' + chapters.length + ' chapters are written so far.</p></div>' +
+        '<div class="roadmap-head"><h2>The chapters</h2><ol class="points">' +
+        '<li>Each chapter starts where the last one stopped.</li>' +
+        '<li>We add a new piece to the system only when the current design runs out of room.</li>' +
+        '<li>Each time, we look at the numbers that tell us it has.</li>' +
+        '<li>' + ready + ' of ' + chapters.length + ' chapters are written so far.</li></ol></div>' +
         '<ol class="rm-list">' + chapters.map(function (ch) {
           return '<li class="' + (ch.status === 'ready' ? 'ready' : 'planned') + '"><a href="#/' + ch.n + '">' +
             '<span class="rm-users"><b>' + ZTM.usersLabel(ch.users) + '</b><small>' + (ch.users === null ? 'at every stage' : 'users') + '</small></span>' +
@@ -110,8 +112,8 @@
       html += '<p class="cover-time">About ' + ch.minutes + ' minutes, with a few things to try in the terminal and on the page.</p>';
     } else {
       html += '<p class="lede">' + esc(ch.summary) + '</p>' +
-        '<div class="planned-box"><h2>What this chapter will cover</h2><ul>' +
-        ch.topics.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+        '<div class="planned-box"><h2>What this chapter will cover</h2><ol class="points">' +
+        ch.topics.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' +
         '<p>This chapter is an outline for now. The topics and order may change once we write it.</p></div>';
     }
     return html;

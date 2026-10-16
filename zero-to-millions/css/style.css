@@ -457,6 +457,25 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .ev-thread p { margin: 0; font-size: 0.92rem; line-height: 1.45; }
 .ev-thread code { background: rgba(255, 255, 255, 0.12); color: inherit; }
 
+/* ---------- Measuring: the percentile strip ---------- */
+
+.pct-wrap { position: relative; padding-top: 3.4rem; }
+.pct-strip { display: flex; gap: 1px; height: 2.2rem; }
+.pct-strip i { flex: 1 1 0; min-width: 0; background: var(--c-disk); opacity: 0.55; }
+.pct-strip i.slow { background: var(--c-cpu); opacity: 1; }
+.pct-strip i.m50, .pct-strip i.m99 { opacity: 1; box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); position: relative; z-index: 1; }
+.pct-strip i:last-child { border-radius: 0 4px 4px 0; }
+.sw.pfast { background: var(--c-disk); opacity: 0.55; }
+.sw.pslow { background: var(--c-cpu); }
+.pct-label { position: absolute; top: 0; font-size: 0.86rem; white-space: nowrap; color: var(--ink-2); }
+.pct-label b { color: var(--ink); }
+.pct-label::after { content: ""; position: absolute; top: 1.6rem; width: 1px; height: 1.4rem; background: var(--ink-2); }
+.pct-label.l50 { left: 49.5%; transform: translateX(-50%); }
+.pct-label.l50::after { left: 50%; }
+.pct-label.l99 { right: 1.5%; text-align: right; }
+.pct-label.l99::after { right: 0; }
+.pct-axis { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.78rem; color: var(--muted); }
+
 /* ---------- 1.1: the server stack ---------- */
 
 .stack { margin: 2.4rem 0 1rem; border: 1px solid var(--rule-2); border-radius: 14px; overflow: hidden; }

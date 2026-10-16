@@ -249,48 +249,40 @@ window.ZTM = window.ZTM || {};
     var LO = Math.log10(0.3), HI = Math.log10(3e8);
     function pos(ns) { return (Math.log10(ns) - LO) / (HI - LO) * 100; }
     var ticks = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8];
-    var humanTicks = ['1 s', '10 s', '2 min', '17 min', '3 h', '1 day', '12 days', '4 mo', '3 yr'];
-    var mode = 'real';
-
     var grid = ticks.map(function (t) { return '<i class="gl" style="left:' + pos(t) + '%"></i>'; }).join('');
-    el.innerHTML = '<div class="w-controls"></div>' +
-      legend([['cpu', 'CPU and memory'], ['disk', 'Disk'], ['net', 'Network']]) +
+    el.innerHTML = legend([['cpu', 'CPU and memory'], ['disk', 'Disk'], ['net', 'Network']]) +
       '<div class="ladder">' +
         '<div class="ld-row ld-axis" aria-hidden="true"><span></span><span class="ld-track">' +
-          ticks.map(function (t, i) { return '<span class="tick" style="left:' + pos(t) + '%" data-i="' + i + '"></span>'; }).join('') +
+          ticks.map(function (t) { return '<span class="tick" style="left:' + pos(t) + '%">' + fmtNs(t) + '</span>'; }).join('') +
         '</span><span></span></div>' +
         rows.map(function (r) {
-          return '<div class="ld-row" tabindex="0" data-ns="' + r[2] + '" data-tip="">' +
+          return '<div class="ld-row" tabindex="0" aria-label="' + esc(r[1]) + ': about ' + fmtNs(r[2]) + '" data-tip="<b>' + esc(r[1]) +
+            '</b><br>~' + fmtNs(r[2]) + '<br><span class=&quot;tip-note&quot;>' + esc(r[3]) + '</span>">' +
             '<span class="ld-label">' + esc(r[1]) + '</span>' +
             '<span class="ld-track">' + grid + '<span class="ld-bar ' + r[0] + '" style="width:' + pos(r[2]) + '%"></span></span>' +
-            '<span class="ld-value"></span></div>';
+            '<span class="ld-value">~' + fmtNs(r[2]) + '</span></div>';
         }).join('') +
-      '</div><p class="readout" aria-live="polite"></p>';
-    var out = el.querySelector('.readout');
-    el.querySelector('.w-controls').appendChild(segmented('Time scale', [
-      { value: 'real', label: 'Real time' }, { value: 'human', label: 'If 1 ns were 1 second' }
-    ], mode, function (v) { mode = v; draw(); }));
-
-    function draw() {
-      var human = mode === 'human';
-      el.querySelectorAll('.tick').forEach(function (t) {
-        var i = +t.dataset.i;
-        t.textContent = human ? humanTicks[i] : fmtNs(ticks[i]);
-      });
-      el.querySelectorAll('.ld-row[data-ns]').forEach(function (row, i) {
-        var ns = +row.dataset.ns, r = rows[i];
-        var v = human ? fmtHuman(ns) : fmtNs(ns);
-        row.querySelector('.ld-value').textContent = (human ? '' : '~') + v;
-        row.setAttribute('data-tip', '<b>' + esc(r[1]) + '</b><br>~' + fmtNs(ns) + ', or ' + fmtHuman(ns) + ' on the human scale<br><span class="tip-note">' + esc(r[3]) + '</span>');
-        row.setAttribute('aria-label', r[1] + ': about ' + fmtNs(ns) + '; ' + fmtHuman(ns) + ' on the human scale');
-      });
-      out.innerHTML = human
-        ? 'If reading from the L1 cache took one second, reading from RAM would take <strong>' + fmtHuman(100) + '</strong>, one SSD read <strong>' +
-          fmtHuman(1e5) + '</strong>, and a round trip to the US <strong>' + fmtHuman(2e8) + '</strong>.'
-        : 'Every bar is on a log scale: each gridline is ten times the one before. From the top row to the bottom is a factor of 200 million.';
-    }
+      '</div>';
     bindTips(el);
-    draw();
+  };
+
+  /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */
+
+  W['percentile-strip'] = function (el) {
+    var cells = '';
+    for (var i = 1; i <= 100; i++) {
+      var slow = i > 98, mark = i === 50 ? ' m50' : i === 99 ? ' m99' : '';
+      cells += '<i class="' + (slow ? 'slow' : 'fast') + mark + '" tabindex="' + (mark ? 0 : -1) + '" data-tip="<b>Request ' + i + '</b><br>' + (slow ? '3,000 ms' : '50 ms') + '"></i>';
+    }
+    el.innerHTML =
+      legend([['pfast', '50 ms'], ['pslow', '3,000 ms']]) +
+      '<div class="pct-wrap">' +
+        '<span class="pct-label l50">Request 50 is the p50: <b>50 ms</b></span>' +
+        '<span class="pct-label l99">Request 99 is the p99: <b>3,000 ms</b></span>' +
+        '<div class="pct-strip" role="img" aria-label="100 requests sorted from fastest to slowest: 98 take 50 ms and the last 2 take 3,000 ms. Request 50, the p50, is 50 ms; request 99, the p99, is 3,000 ms.">' + cells + '</div>' +
+        '<div class="pct-axis"><span>Fastest</span><span>100 requests, sorted</span><span>Slowest</span></div>' +
+      '</div>';
+    bindTips(el);
   };
 
   /* ---------- 1.8  Fan-out and the p99 ---------- */

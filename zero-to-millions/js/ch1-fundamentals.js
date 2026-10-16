@@ -1082,24 +1082,11 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <li>Your code builds the response, and the kernel sends it back out as packets. <span class="uses">CPU, network</span></li>
         </ol>
 
-        <h2>If a server were a restaurant kitchen</h2>
-        <table class="data">
-          <thead><tr><th>Part</th><th>In the kitchen</th><th>Runs out when</th></tr></thead>
-          <tbody>
-            <tr><td>CPU</td><td>The cooks</td><td>More dishes need cooking than there are cooks</td></tr>
-            <tr><td>Threads</td><td>The orders being worked on</td><td>Too many orders are open at once and cooks keep switching between them</td></tr>
-            <tr><td>Memory</td><td>Counter space</td><td>Too many dishes are in progress at once</td></tr>
-            <tr><td>Disk</td><td>The storeroom</td><td>Every dish needs a walk to the storeroom</td></tr>
-            <tr><td>Network</td><td>The serving hatch and waiters</td><td>Orders can’t get in, or food can’t get out</td></tr>
-            <tr><td>Operating system</td><td>The head chef handing out work</td><td>Its house rules (limits) start turning orders away</td></tr>
-          </tbody>
-        </table>
-
         <aside class="note rule">
           <h3>The one idea of this chapter</h3>
           <ol class="points">
             <li>A system is only as fast as its busiest part.</li>
-            <li>Hiring more cooks does nothing when the problem is counter space.</li>
+            <li>Adding cores does nothing when the server is short of memory, and more RAM does nothing when the disk is the limit.</li>
             <li>Before you scale anything, find out which part is full.</li>
           </ol>
         </aside>`
@@ -1115,12 +1102,9 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
         <ol class="points lede">
           <li>You don’t need exact values; you need the orders of magnitude.</li>
           <li>Memory is nanoseconds, SSDs are microseconds, networks and spinning disks are milliseconds.</li>
-          <li>Switch to the human scale to feel the gaps.</li>
         </ol>
 
         <div class="widget" data-widget="latency-ladder"></div>
-        <p class="caption">After the classic table by Jeff Dean and Peter Norvig, rounded for current hardware. Your
-        machines will differ by 2–3 times; the gaps between rows will not.</p>
 
         <h2>What this means in practice</h2>
         <ol class="points">
@@ -1148,13 +1132,15 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
 
         <h2>Averages hide the slow requests</h2>
         <ol class="points">
-          <li>Take 100 requests: 98 take 50 ms and 2 take 3 seconds.</li>
-          <li>The average is 109 ms, which looks fine.</li>
-          <li>The median (p50) is 50 ms, and the p99 is 3 seconds.</li>
-          <li>Percentiles show the slow tail, and the slow tail is where your unhappy users are.</li>
-          <li>It gets worse when one page calls many services: the page is as slow as its slowest call.</li>
+          <li>Take 100 requests: 98 take 50 ms and 2 take 3 seconds (3,000 ms).</li>
+          <li><strong>Average:</strong> add them all up and divide by 100. (98 × 50 + 2 × 3,000) ÷ 100 = (4,900 + 6,000) ÷ 100 = <strong>109 ms</strong>. That looks fine.</li>
+          <li><strong>Percentiles:</strong> sort the 100 times from fastest to slowest. The <strong>p50</strong> (median) is the one in the middle, request 50: <strong>50 ms</strong>.</li>
+          <li>The <strong>p99</strong> is request 99: 99 out of 100 requests are this fast or faster. Here it’s one of the two slow ones: <strong>3,000 ms</strong>.</li>
         </ol>
-        <div class="widget" data-widget="fan-out"></div>
+        <div class="widget" data-widget="percentile-strip"></div>
+        <ol class="points" start="5">
+          <li>The average says 109 ms, but 2 users in every 100 waited 3 seconds. Percentiles show that slow tail, and the slow tail is where your unhappy users are.</li>
+        </ol>
 
         <h2>Why 80% busy is already full</h2>
         <ol class="points">

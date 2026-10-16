@@ -154,7 +154,9 @@
     pageEl.innerHTML = '<div class="page-inner">' + body + (p.kind === 'home' ? '' : pagerNav(i)) + '</div>';
     pageEl.querySelectorAll('[data-widget]').forEach(function (el) {
       var f = ZTM.widgets[el.getAttribute('data-widget')];
-      if (f) f(el);
+      try { if (f) f(el); } catch (e) {   /* one broken chart must not stop the rest of the page */
+        if (window.console) console.error('Widget ' + el.getAttribute('data-widget') + ' failed:', e);
+      }
     });
     addCopyButtons(pageEl);
     pageEl.querySelectorAll('table.data').forEach(function (t) {   /* wide tables scroll inside, never the page */

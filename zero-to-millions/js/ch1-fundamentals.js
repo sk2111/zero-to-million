@@ -21,7 +21,7 @@ ZTM.content[1] = {
       <h2>By the end of this chapter you can</h2>
       <ul>
         <li>Explain what clock speed, cores, processes and threads mean for how fast your code can run.</li>
-        <li>Read <code>top</code>, <code>htop</code>, <code>free</code>, <code>iostat</code> and <code>ss</code> and say which resource is the bottleneck.</li>
+        <li>Read <code>top</code>, <code>htop</code>, <code>free</code> and <code>iostat</code> and say which resource is the bottleneck.</li>
         <li>Explain why a server at 90% CPU feels far slower than one at 50%.</li>
         <li>Estimate on paper how many users one server can handle.</li>
       </ul>
@@ -706,15 +706,6 @@ CPU(s):                  8
           <li>Finding data near the top costs a nanosecond; going all the way down costs a hundred.</li>
         </ol>
 
-        <h2>Locality: why the same work can run ten times faster</h2>
-        <ol class="points">
-          <li>When the CPU reads one byte, it fetches the whole 64-byte line around it.</li>
-          <li>When it sees you walking through memory in order, it fetches the next lines before you ask.</li>
-          <li>So walking an array in order is fast, while chasing pointers around memory (a linked list, a tree of small objects) misses the cache again and again.</li>
-          <li>The same idea returns at every scale: databases read whole 8–16 KB pages, disks prefer sequential reads, and column stores keep each column together.</li>
-          <li>Keep data that is used together, together.</li>
-        </ol>
-
         <h2>Virtual memory</h2>
         <ol class="points">
           <li>Each process sees its own private address space, as if it had the machine to itself.</li>
@@ -742,7 +733,10 @@ CPU(s):                  8
 <span class="o">    PID      VSZ     RSS CMD
    4121 31204420 2614208 java -Xmx2g -jar orders.jar</span></pre>
           <ol class="points term-note">
-            <li>Four cores, each with 48 KB of L1 data cache and 1.25 MB of L2, sharing 54 MB of L3.</li>
+            <li><code>L1d</code> is the L1 cache for <strong>data</strong>, <code>L1i</code> the one for <strong>instructions</strong>: each core keeps the code it’s about to run apart from the values it’s working on, so it can fetch both in the same tick.</li>
+            <li>“Instances” is how many separate caches there are, and the size is the total. 4 instances means one per core, so each core has 48 KiB of L1d, 32 KiB of L1i and 1.25 MiB of L2.</li>
+            <li>L3 has 1 instance: one 54 MiB cache shared by all the cores. On a cloud VM it’s usually the whole chip’s L3, shared with other customers’ VMs on the same machine.</li>
+            <li>KiB and MiB are binary units: 1 KiB is 1,024 bytes.</li>
             <li>A Java process that has reserved 30 GB of address space but is really using 2.5 GB (<code>ps</code> shows KB).</li>
           </ol>
         </figure>
@@ -754,14 +748,7 @@ CPU(s):                  8
             a CDN’s hot set are all ways of keeping the working set in RAM instead of on disk or across the network.</li>
             <li><strong>Memory bandwidth is shared.</strong> Hundreds of GB/s sounds endless, but 64 cores streaming data
             at once can use it all, and then extra cores add nothing.</li>
-            <li><strong>Layout often beats cleverness.</strong> Batching, arrays of plain values instead of objects, and
-            fewer pointer hops often speed up hot code more than a better algorithm on paper.</li>
           </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>Fast code touches little memory, and touches it in order.</p>
         </aside>`
     },
 
@@ -773,9 +760,8 @@ CPU(s):                  8
       sub: 'Working sets, the page cache, swapping, the OOM killer and garbage collection.',
       html: `
         <ol class="points lede">
-          <li>Memory almost never runs out gracefully.</li>
-          <li>A CPU that runs out makes things slower; memory that runs out makes things stop.</li>
-          <li>So it’s worth knowing exactly where it goes.</li>
+          <li>Memory behaves differently from the CPU. When the CPU runs out, everything gets slower. When memory runs out, things stop.</li>
+          <li>This page answers three questions: where does the memory go, how much is really free, and what happens when it runs out.</li>
         </ol>
 
         <h2>Where the memory goes</h2>
@@ -784,11 +770,27 @@ CPU(s):                  8
           plus a few hundred MB more.</li>
           <li><strong>The database.</strong> Its cache of table and index pages (PostgreSQL’s <code>shared_buffers</code>,
           MySQL’s InnoDB buffer pool), plus memory for every connection and every sort.</li>
-          <li><strong>The OS page cache.</strong> Linux fills spare RAM with recently read files. That’s a good thing, and
-          it’s why a healthy server shows almost no “free” memory.</li>
+          <li><strong>The OS page cache.</strong> Linux fills spare RAM with recently read files, so reading them again is
+          fast. That’s a good thing, and it’s why a healthy server shows almost no “free” memory.</li>
           <li><strong>The kernel.</strong> Socket buffers, connection tracking, its own bookkeeping: small per connection,
           large with a million of them.</li>
         </ol>
+
+        <h2>How much is really free?</h2>
+        <p><code>free -h</code> answers it. The number to read is <code>available</code>, not <code>free</code>:</p>
+        <figure class="term">
+          <figcaption>Try it on a Linux server</figcaption>
+<pre><span class="p">$</span> free -h
+<span class="o">               total        used        free      shared  buff/cache   available
+Mem:           7.7Gi       3.1Gi       312Mi        41Mi       4.3Gi       4.3Gi
+Swap:          2.0Gi          0B       2.0Gi</span></pre>
+          <ol class="points term-note">
+            <li><code>total</code> is 7.7 GB of RAM, and <code>used</code> shows programs are using 3.1 GB of it.</li>
+            <li>Only 312 MB is <code>free</code>, and that’s fine: 4.3 GB is page cache (<code>buff/cache</code>), which Linux hands back the moment a program needs it.</li>
+            <li><code>available</code> is the real answer: about 4.3 GB can still be given to programs.</li>
+            <li><code>shared</code> is memory several processes use together; it’s usually small. <code>Swap</code> 0B used means nothing has been pushed out to disk.</li>
+          </ol>
+        </figure>
 
         <h2>The working set</h2>
         <ol class="points">
@@ -796,41 +798,38 @@ CPU(s):                  8
           <li>It’s usually a small fraction of all your data.</li>
           <li>If it fits in RAM, almost every read is a memory read.</li>
           <li>If it doesn’t, reads start falling through to disk, each about a thousand times slower, and latency goes over a cliff rather than rising gently.</li>
-          <li>That’s why a database that was fast for a year can turn slow one Tuesday: the data grew past the RAM, not the traffic.</li>
+          <li>That’s why a database that was fast for a year can suddenly turn slow: the data grew past the RAM, not the traffic.</li>
         </ol>
 
+        <h2>What happens when it runs out</h2>
+        <p>When programs need more memory than the RAM has, Linux tries three things, in this order:</p>
+        <ol class="steps">
+          <li><strong>It shrinks the page cache.</strong> Files that were cached in RAM have to be read from disk again, so things get slower, but nothing breaks yet.</li>
+          <li><strong>It swaps.</strong> If the server has swap space, Linux moves memory that hasn’t been used lately out to disk. Touching it again is about 1,000 times slower, and the server seems to freeze without crashing.</li>
+          <li><strong>It kills a process.</strong> With nothing left to free, the kernel’s <strong>OOM killer</strong> (out of memory) picks a process, usually the biggest, and kills it. That is often your database.</li>
+        </ol>
+        <p>In a container the same thing happens at the container’s memory limit: the process is killed with exit code 137 (<code>OOMKilled</code>), often with nothing in the app’s own logs.</p>
+
         <figure class="term">
-          <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> free -h
-<span class="o">               total        used        free      shared  buff/cache   available
-Mem:           7.7Gi       3.1Gi       312Mi        41Mi       4.3Gi       4.3Gi
-Swap:          2.0Gi          0B       2.0Gi</span>
-<span class="p">$</span> vmstat 1        <span class="c"># si / so: swapped in and out per second</span>
-<span class="o"> r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
- 2  0      0 319488  82112 4413920    0    0     4    96 2210 4105 22  4 74  0  0</span>
+          <figcaption>How each stage shows up</figcaption>
+<pre><span class="p">$</span> vmstat 1                 <span class="c"># on a server that's running out of memory</span>
+<span class="o">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 1  6 1843200  51200   2048  98304 2840 3912  3100  4120 2210 4105  9 14 22 55  0</span>
 <span class="p">$</span> sudo dmesg -T | grep -i "killed process"
-<span class="o">[Tue Oct 13 02:47:13 2026] Out of memory: Killed process 3112 (postgres) total-vm:8453612kB, anon-rss:6120448kB</span></pre>
+<span class="o wrap">[Tue Oct 13 02:47:13 2026] Out of memory: Killed process 3112 (postgres) total-vm:8453612kB, anon-rss:6120448kB</span></pre>
           <ol class="points term-note">
-            <li>Read <code>available</code>, not <code>free</code>. The 4.3 GB of <code>buff/cache</code> is the page cache, and Linux hands it back the moment an app needs it.</li>
-            <li>No swapping right now: <code>si</code> and <code>so</code> are 0.</li>
-            <li>But at 2:47 on Tuesday, the kernel killed PostgreSQL to free 6 GB.</li>
+            <li>Stage 1: <code>cache</code> has shrunk to 96 MB (the healthy server above had 4.3 GB), so files are being read from disk again.</li>
+            <li>Stage 2: <code>swpd</code> shows 1.8 GB already swapped out, and <code>si</code> and <code>so</code> (KB swapped in and out per second) are in the thousands. The CPU spends 55% of its time waiting for the disk (<code>wa</code>).</li>
+            <li>Stage 3: the <code>dmesg</code> line is the kernel’s log of an OOM kill. It killed process 3112, PostgreSQL, which was using about 6 GB (<code>anon-rss</code>).</li>
           </ol>
         </figure>
 
-        <aside class="note runs-out">
-          <h3>When it runs out</h3>
-          <ol class="points">
-            <li><strong>Swapping.</strong> The OS moves memory pages to disk. Every access to them becomes about 1,000
-            times slower, and the server seems to freeze without crashing.</li>
-            <li><strong>The OOM killer.</strong> With nothing left, Linux kills a process, usually the biggest, which is
-            often your database. In a container the limit hits first: the process is killed with exit code 137
-            (<code>OOMKilled</code>), often with nothing in the app’s own logs.</li>
-            <li><strong>Garbage-collection pressure.</strong> Java, Go, .NET and Node free memory in the background, but a
-            heap that’s nearly full collects constantly. p99 latency suffers long before anything crashes.</li>
-            <li><strong>Leaks.</strong> Memory grows a little every hour until one of the above happens. A restart
-            “fixes” it, which is why leaks survive for so long.</li>
-          </ol>
-        </aside>
+        <h3 class="read-head">Two problems that build up slowly</h3>
+        <ol class="points">
+          <li><strong>Leaks.</strong> Memory grows a little every hour until the stages above begin. A restart “fixes” it, which is why leaks survive for so long. Watch for memory that only ever goes up.</li>
+          <li><strong>Garbage-collection pressure.</strong> Java, Go, .NET and Node free memory in the background, but a heap that’s nearly full collects constantly. p99 latency suffers long before anything crashes.</li>
+        </ol>
 
         <aside class="note design">
           <h3>For system design</h3>
@@ -840,9 +839,12 @@ Swap:          2.0Gi          0B       2.0Gi</span>
             <li><strong>Pick the instance type by what runs out.</strong> Cloud families mostly differ in memory per vCPU:
             about 2 GB (compute-optimised, AWS c), 4 GB (general purpose, m) and 8 GB (memory-optimised, r). Caches and
             databases usually want the last; stateless APIs the first two.</li>
-            <li><strong>Tell the runtime about container limits.</strong> By default a JVM in a container gives its heap
-            only 25% of the container’s memory (<code>MaxRAMPercentage</code>). Set it on purpose, and leave room outside
-            the heap for threads, buffers and metaspace.</li>
+            <li><strong>Decide whether you want swap.</strong> Swap turns a memory shortage into a slow, frozen server
+            instead of a crash. Many teams turn it off on production servers so the problem fails fast and visibly, and
+            gets fixed.</li>
+            <li><strong>Protect the process that matters most.</strong> You can tell the OOM killer to spare a process:
+            <code>OOMScoreAdjust=-1000</code> in its systemd unit, for example for the database, so a runaway worker is
+            killed instead.</li>
             <li><strong>Caching is trading memory for everything else.</strong> Every cache spends RAM to save CPU, disk
             or network. Chapter 5 builds on this.</li>
           </ol>
@@ -850,7 +852,7 @@ Swap:          2.0Gi          0B       2.0Gi</span>
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Memory doesn’t degrade gracefully, so alert at 80–85% of RAM (or of the container limit), not at 100%.</p>
+          <p>Watch <code>available</code>, not <code>free</code>, and alert when it drops below about 15–20% of RAM (or of the container limit). By the time it reaches zero, the OOM killer is already choosing a victim.</p>
         </aside>`
     },
 
@@ -859,7 +861,7 @@ Swap:          2.0Gi          0B       2.0Gi</span>
       group: 'Disk',
       slug: 'disk',
       title: 'How disks work',
-      sub: 'Spinning disks, SSDs, cloud volumes and object storage: where data survives a restart.',
+      sub: 'Spinning disks, SSDs and cloud volumes: where data survives a restart.',
       html: `
         <ol class="points lede">
           <li>Disk is where data lives when the power goes off.</li>
@@ -881,7 +883,6 @@ Swap:          2.0Gi          0B       2.0Gi</span>
           <li>Flash writes in pages of a few KB, can only erase much larger blocks, and wears out after enough rewrites.</li>
           <li>The drive’s controller hides this by constantly moving data around. That’s why SSDs slow down when nearly full, and why heavy writes wear them out.</li>
           <li>An SSD’s big IOPS numbers come from parallelism: many flash chips working at once.</li>
-          <li>A program that reads one block at a time (queue depth 1) gets perhaps 10,000–20,000 reads a second from a drive rated at a million.</li>
         </ol>
 
         <h2>Three numbers describe a disk</h2>
@@ -900,33 +901,56 @@ Swap:          2.0Gi          0B       2.0Gi</span>
           <li>Its default limits are more than 100 times below the NVMe drive in your laptop.</li>
         </ol>
 
-        <h2>Where data can live</h2>
+        <figure class="term">
+          <figcaption>Try it on a Linux server</figcaption>
+<pre><span class="p">$</span> iostat -xz 1        <span class="c"># one line per disk, every second</span>
+<span class="o">Device      r/s     w/s    rkB/s    wkB/s  r_await  w_await  aqu-sz  %util
+nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span></pre>
+          <ol class="points term-note">
+            <li><code>r/s</code> and <code>w/s</code>: reads and writes per second, the disk’s IOPS. 2,610 + 390 = 3,000.</li>
+            <li><code>rkB/s</code> and <code>wkB/s</code>: KB read and written per second, its throughput. About 17 MB/s here.</li>
+            <li><code>r_await</code> and <code>w_await</code>: average milliseconds per read and per write, including time spent waiting in line. Reads take 8 ms.</li>
+            <li><code>aqu-sz</code>: how many operations are waiting in line on average. 23 here.</li>
+            <li><code>%util</code>: how much of the time the disk was busy. On SSDs, trust <code>await</code> more: an SSD can show 100% and still have room.</li>
+            <li>Put together: exactly 3,000 operations a second, a long queue and slow reads. This is a default cloud SSD (AWS gp3) at its IOPS limit.</li>
+          </ol>
+        </figure>
+
+        <h2>Picking a disk for your workload</h2>
+        <ol class="points">
+          <li>Every workload leans on one of the three numbers. Work out which one first: in the cloud you pay for each separately.</li>
+        </ol>
         <table class="data">
-          <thead><tr><th>Tier</th><th class="num">Latency</th><th>Survives</th><th>Typical use</th></tr></thead>
+          <thead><tr><th>Number</th><th>Matters most when</th><th>Typical workloads</th></tr></thead>
           <tbody>
-            <tr><td>RAM</td><td class="num">~100 ns</td><td>Nothing: gone on restart</td><td>Caches, the working set</td></tr>
-            <tr><td>Local NVMe (instance store)</td><td class="num">~0.1 ms</td><td>A reboot, but not the instance stopping or failing</td><td>Scratch space, caches, databases that replicate themselves</td></tr>
-            <tr><td>Network block storage (EBS, Persistent Disk)</td><td class="num">~1 ms</td><td>The server dying; copied within one zone</td><td>Database disks, boot disks</td></tr>
-            <tr><td>Object storage (S3, GCS)</td><td class="num">10–100 ms</td><td>Almost anything: designed for 11 nines</td><td>Images, backups, logs, data lakes</td></tr>
+            <tr><td>Latency</td><td>Operations happen one after another, and someone is waiting for each</td><td>Database commits (every commit waits for a write), cache misses on a busy database</td></tr>
+            <tr><td>IOPS</td><td>There are many small, scattered reads and writes</td><td>Transactional databases (orders, users, payments), key-value stores</td></tr>
+            <tr><td>Throughput</td><td>Big reads and writes happen in order</td><td>Analytics scans, backups and restores, log processing, video</td></tr>
           </tbody>
         </table>
 
-        <figure class="term">
-          <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> lsblk -d -o NAME,ROTA,SIZE,MODEL           <span class="c"># ROTA 1 = spinning disk</span>
-<span class="o">NAME    ROTA  SIZE MODEL
-nvme0n1    0    8G Amazon Elastic Block Store
-nvme1n1    0  500G Amazon Elastic Block Store
-nvme2n1    0  1.7T Amazon EC2 NVMe Instance Storage</span>
-<span class="p">$</span> sudo fio --name=qd1 --filename=/dev/nvme1n1 --readonly --direct=1 --ioengine=libaio --rw=randread --bs=4k --iodepth=1 --runtime=10 --time_based
-<span class="o">  read: IOPS=1702, BW=6808KiB/s (6971kB/s)
-     lat (usec): min=380, max=4210, avg=586.51</span></pre>
-          <ol class="points term-note">
-            <li>One EBS volume, read one block at a time: about 0.6 ms per read.</li>
-            <li>That’s only 1,700 reads a second from a single thread, well under the volume’s 3,000 IOPS.</li>
-            <li>Run it again with <code>--iodepth=32</code> and it hits the limit.</li>
-          </ol>
-        </figure>
+        <h3 class="read-head">What to pick</h3>
+        <table class="data">
+          <thead><tr><th>Workload</th><th>Pick</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>App servers: code, logs, temporary files</td><td>The default cloud SSD (AWS gp3: 3,000 IOPS, 125 MB/s)</td><td>Plenty for this, and cheap</td></tr>
+            <tr><td>Transactional database</td><td>A cloud SSD with extra IOPS bought, or a high-IOPS volume (AWS io2) for the busiest</td><td>Lots of small random reads and writes, and commit latency is felt by users</td></tr>
+            <tr><td>A database that copies itself to other servers (Cassandra, Kafka)</td><td>Local NVMe inside the server (instance store)</td><td>The fastest disk there is. Its data is lost if the server stops, but the copies on other servers cover that.</td></tr>
+            <tr><td>Analytics, backups, big batch jobs</td><td>A cloud SSD with extra throughput, or a throughput-optimised hard disk (AWS st1) for big, rarely read data</td><td>MB per second matters here, not latency</td></tr>
+            <tr><td>Caches and scratch space</td><td>Local NVMe</td><td>Fast, and losing it when the server stops doesn’t matter</td></tr>
+          </tbody>
+        </table>
+
+        <h3 class="read-head">Worked example: reading the numbers above</h3>
+        <ol class="steps">
+          <li><strong>Measure at the busiest hour.</strong> The <code>iostat</code> output above shows 2,610 reads and 390 writes a second, with reads waiting 8 ms because 23 operations are queued.</li>
+          <li><strong>IOPS:</strong> 2,610 + 390 = 3,000 operations a second. Add 50% headroom: 4,500.</li>
+          <li><strong>Throughput:</strong> 10,440 + 6,240 KB/s is about 17 MB/s. With headroom, about 25 MB/s.</li>
+          <li><strong>Compare with the disk.</strong> The default gp3 gives 3,000 IOPS and 125 MB/s. Throughput has plenty of room, but IOPS is exactly at the limit, which is why reads wait 8 ms. Buy about 4,500 IOPS on the same volume; there’s no need for a bigger or different disk.</li>
+        </ol>
+
+        <p>Try your own numbers:</p>
+        <div class="widget" data-widget="disk-picker"></div>
 
         <aside class="note design">
           <h3>For system design</h3>
@@ -936,8 +960,6 @@ nvme2n1    0  1.7T Amazon EC2 NVMe Instance Storage</span>
             disk can vanish.</li>
             <li><strong>Your laptop flatters you.</strong> A query that’s instant on a laptop NVMe can crawl on a default
             cloud volume. Instance size caps disk bandwidth too: a small instance can’t use a fast volume’s full speed.</li>
-            <li><strong>Parallel reads unlock SSDs.</strong> Many outstanding reads (more threads, async I/O, prefetching)
-            can get tens of times more IOPS from the same SSD than one-at-a-time reads.</li>
             <li><strong>Objects for blobs, databases for rows.</strong> Put images, PDFs and backups in object storage and
             keep only their keys in the database.</li>
           </ol>
@@ -946,104 +968,6 @@ nvme2n1    0  1.7T Amazon EC2 NVMe Instance Storage</span>
         <aside class="note rule">
           <h3>Rule of thumb</h3>
           <p>Disk is for keeping data safe; RAM is for speed. Design so the hot path rarely touches disk.</p>
-        </aside>`
-    },
-
-    /* ------------------------------------------------------------------ */
-    {
-      group: 'Disk',
-      slug: 'writing-safely',
-      title: 'Writing data safely',
-      sub: 'What really happens when you save something, and what it costs not to lose it.',
-      html: `
-        <ol class="points lede">
-          <li>When your code writes to a file and the call returns, the data is usually not on the disk yet.</li>
-          <li>The gap between “written” and “safe” is the difference between a fast system and one that loses orders in a power cut.</li>
-        </ol>
-
-        <h2>The write path</h2>
-        <ol class="steps">
-          <li>Your code calls <code>write()</code>. The kernel copies the data into the page cache in RAM and returns at once. Fast, but not safe.</li>
-          <li>Some time later, by default within about 30 seconds, the kernel flushes those changed pages to the disk.</li>
-          <li>If you call <code>fsync()</code>, your code waits until the disk confirms the data is stored. Slow, but safe.</li>
-          <li>Even then, the drive may hold it in its own cache. Enterprise SSDs carry capacitors to finish the write if power fails; cheap ones may not.</li>
-        </ol>
-        <p>A crash between step 1 and step 2 loses the data, even though <code>write()</code> reported success.</p>
-
-        <div class="figures">
-          <div class="fig"><small>fsync, enterprise NVMe</small><b>Tens of µs</b><span>Drives with power-loss protection can confirm writes almost at once.</span></div>
-          <div class="fig"><small>fsync, cloud volume</small><b>~1 ms</b><span>About the same on a consumer SSD.</span></div>
-          <div class="fig"><small>Write-back delay</small><b>~30 s</b><span>How long Linux may keep a written page in RAM before flushing it to disk.</span></div>
-        </div>
-
-        <h2>How databases make commits fast and safe</h2>
-        <ol class="points">
-          <li>Writing every change straight into its place in the table would mean random writes on every commit.</li>
-          <li>So databases first append the change to a log, the <strong>write-ahead log</strong> (WAL), and fsync only that.</li>
-          <li>Appending is sequential and quick. The tables themselves are updated later, in the background.</li>
-          <li>After a crash, the database replays the log.</li>
-          <li>Because fsync is the expensive part, databases share it: when 50 transactions commit at the same moment, one fsync can cover all of them.</li>
-          <li>This <strong>group commit</strong> is why a database can commit far more transactions a second than its disk can do fsyncs.</li>
-        </ol>
-
-        <h2>Two ways to organise data on disk</h2>
-        <table class="data">
-          <thead><tr><th></th><th>B-tree</th><th>LSM tree</th></tr></thead>
-          <tbody>
-            <tr><td>Used by</td><td>PostgreSQL, MySQL (InnoDB), SQL Server: most relational databases</td><td>RocksDB, Cassandra, ScyllaDB, many time-series stores</td></tr>
-            <tr><td>How it writes</td><td>Updates pages in place, after logging the change</td><td>Appends to memory and a log, writes sorted files, merges them later</td></tr>
-            <tr><td>Good at</td><td>Fast reads and range queries</td><td>Very high write rates</td></tr>
-            <tr><td>Pays with</td><td>Random writes as tables grow</td><td>Background merging (compaction), and reads that may check several files</td></tr>
-          </tbody>
-        </table>
-
-        <aside class="note runs-out">
-          <h3>When it runs out</h3>
-          <ol class="points">
-            <li><strong>The disk fills up.</strong> Databases stop accepting writes; unrotated logs are the usual cause.
-            Check inodes too (<code>df -i</code>): millions of tiny files can fill a disk that still has free space.</li>
-            <li><strong>fsync gets slow.</strong> Every commit waits on it, so write latency rises across the whole app at once.</li>
-            <li><strong>Write amplification.</strong> One row you insert becomes a WAL entry, a table page, a page in every
-            index and a copy on each replica. Ten indexes means roughly ten extra writes per insert.</li>
-          </ol>
-        </aside>
-
-        <figure class="term">
-          <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> iostat -xz 1
-<span class="o">Device      r/s     w/s    rkB/s    wkB/s  r_await  w_await  aqu-sz  %util
-nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
-<span class="p">$</span> df -h /var/lib/postgresql
-<span class="o">Filesystem      Size  Used Avail Use% Mounted on
-/dev/nvme1n1    492G  431G   61G  88% /var/lib/postgresql</span>
-<span class="p">$</span> df -i /
-<span class="o">Filesystem      Inodes   IUsed IFree IUse% Mounted on
-/dev/nvme0n1p1  524288  524288     0  100% /</span></pre>
-          <ol class="points term-note">
-            <li>2,610 reads plus 390 writes is exactly 3,000 operations a second, with reads taking 8 ms and 23 waiting in line: a default gp3 volume at its limit.</li>
-            <li>The data disk is 88% full.</li>
-            <li>The root disk has no inodes left, so no new file can be created, whatever <code>df -h</code> says.</li>
-          </ol>
-        </figure>
-
-        <aside class="note design">
-          <h3>For system design</h3>
-          <ol class="points">
-            <li><strong>Decide what you can afford to lose.</strong> Orders and payments must be fsynced on commit. View
-            counts and analytics events can lose a second in a crash in exchange for much higher throughput. PostgreSQL’s
-            <code>synchronous_commit = off</code> makes exactly that trade, without risking corruption.</li>
-            <li><strong>Batch writes.</strong> Inserting 1,000 rows in one transaction costs one commit; 1,000 separate
-            inserts cost 1,000. Batching is the cheapest write optimisation there is.</li>
-            <li><strong>Append-only logs are everywhere.</strong> The WAL, Kafka, event sourcing and database replication
-            all build on the same idea: appending is cheap, and a log can be replayed. You’ll meet it again in chapters 6 and 7.</li>
-            <li><strong>A write isn’t really safe until it’s on another machine.</strong> fsync protects you from a power
-            cut, not from losing the server. That takes replication.</li>
-          </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>For every kind of data you store, know what happens if the power goes one millisecond after you save it.</p>
         </aside>`
     },
 
@@ -1085,32 +1009,15 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <div class="fig"><small>India to US east coast</small><b>~200 ms</b><span>One round trip, there and back.</span></div>
         </div>
 
-        <h2>TCP starts slowly</h2>
-        <ol class="points">
-          <li>A new TCP connection doesn’t know how fast the path is, so it starts carefully: about 14 KB in the first round trip.</li>
-          <li>It then doubles the amount every round trip until something gets lost. This is <strong>slow start</strong>.</li>
-          <li>On a long path, the number of round trips, not the bandwidth, decides how long a download takes.</li>
-        </ol>
-        <div class="widget" data-widget="slow-start"></div>
-        <ol class="points" start="4">
-          <li>That’s why big sites keep connections open and reuse them: a warm connection has already grown its window.</li>
-          <li>It’s why the first 14 KB of a page matter.</li>
-          <li>And it’s why moving content closer to users helps even when bandwidth is plentiful.</li>
-        </ol>
-
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>
 <pre><span class="p">$</span> ping -c 3 10.0.2.14             <span class="c"># the database server, same datacenter</span>
 <span class="o">64 bytes from 10.0.2.14: icmp_seq=1 ttl=64 time=0.214 ms
 64 bytes from 10.0.2.14: icmp_seq=2 ttl=64 time=0.198 ms
-64 bytes from 10.0.2.14: icmp_seq=3 ttl=64 time=0.221 ms</span>
-<span class="p">$</span> ss -ti dst 10.0.2.14             <span class="c"># TCP's own view of each connection</span>
-<span class="o">ESTAB  0  0  10.0.1.17:51544  10.0.2.14:5432
-	 cubic wscale:7,7 rto:204 rtt:0.211/0.05 mss:8949 cwnd:10</span></pre>
+64 bytes from 10.0.2.14: icmp_seq=3 ttl=64 time=0.221 ms</span></pre>
           <ol class="points term-note">
-            <li>The database is 0.2 ms away.</li>
-            <li>But look at <code>rto:204</code>: if TCP has to fall back on its timer to notice a lost packet, it waits 204 ms before resending, a thousand times the round trip.</li>
-            <li>Lost packets are a big source of slow outliers.</li>
+            <li><code>ping</code> measures the round trip. The database server is about 0.2 ms away: two servers in the same datacenter.</li>
+            <li>From your laptop, ping a server in another city or country to see how distance adds milliseconds.</li>
           </ol>
         </figure>
 
@@ -1122,8 +1029,13 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
             <li><strong>One connection has its own speed limit.</strong> Throughput ≤ window size ÷ round-trip time.
             Copying a big file across the world over one connection can be far slower than the link; parallel connections
             or larger buffers fix it.</li>
-            <li><strong>Every network call can fail in new ways.</strong> A function call returns or throws. A network call
-            can also time out, succeed without you hearing back, or arrive twice. Designing for that is most of chapter 8.</li>
+            <li><strong>Pool and reuse every connection.</strong> Every new connection spends a few round trips on setup
+            (TCP, then TLS for HTTPS) before any useful work. Keep-alive to browsers and connection pools to databases skip that.</li>
+            <li><strong>Network traffic has a price.</strong> In AWS, traffic between zones costs about $0.01 per GB each
+            way, and traffic out to the internet about $0.09 per GB. A chatty service spread across zones can cost more than
+            its servers.</li>
+            <li><strong>Big files don’t belong on app servers.</strong> 2 MB images to 100 users a second is 200 MB/s,
+            1.6 Gbps: more than a 1 Gbps link. That’s work for a CDN and object storage (chapter 5).</li>
           </ol>
         </aside>
 
@@ -1131,88 +1043,6 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <h3>Rule of thumb</h3>
           <p>Count round trips, not bytes. Most slow pages are slow because of how many times they cross the network,
           not how much they send.</p>
-        </aside>`
-    },
-
-    /* ------------------------------------------------------------------ */
-    {
-      group: 'Network',
-      slug: 'network-in-practice',
-      title: 'Networks in practice',
-      sub: 'What connections cost, where the hidden limits are, and why the slowest requests are often network ones.',
-      html: `
-        <ol class="points lede">
-          <li>Inside one server, everything happens in nanoseconds and microseconds.</li>
-          <li>The moment a request crosses the network, it’s milliseconds.</li>
-          <li>Every new connection pays several round trips before any useful work starts.</li>
-        </ol>
-
-        <h2>A new connection costs several round trips</h2>
-        <p>Pick a distance and compare a fresh connection, which must set up TCP and then TLS, with a reused one.</p>
-        <div class="widget" data-widget="connection-waterfall"></div>
-
-        <ol class="points">
-          <li><strong>Reuse connections.</strong> Keep-alive between browser and server, connection pools between your app and the database.</li>
-          <li><strong>Move closer to users.</strong> A server or CDN in the user’s region beats any code optimisation.</li>
-          <li><strong>Make fewer round trips.</strong> One request that returns 20 items beats 20 requests that return one each.</li>
-        </ol>
-
-        <h2>The limits nobody tells you about</h2>
-        <table class="data">
-          <thead><tr><th>Limit</th><th>Typical default</th><th>What you see when you hit it</th></tr></thead>
-          <tbody>
-            <tr><td>Open files per process</td><td>1,024 (<code>ulimit -n</code>)</td><td>“Too many open files”. Every socket is a file.</td></tr>
-            <tr><td>Local ports for outgoing connections</td><td>~28,000 (32768–60999)</td><td>Connection errors to one busy destination</td></tr>
-            <tr><td>TIME_WAIT after a close</td><td>60 s per connection</td><td>Without reuse, about 470 new connections a second to one destination use up every port</td></tr>
-            <tr><td>Connection tracking table</td><td>Sized from RAM</td><td>“nf_conntrack: table full, dropping packet” in <code>dmesg</code>, and random timeouts</td></tr>
-            <tr><td>Cloud instance bandwidth</td><td>“Up to 10 Gbps” is often a burst</td><td>Throughput drops after a few minutes on smaller instances</td></tr>
-          </tbody>
-        </table>
-
-        <h2>Where the slowest requests come from</h2>
-        <p>Most requests take a few milliseconds. The slow outliers often hit one of these:</p>
-        <ol class="points">
-          <li><strong>A lost packet.</strong> When TCP can only notice the loss by timeout, it waits at least 200 ms before resending, even on a 0.2 ms link.</li>
-          <li><strong>A lost connection request.</strong> The first retry of a SYN comes after 1 second, the next 2 seconds
-          later. Latency graphs with spikes at exactly 1 s and 3 s are almost always this.</li>
-          <li><strong>A DNS lookup</strong> that isn’t cached, or a resolver that’s slow or overloaded.</li>
-          <li><strong>A new TLS connection</strong> where a reused one was expected, because a pool was too small or kept closing connections.</li>
-        </ol>
-
-        <figure class="term">
-          <figcaption>Try it from your laptop, then on a server</figcaption>
-<pre><span class="p">$</span> curl -so /dev/null https://example.com \\
-    -w 'dns %{time_namelookup}  connect %{time_connect}  tls %{time_appconnect}  first byte %{time_starttransfer}\\n'
-<span class="o">dns 0.012  connect 0.235  tls 0.459  first byte 0.702</span>
-<span class="p">$</span> cat /proc/sys/net/ipv4/ip_local_port_range
-<span class="o">32768	60999</span>
-<span class="p">$</span> ss -tan state time-wait | wc -l
-<span class="o">27904</span></pre>
-          <ol class="points term-note">
-            <li>curl’s timings add up as it goes: each step costs about 223 ms, one round trip.</li>
-            <li>The server spent about 20 ms producing the answer.</li>
-            <li>On the server, 27,904 connections in TIME_WAIT against 28,232 local ports: this app is about to run out.</li>
-          </ol>
-        </figure>
-
-        <aside class="note design">
-          <h3>For system design</h3>
-          <ol class="points">
-            <li><strong>Pool and reuse every connection.</strong> It removes handshakes, avoids port exhaustion, and keeps
-            TCP windows warm.</li>
-            <li><strong>Network traffic has a price.</strong> In AWS, traffic between zones costs about $0.01 per GB each
-            way, and traffic out to the internet about $0.09 per GB. A chatty service spread across zones can cost more than
-            its servers.</li>
-            <li><strong>Big files don’t belong on app servers.</strong> 2 MB images to 100 users a second is 200 MB/s,
-            1.6 Gbps: more than a 1 Gbps link. That’s work for a CDN and object storage (chapter 5).</li>
-            <li><strong>Retries need timeouts, and timeouts need budgets.</strong> Retrying on top of a 1 s SYN timeout
-            can turn a blip into a pile-up. Chapter 8 covers doing it safely.</li>
-          </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>Treat every network call as slow, expensive and unreliable, because sooner or later it will be.</p>
         </aside>`
     },
 
@@ -1408,8 +1238,8 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <tbody>
             <tr><td>CPU</td><td><code>top</code> or <code>htop</code>: us + sy, per core</td><td>Load above core count; <code>r</code> in <code>vmstat 1</code></td><td>High <code>st</code> (steal) on cloud VMs</td></tr>
             <tr><td>Memory</td><td><code>free -h</code>: used vs available</td><td>Swapping: <code>si</code>/<code>so</code> in <code>vmstat 1</code>; GC time</td><td>OOM kills in <code>dmesg</code>, exit code 137</td></tr>
-            <tr><td>Disk</td><td><code>iostat -xz 1</code>: %util</td><td><code>aqu-sz</code> and <code>await</code> rising</td><td>Disk or inodes full (<code>df -h</code>, <code>df -i</code>)</td></tr>
-            <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Retransmits (<code>nstat</code>), TIME_WAIT piling up</td><td>“Too many open files”, connection resets</td></tr>
+            <tr><td>Disk</td><td><code>iostat -xz 1</code>: %util</td><td><code>aqu-sz</code> and <code>await</code> rising</td><td>Disk full (<code>df -h</code>)</td></tr>
+            <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Packets being resent (<code>nstat</code>)</td><td>Connection errors and timeouts</td></tr>
             <tr><td>Workers and pools</td><td>Busy workers vs total</td><td>Requests waiting for a free worker or a database connection</td><td>Timeouts</td></tr>
           </tbody>
         </table>
@@ -1420,7 +1250,6 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <li>Clock speeds stopped growing, so scale comes from parallelism, and the part that can’t run in parallel limits it.</li>
           <li>Memory is nanoseconds, SSDs are microseconds, networks are milliseconds.</li>
           <li>Most web requests spend their time waiting, so concurrency matters more than cores.</li>
-          <li>“Written” is not “safe”. Durability costs an fsync, and real durability needs a second machine.</li>
           <li>Every network call costs round trips and can fail in ways a function call can’t.</li>
           <li>Response time explodes as utilisation nears 100%. Plan for about 70%.</li>
           <li>Estimate first. One server goes further than you think.</li>

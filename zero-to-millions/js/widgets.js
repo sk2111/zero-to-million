@@ -700,6 +700,60 @@ window.ZTM = window.ZTM || {};
     draw();
   };
 
+  /* ---------- How disks work: is the default cloud SSD enough? ---------- */
+
+  W['disk-picker'] = function (el) {
+    var BASE_IOPS = 3000, BASE_MBS = 125;          /* AWS gp3 without extras */
+    var SIZES = [{ value: '4', label: '4 KB' }, { value: '8', label: '8 KB' }, { value: '16', label: '16 KB' },
+                 { value: '64', label: '64 KB' }, { value: '256', label: '256 KB' }, { value: '1024', label: '1 MB' }];
+    var st = { r: 2400, w: 600, kb: '8' };
+    el.innerHTML =
+      '<div class="calc">' +
+        '<div class="w-field"><label for="dpR">Reads per second at the busiest hour</label><input type="range" id="dpR" min="0" max="20000" step="100" value="' + st.r + '"><output for="dpR"></output></div>' +
+        '<div class="w-field"><label for="dpW">Writes per second at the busiest hour</label><input type="range" id="dpW" min="0" max="10000" step="100" value="' + st.w + '"><output for="dpW"></output></div>' +
+        '<div class="w-field"><span class="lbl">Average size of one read or write</span><span class="cores"></span></div>' +
+      '</div>' +
+      '<div class="tiles tiles-3" aria-live="polite">' +
+        '<div class="tile"><span>IOPS needed</span><b data-o="iops"></b><small>with 50% headroom</small></div>' +
+        '<div class="tile"><span>Throughput needed</span><b data-o="mbs"></b><small>with 50% headroom</small></div>' +
+        '<div class="tile key"><span>Default cloud SSD</span><b data-o="ok"></b><small>3,000 IOPS and 125 MB/s</small></div>' +
+      '</div>' +
+      '<p class="calc-math" data-o="say"></p>' +
+      '<p class="w-note">Based on AWS gp3, where IOPS and throughput can be bought separately. Cloud SSDs count an operation bigger than 256 KB as several.</p>';
+    el.querySelector('.cores').appendChild(segmented('Average size of one read or write', SIZES, st.kb, function (v) { st.kb = v; draw(); }));
+    el.querySelector('#dpR').addEventListener('input', function (e) { st.r = +e.target.value; draw(); });
+    el.querySelector('#dpW').addEventListener('input', function (e) { st.w = +e.target.value; draw(); });
+    function o(n) { return el.querySelector('[data-o="' + n + '"]'); }
+    function round100(n) { return Math.ceil(n / 100) * 100; }
+
+    function draw() {
+      var kb = +st.kb, ops = st.r + st.w;
+      var iops = round100(ops * Math.ceil(kb / 256) * 1.5);
+      var mbs = Math.ceil(ops * kb / 1000 * 1.5);
+      var iopsOk = iops <= BASE_IOPS, mbsOk = mbs <= BASE_MBS;
+      el.querySelector('#dpR + output').textContent = fmtInt(st.r);
+      el.querySelector('#dpW + output').textContent = fmtInt(st.w);
+      o('iops').textContent = fmtInt(iops);
+      o('mbs').textContent = fmtInt(mbs) + ' MB/s';
+      o('ok').textContent = iopsOk && mbsOk ? 'Enough' : 'Not enough';
+      var lim = Math.floor(BASE_MBS * 1000 / kb);   /* ops per second before 125 MB/s runs out */
+      var say = fmtInt(ops) + ' operations a second × ' + SIZES.filter(function (x) { return x.value === st.kb; })[0].label +
+        ' = <b>' + fmtNum(ops * kb / 1000) + ' MB/s</b> today. ';
+      if (iopsOk && mbsOk) {
+        say += 'Both fit inside the default 3,000 IOPS and 125 MB/s, with room to grow.';
+      } else {
+        var fix = [];
+        if (!iopsOk) fix.push('about <b>' + fmtInt(iops) + ' IOPS</b>');
+        if (!mbsOk) fix.push('about <b>' + fmtInt(mbs) + ' MB/s</b>');
+        say += 'Buy ' + fix.join(' and ') + ' on the same volume. ';
+        if (!mbsOk && lim < BASE_IOPS) say += 'At ' + st.kb + ' KB each, 125 MB/s runs out at about ' + fmtInt(lim) + ' operations a second, before the IOPS limit does. ';
+        if (iops > 16000) say += 'That is a lot for one general-purpose volume: look at a high-IOPS volume (AWS io2), or local NVMe if the data is replicated.';
+      }
+      o('say').innerHTML = say;
+    }
+    draw();
+  };
+
   /* ---------- 1.9  Capacity calculator ---------- */
 
   W['capacity'] = function (el) {

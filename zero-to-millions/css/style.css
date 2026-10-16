@@ -310,6 +310,7 @@ table.cols td:first-child code { white-space: nowrap; }
 .term .p { color: var(--term-prompt); }
 .term .o { color: var(--term-out); }
 .term .c { color: var(--term-dim); }
+.term .wrap { white-space: pre-wrap; overflow-wrap: anywhere; }   /* one long log line that may wrap */
 .term-note { margin: 0.95rem 0 0; padding-top: 0.85rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.95rem; }
 ol.term-note { padding-left: 1.5rem; }
 ol.term-note > li { margin: 0.3rem 0; }
@@ -594,6 +595,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 /* capacity calculator */
 .calc { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1.1rem 2.2rem; margin-bottom: 1.8rem; }
 .cores .seg button { padding: 0.32rem 0.7rem; font-variant-numeric: tabular-nums; }
+.tiles-3 { grid-template-columns: repeat(3, 1fr) !important; }
 .tiles { display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2); }
 .tile { padding: 1rem 1.2rem 1rem 0; }
 .tile + .tile { padding-left: 1.2rem; border-left: 1px solid var(--rule); }

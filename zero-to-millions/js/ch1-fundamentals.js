@@ -402,36 +402,73 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
 
         <h2>How to tell which kind you have</h2>
         <ol class="points">
-          <li><strong>CPU-bound:</strong> <code>us</code> in <code>top</code> is high, and the load average is at or above the number of cores.</li>
-          <li><strong>Waiting on disk:</strong> <code>wa</code> is high. The CPU is idle, but threads are stuck on reads and writes.</li>
-          <li><strong>Waiting on the network</strong> (a database, another API): the CPU just looks idle, because <code>top</code> can’t see network waits. If requests are slow while the CPU is mostly idle, the time is going into waiting.</li>
+          <li>Run <code>top</code> on the server while it’s under real load, and look at one line: the CPU line, which starts with <code>%Cpu(s)</code>.</li>
+          <li>It shows how the CPU spent the last few seconds, in percent. The five parts that matter:</li>
+        </ol>
+        <div class="cpu-line">
+          <div><code>us</code><span>running your code</span></div>
+          <div><code>sy</code><span>the kernel working for your code: network, files</span></div>
+          <div><code>id</code><span>idle: nothing to do</span></div>
+          <div><code>wa</code><span>idle, but waiting for the disk</span></div>
+          <div><code>st</code><span>taken by other virtual machines on the same host</span></div>
+        </div>
+        <p class="caption">The line also shows <code>ni</code>, <code>hi</code> and <code>si</code>. They’re rarely important, so you can ignore them for now.</p>
+
+        <h3 class="read-head">Three servers, three answers</h3>
+        <p>Three servers under load, each slow in its own way:</p>
+        <div class="legend"><span><i class="sw cpu"></i>CPU working (us + sy)</span><span><i class="sw disk"></i>Waiting for disk (wa)</span><span><i class="sw idle"></i>Idle (id)</span></div>
+        <div class="cases">
+          <div class="case">
+            <h4>Server 1: busy computing</h4>
+<div class="cnums" aria-label="CPU line from top, in percent"><span class="hot"><b>88.1</b>us</span><span><b>4.0</b>sy</span><span><b>6.9</b>id</span><span><b>0.6</b>wa</span></div>
+            <span class="cbar" role="img" aria-label="92% working, 1% waiting for disk, 7% idle"><i class="w" style="flex-grow:92.1"></i><i class="d" style="flex-grow:0.6"></i><i class="i" style="flex-grow:6.9"></i></span>
+            <dl>
+              <dt>What it means</dt><dd><strong>CPU-bound.</strong> The cores are almost always running your code.</dd>
+              <dt>What helps</dt><dd>Faster code, or more or faster cores.</dd>
+            </dl>
+          </div>
+          <div class="case">
+            <h4>Server 2: waiting for the disk</h4>
+<div class="cnums" aria-label="CPU line from top, in percent"><span><b>9.5</b>us</span><span><b>3.1</b>sy</span><span><b>42.0</b>id</span><span class="hot"><b>45.2</b>wa</span></div>
+            <span class="cbar" role="img" aria-label="13% working, 45% waiting for disk, 42% idle"><i class="w" style="flex-grow:12.6"></i><i class="d" style="flex-grow:45.2"></i><i class="i" style="flex-grow:42"></i></span>
+            <dl>
+              <dt>What it means</dt><dd><strong>I/O-bound on disk.</strong> The CPU is free, but threads are stuck on reads and writes.</dd>
+              <dt>What helps</dt><dd>More RAM to cache data, fewer or better-indexed queries, a faster disk. More CPU won’t help.</dd>
+            </dl>
+          </div>
+          <div class="case">
+            <h4>Server 3: waiting on the network</h4>
+<div class="cnums" aria-label="CPU line from top, in percent"><span><b>7.8</b>us</span><span><b>2.2</b>sy</span><span class="hot"><b>89.6</b>id</span><span><b>0.2</b>wa</span></div>
+            <span class="cbar" role="img" aria-label="10% working, under 1% waiting for disk, 90% idle"><i class="w" style="flex-grow:10"></i><i class="d" style="flex-grow:0.2"></i><i class="i" style="flex-grow:89.6"></i></span>
+            <dl>
+              <dt>What it means</dt><dd><strong>I/O-bound on the network.</strong> Requests take 800 ms, but the CPU looks idle: they’re waiting for the database or another service, and <code>top</code> can’t see that kind of waiting.</dd>
+              <dt>What helps</dt><dd>More requests in flight, faster or cached dependencies. More CPU won’t help.</dd>
+            </dl>
+          </div>
+        </div>
+        <ol class="points">
+          <li>Only on Server 1 does more CPU help. Servers 2 and 3 have plenty of idle CPU; the fix is in what they’re waiting for.</li>
+          <li>Server 3 is the most common case for web APIs, and the easiest to miss: an idle CPU looks healthy. Always look at response times as well as CPU.</li>
+        </ol>
+
+        <h3 class="read-head">Is the CPU full? Compare the load with the cores</h3>
+        <ol class="points">
+          <li><code>nproc</code> prints how many cores the server has. <code>uptime</code> prints the <strong>load average</strong>: how many threads, on average, were running or waiting for a core.</li>
+          <li>A load below the number of cores means there’s spare CPU. At or above it, threads are queuing for the CPU.</li>
+          <li>You get three numbers: the averages over the last 1, 5 and 15 minutes. If the first is higher than the others, the load is rising.</li>
+          <li>On Linux, threads waiting for the disk count towards the load too, so check <code>wa</code> before blaming the CPU.</li>
         </ol>
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>
 <pre><span class="p">$</span> nproc
 <span class="o">4</span>
 <span class="p">$</span> uptime
-<span class="o"> 14:02:11 up 12 days,  3 users,  load average: 3.92, 3.10, 2.45</span>
-<span class="p">$</span> top            <span class="c"># press 1 to see each core</span>
-<span class="o">%Cpu(s): 88.1 us,  4.0 sy,  0.0 ni,  6.9 id,  0.6 wa,  0.0 hi,  0.1 si,  0.3 st</span></pre>
+<span class="o"> 14:02:11 up 12 days,  3 users,  load average: 3.92, 3.10, 2.45</span></pre>
           <ol class="points term-note">
-            <li>4 cores and a load average of 3.92: almost exactly one ready thread per core.</li>
-            <li>88% of CPU time is <code>us</code> (your code) and almost none is <code>wa</code>: this server is CPU-bound and nearly full.</li>
-            <li>The three load numbers are 1, 5 and 15 minute averages. Rising from 2.45 to 3.92 means it’s getting busier.</li>
+            <li>4 cores, and a load of 3.92 over the last minute: the CPU is just about full, like Server 1.</li>
+            <li>3.92, then 3.10, then 2.45 going back in time: the load is rising, so the server is getting busier.</li>
           </ol>
         </figure>
-
-        <p>The CPU line in <code>top</code>, field by field:</p>
-        <table class="data">
-          <thead><tr><th>Field</th><th>Time spent</th><th>If it’s high</th></tr></thead>
-          <tbody>
-            <tr><td><code>us</code></td><td>Running your code</td><td>CPU-bound: profile it, or add cores</td></tr>
-            <tr><td><code>sy</code></td><td>In the kernel, working for you: system calls, networking</td><td>Too many small reads and writes, or too many context switches</td></tr>
-            <tr><td><code>wa</code></td><td>Idle, with threads waiting for disk</td><td>Disk-bound, not CPU-bound. More CPU won’t help</td></tr>
-            <tr><td><code>st</code></td><td>Taken by the hypervisor for another VM</td><td>A noisy neighbour, or a burstable instance out of credits</td></tr>
-            <tr><td><code>id</code></td><td>Idle</td><td>Headroom, unless it’s idle because every thread is waiting on a lock</td></tr>
-          </tbody>
-        </table>
 
         <h2>htop: the same numbers, easier to read</h2>
         <ol class="points">
@@ -462,38 +499,22 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           <ol class="points">
             <li><strong>Load average stays above the core count</strong>, and every request gets slower, not just the heavy
             ones, because they all share the queue.</li>
-            <li><strong>Containers can run out on an idle machine.</strong> A Kubernetes CPU limit of 1 gives the container
-            100 ms of CPU every 100 ms. Four busy threads use that up in 25 ms, and the container is frozen for the other 75.
-            Look for <code>nr_throttled</code> in <code>cpu.stat</code>.</li>
-            <li><strong>Burstable instances</strong> (AWS T family) run at full speed until their CPU credits are spent,
-            then drop to a fraction of a core.</li>
           </ol>
         </aside>
-
-        <figure class="term">
-          <figcaption>Try it inside a container</figcaption>
-<pre><span class="p">$</span> cat /sys/fs/cgroup/cpu.stat     <span class="c"># cgroup v2</span>
-<span class="o">usage_usec 912334871
-nr_periods 51231
-nr_throttled 8840
-throttled_usec 664210334</span></pre>
-          <ol class="points term-note">
-            <li>The container was throttled in 8,840 of 51,231 periods (17%) and lost 664 seconds of running time.</li>
-            <li>Users see that as random latency spikes, even when the machine itself is mostly idle.</li>
-          </ol>
-        </figure>
 
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>Know which kind each endpoint is.</strong> Mixing them on one worker pool is how a few heavy
-            requests (a report, an export) slow down every cheap one. Give heavy work its own pool, or a queue (chapter 6).</li>
+            <li><strong>Know which kind each endpoint is, and keep heavy work apart.</strong> Picture one server with
+            8 workers and two endpoints: product pages (50 ms, mostly waiting on the database) and PDF invoices (2 seconds
+            of pure CPU each). If 8 people download an invoice at the same moment, all 8 workers are busy for 2 seconds,
+            and every product page waits behind them, even though it needs only 50 ms. The fix is to give heavy work its
+            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue (chapter 6)
+            and let the user collect the PDF when it’s ready.</li>
             <li><strong>I/O-bound services scale with concurrency.</strong> If CPU is low and throughput is capped, you
             need more requests in flight (more workers, async I/O), not more cores.</li>
             <li><strong>Parallelism buys throughput, not speed.</strong> More cores let you serve more requests at once.
             A request that needs 200 ms of CPU still takes 200 ms, however many cores you buy.</li>
-            <li><strong>Be careful with CPU limits.</strong> Many teams run latency-sensitive services on Kubernetes with
-            CPU requests but no CPU limits, or limits well above normal use, because of the throttling above.</li>
           </ol>
         </aside>
 
@@ -525,7 +546,7 @@ throttled_usec 664210334</span></pre>
             <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How much work each tick does. A newer core at the same GHz can be 1.5 times faster than one from ten years earlier.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
             <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much hot data stays right next to the cores</td><td>Databases, caches, anything with a big working set</td></tr>
             <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which machine instructions the chip understands</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
-            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>Two chips means two groups of memory (NUMA)</td><td>Very large databases</td></tr>
+            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>A socket is the slot on the motherboard that holds one CPU chip, so it’s the number of separate chips. Each chip has its own RAM attached, and a core reading the other chip’s RAM waits about 1.5–2 times longer. This is called NUMA.</td><td>Only very large machines. A big database on a two-chip server runs fastest when its threads stay near their own memory. Most cloud servers sit on one chip; only the largest sizes span two.</td></tr>
           </tbody>
         </table>
         <h2>Reading a cloud instance type</h2>
@@ -554,6 +575,7 @@ CPU(s):                  8
           <ol class="points term-note">
             <li><code>x86_64</code>: an Intel or AMD chip, so binaries and Docker images must be built for amd64.</li>
             <li>8 vCPUs, but 2 threads per core: really 4 physical cores.</li>
+            <li><code>Socket(s): 1</code>: a single CPU chip, so all memory is equally close and NUMA doesn’t apply.</li>
             <li>The model name gives the generation (the 8375C is a 2021 Intel Xeon, code-named Ice Lake) and the base clock, 2.9 GHz.</li>
           </ol>
         </figure>
@@ -596,8 +618,8 @@ CPU(s):                  8
           <thead><tr><th>Model</th><th>How it works</th><th>You’ll see it in</th><th>Good at</th><th>Watch out for</th></tr></thead>
           <tbody>
             <tr><td>Worker processes</td><td>Each process handles one request at a time</td><td>gunicorn (sync), PHP-FPM, PostgreSQL</td><td>Isolation, simple code</td><td>Memory: 100 workers × 100 MB = 10 GB, for only 100 requests in flight</td></tr>
-            <tr><td>Thread pool</td><td>Many threads in one process, one request per thread</td><td>Tomcat and Spring MVC, Puma, MySQL</td><td>Simple blocking code, shared caches</td><td>Each waiting thread still holds its stack, and the pool size caps concurrency</td></tr>
-            <tr><td>Event loop</td><td>One thread juggles thousands of requests, switching whenever one would wait</td><td>Node.js, Python asyncio and FastAPI, Nginx, Redis</td><td>Tens of thousands of slow connections</td><td>One CPU-heavy task or one blocking call freezes everyone</td></tr>
+            <tr><td>Thread pool</td><td>Many threads in one process, one request per thread</td><td>Tomcat and Spring MVC, Puma, MySQL</td><td>Simple blocking code, shared caches</td><td>A fixed number of threads. With a pool of 200, request 201 waits for a free thread, even if the CPU is idle. And every thread, even one that’s just waiting, holds its own memory (about 1 MB each in Java).</td></tr>
+            <tr><td>Event loop</td><td>One thread juggles thousands of requests, switching whenever one would wait</td><td>Node.js, Python asyncio and FastAPI, Nginx, Redis</td><td>Lots of requests that mostly wait. 10,000 users connected at once, such as a chat app or requests waiting on a slow API, need one thread instead of 10,000, because a waiting request costs almost nothing.</td><td>One CPU-heavy task or one blocking call freezes everyone</td></tr>
           </tbody>
         </table>
 
@@ -605,23 +627,23 @@ CPU(s):                  8
         <ol class="points">
           <li>In 1999, Dan Kegel asked how one server could handle 10,000 connections at once.</li>
           <li>With a thread per connection, 10,000 threads meant gigabytes of stacks and a scheduler drowning in context switches.</li>
-          <li>The answer was the event loop, built on OS features (<code>epoll</code> on Linux, <code>kqueue</code> on BSD) that tell one thread which of thousands of sockets are ready.</li>
-          <li>Nginx and Node.js grew out of that idea.</li>
+          <li>The answer was the <strong>event loop</strong>: one thread that never sits and waits.</li>
         </ol>
 
-        <h2>The modern middle ground</h2>
+        <h3 class="read-head">How an event loop works</h3>
         <ol class="points">
-          <li>Go’s goroutines start with a stack of just a few KB, and Java’s virtual threads (Java 21) are similarly cheap.</li>
-          <li>You write simple blocking code, and the runtime runs it on a handful of OS threads, much like an event loop.</li>
-          <li>You get thread-style code at close to event-loop cost.</li>
+          <li>Every network connection is a <strong>socket</strong>. Think of it as an open phone line between two programs: when a user’s browser connects to your server, the OS sets up a socket for that connection. Your code reads the request from it and writes the response into it.</li>
+          <li>A server talking to 1,000 users and a database has over 1,000 sockets open at once: one per user, plus one for each connection to the database.</li>
+          <li>A normal thread reads from one socket and waits until data arrives. An event-loop thread never does that. Instead it hands the kernel its whole list of sockets and says: “wake me when any of these has data”.</li>
+          <li>On Linux that request is a system call named <code>epoll_wait</code> (<code>kqueue</code> on macOS and BSD). The kernel already handles every packet that arrives, so it knows which sockets have data and simply hands back that short list.</li>
+          <li>The thread then works through the list: read a request here, send a response there, start a database query and move on without waiting for the answer. Then it asks the kernel again. That cycle is the event loop.</li>
+          <li>A waiting connection costs only a small entry in the kernel’s list and a few KB of memory, not a whole thread. That’s how one thread can hold 10,000 connections.</li>
         </ol>
-
-        <h2>How many workers do you need?</h2>
-        <ol class="points">
-          <li>Requests in flight = requests per second × time per request. This is <strong>Little’s Law</strong>, and it works for any queue.</li>
-          <li>At 200 requests a second taking 250 ms each, 50 requests are in flight on average.</li>
-          <li>With sync workers you need at least 50, plus headroom for spikes.</li>
-          <li>With async I/O, one process per core can hold all 50.</li>
+        <p>Step through one turn of the loop, with one thread and 8 connections:</p>
+        <div class="widget" data-widget="event-loop"></div>
+        <ol class="points" start="7">
+          <li>Think of a waiter with 20 tables. They don’t stand at one table while the kitchen cooks; they take an order, pass it to the kitchen, and go to whichever table is waving. A thread per connection is one waiter per table, mostly standing still.</li>
+          <li>Nginx, Node.js, Redis and Python’s asyncio (which FastAPI uses) all work this way.</li>
         </ol>
 
         <aside class="note runs-out">
@@ -634,42 +656,18 @@ CPU(s):                  8
           </ol>
         </aside>
 
-        <figure class="term">
-          <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> ps -o pid,nlwp,rss,cmd -C gunicorn
-<span class="o">    PID NLWP    RSS CMD
-   1201    1  48212 gunicorn: master [orders:app]
-   1207    1 132904 gunicorn: worker [orders:app]
-   1208    1 131620 gunicorn: worker [orders:app]
-   1209    1 133488 gunicorn: worker [orders:app]
-   1210    1 132176 gunicorn: worker [orders:app]</span>
-<span class="p">$</span> ss -ltn 'sport = :8000'          <span class="c"># Recv-Q = connections waiting to be picked up</span>
-<span class="o">State   Recv-Q  Send-Q   Local Address:Port   Peer Address:Port
-LISTEN  97      2048           0.0.0.0:8000        0.0.0.0:*</span></pre>
-          <ol class="points term-note">
-            <li>Four sync workers at about 130 MB each.</li>
-            <li>97 connections are waiting for one of them to be free.</li>
-            <li>The fix is more requests in flight, not more CPU.</li>
-          </ol>
-        </figure>
-
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>Your slowest dependency sets your worker count.</strong> If the payment service goes from 100 ms to
-            5 s, every request holds a worker 50 times longer, and a pool sized for a normal day is gone in seconds. That’s
-            how one slow service takes down everything that calls it (chapter 8 covers timeouts).</li>
-            <li><strong>Event loops hate surprises.</strong> One blocking call (a sync database driver, a huge
-            <code>JSON.parse</code>, a runaway regex) stalls every request on that loop. Node also runs file access and
-            <code>dns.lookup</code> on a thread pool of just 4 threads by default, which quietly becomes a bottleneck.</li>
+            <li><strong>Event loops hate surprises.</strong> In an <code>async def</code> FastAPI endpoint, one blocking call
+            stalls every request on that event loop: <code>requests.get()</code> instead of <code>httpx.AsyncClient</code>,
+            a sync database driver such as <code>psycopg2</code> instead of <code>asyncpg</code>, <code>time.sleep()</code>
+            instead of <code>await asyncio.sleep()</code>, or a CPU-heavy job like parsing a huge JSON file. If the code has
+            to block, declare the endpoint with plain <code>def</code>: FastAPI then runs it in a thread pool (40 threads
+            by default) instead of on the loop. Send CPU-heavy work to a separate process.</li>
             <li><strong>Pools multiply.</strong> 20 app servers × 8 processes × a 10-connection database pool = 1,600
             database connections. Do this sum before the database does it for you.</li>
           </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>Workers needed ≈ peak requests per second × response time in seconds, plus about 50% headroom.</p>
         </aside>`
     },
 
@@ -1408,11 +1406,11 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
         <table class="data use">
           <thead><tr><th>Resource</th><th>Utilisation: how busy?</th><th>Saturation: is work waiting?</th><th>Errors</th></tr></thead>
           <tbody>
-            <tr><td>CPU</td><td><code>top</code> or <code>htop</code>: us + sy, per core</td><td>Load above core count; <code>r</code> in <code>vmstat 1</code>; <code>nr_throttled</code> in containers</td><td>High <code>st</code> (steal) on cloud VMs</td></tr>
+            <tr><td>CPU</td><td><code>top</code> or <code>htop</code>: us + sy, per core</td><td>Load above core count; <code>r</code> in <code>vmstat 1</code></td><td>High <code>st</code> (steal) on cloud VMs</td></tr>
             <tr><td>Memory</td><td><code>free -h</code>: used vs available</td><td>Swapping: <code>si</code>/<code>so</code> in <code>vmstat 1</code>; GC time</td><td>OOM kills in <code>dmesg</code>, exit code 137</td></tr>
             <tr><td>Disk</td><td><code>iostat -xz 1</code>: %util</td><td><code>aqu-sz</code> and <code>await</code> rising</td><td>Disk or inodes full (<code>df -h</code>, <code>df -i</code>)</td></tr>
             <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Retransmits (<code>nstat</code>), TIME_WAIT piling up</td><td>“Too many open files”, connection resets</td></tr>
-            <tr><td>Workers and pools</td><td>Busy workers vs total</td><td>Listen queue (<code>ss -ltn</code> Recv-Q), requests waiting for a DB connection</td><td>Timeouts</td></tr>
+            <tr><td>Workers and pools</td><td>Busy workers vs total</td><td>Requests waiting for a free worker or a database connection</td><td>Timeouts</td></tr>
           </tbody>
         </table>
 

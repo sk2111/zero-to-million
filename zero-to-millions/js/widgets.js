@@ -522,6 +522,58 @@ window.ZTM = window.ZTM || {};
     draw();
   };
 
+  /* ---------- Serving many requests: one event-loop thread, many connections ---------- */
+
+  W['event-loop'] = function (el) {
+    var W8 = { C1: 'user', C2: 'user', C3: 'db', C4: 'user', C5: 'db', C6: 'user', C7: 'api', C8: 'user' };
+    var WAIT = { user: 'waiting for the user', db: 'waiting for the database', api: 'waiting for the payment API' };
+    function merge(o) { var r = {}; for (var k in W8) r[k] = W8[k]; for (k in o) r[k] = o[k]; return r; }
+    var STEPS = [
+      { st: merge({}), ready: [],
+        thread: 'Asks the kernel: “wake me when any of these 8 sockets has data” (<code>epoll_wait</code>). Then it sleeps, using no CPU.',
+        say: 'All 8 connections are waiting: for their users, for the database, for the payment API. Nobody needs the thread, so it sleeps.' },
+      { st: merge({ C2: 'ready:a new request arrived', C5: 'ready:the database answered' }), ready: ['C2', 'C5'],
+        thread: 'Woken by the kernel with a short list: C2 and C5 are ready.',
+        say: 'Data arrived on two sockets. The kernel noticed (it handles all network traffic anyway) and woke the thread with the list of ready ones.' },
+      { st: merge({ C2: 'busy:reading the request, sending a database query', C5: 'ready:the database answered' }), ready: ['C5'],
+        thread: 'Handles C2: reads the request, sends a query to the database, and moves on <strong>without waiting</strong> for the answer.',
+        say: 'This takes the thread a fraction of a millisecond. The database will take 20 ms to answer, but the thread doesn’t wait for it.' },
+      { st: merge({ C2: 'db', C5: 'busy:building the response, sending it' }), ready: [],
+        thread: 'Handles C5: the database has answered, so it builds the response and sends it back to the user.',
+        say: 'C2 is now waiting for the database, like C3. C5’s user gets their answer.' },
+      { st: merge({ C2: 'db' }), ready: [],
+        thread: 'The list is done, so it asks the kernel again and sleeps until the next socket is ready.',
+        say: 'That’s one turn of the event loop. It repeats thousands of times a second, and one thread keeps all 8 connections moving, or 10,000.' }
+    ];
+    var k = 0;
+    el.innerHTML =
+      '<div class="ev-conns">' + Object.keys(W8).map(function (c) {
+        return '<div class="ev-conn" data-c="' + c + '"><b>' + c + '</b><span class="ev-st"></span></div>';
+      }).join('') + '</div>' +
+      '<div class="ev-row">' +
+        '<div class="ev-kernel"><small>Kernel: sockets with data ready</small><span class="ev-ready"></span></div>' +
+        '<div class="ev-thread"><small>The one event-loop thread</small><p></p></div>' +
+      '</div>' +
+      '<div class="pt-controls"><button type="button" class="btn-sm" data-next>Next step</button><span class="pt-count"></span></div>' +
+      '<p class="readout" aria-live="polite"></p>';
+    var ready = el.querySelector('.ev-ready'), thread = el.querySelector('.ev-thread p'),
+        out = el.querySelector('.readout'), count = el.querySelector('.pt-count');
+    function draw() {
+      var s = STEPS[k];
+      el.querySelectorAll('.ev-conn').forEach(function (n) {
+        var v = s.st[n.getAttribute('data-c')], kind = v.split(':')[0], text = v.indexOf(':') > 0 ? v.slice(v.indexOf(':') + 1) : WAIT[v];
+        n.className = 'ev-conn ' + (kind === 'ready' ? 'ready' : kind === 'busy' ? 'busy' : 'waiting');
+        n.querySelector('.ev-st').textContent = (kind === 'ready' ? 'Ready: ' : kind === 'busy' ? 'Thread is ' : '') + text;
+      });
+      ready.innerHTML = s.ready.length ? s.ready.map(function (c) { return '<span class="pt-chip pa">' + c + '</span>'; }).join('') : '<em>none</em>';
+      thread.innerHTML = s.thread;
+      count.textContent = 'Step ' + (k + 1) + ' of ' + STEPS.length;
+      out.innerHTML = s.say;
+    }
+    el.querySelector('[data-next]').addEventListener('click', function () { k = (k + 1) % STEPS.length; draw(); });
+    draw();
+  };
+
   /* ---------- Processes and threads: Amdahl's Law ---------- */
 
   W['amdahl'] = function (el) {

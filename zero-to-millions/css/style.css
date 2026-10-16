@@ -409,6 +409,53 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .pt-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; margin-top: 1rem; }
 .pt-count { font-size: 0.86rem; color: var(--muted); }
 
+/* ---------- 1.3: reading the CPU line, three example servers ---------- */
+
+.cpu-line { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-width: 50rem; margin: 1rem 0 0.6rem; }
+.cpu-line div { padding: 0.6rem 0.75rem; border: 1px solid var(--rule); border-radius: 8px; background: var(--paper); }
+.cpu-line code { display: block; padding: 0; background: none; font-size: 1rem; font-weight: 600; color: var(--ink); }
+.cpu-line span { display: block; margin-top: 0.2rem; font-size: 0.84rem; line-height: 1.3; color: var(--ink-2); }
+.sw.idle { background: var(--rule-2); }
+.cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin: 0.4rem 0 1.2rem; }
+.case { display: flex; flex-direction: column; gap: 0.7rem; padding: 1rem 1.1rem 1.1rem; border: 1px solid var(--rule-2); border-radius: 12px; }
+.page .case h4 { margin: 0; font-size: 1.02rem; }
+.cnums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.cnums span { display: flex; flex-direction: column; align-items: center; padding: 0.35rem 0.2rem 0.3rem; border-radius: 6px; background: var(--paper); font-family: var(--mono); font-size: 0.74rem; color: var(--muted); }
+.cnums b { font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+.cnums .hot { background: var(--ink); color: var(--sheet); }
+.cnums .hot b { color: var(--sheet); }
+.cbar { display: flex; gap: 2px; height: 0.9rem; }
+.cbar i { display: block; min-width: 2px; flex-basis: 0; }
+.cbar i:last-child { border-radius: 0 4px 4px 0; }
+.cbar .w { background: var(--c-cpu); }
+.cbar .d { background: var(--c-disk); }
+.cbar .i { background: var(--rule-2); }
+.case dl { display: grid; gap: 0.2rem; margin: 0; font-size: 0.9rem; line-height: 1.45; }
+.case dt { margin-top: 0.3rem; font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+.case dd { margin: 0; color: var(--ink-2); }
+.case dd strong { color: var(--ink); }
+
+/* ---------- 1.5: one event-loop thread, many connections ---------- */
+
+.ev-conns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.ev-conn { display: flex; flex-direction: column; gap: 0.15rem; min-height: 4.4rem; padding: 0.5rem 0.65rem; border: 1px solid var(--rule-2); border-left-width: 4px; border-radius: 8px; font-size: 0.82rem; line-height: 1.3; transition: background-color 0.2s, border-color 0.2s; }
+.ev-conn b { font-size: 0.92rem; }
+.ev-conn .ev-st { color: var(--ink-2); }
+.ev-conn.waiting { border-left-color: var(--rule-2); }
+.ev-conn.waiting .ev-st { color: var(--muted); }
+.ev-conn.ready { border-color: var(--amber-mark); background: var(--amber-soft); }
+.ev-conn.busy { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.ev-row { display: grid; grid-template-columns: 1fr 2fr; gap: 0.6rem; margin-top: 0.7rem; }
+.ev-kernel, .ev-thread { padding: 0.55rem 0.8rem 0.7rem; border-radius: 10px; }
+.ev-kernel { border: 1px solid var(--rule-2); }
+.ev-kernel small, .ev-thread small { display: block; margin-bottom: 0.35rem; font-size: 0.74rem; color: var(--muted); }
+.ev-kernel em { font-size: 0.86rem; color: var(--muted); }
+.ev-ready { display: flex; flex-wrap: wrap; gap: 0.4rem; min-height: 1.9rem; align-items: center; }
+.ev-thread { background: var(--ink); color: var(--sheet); }
+.ev-thread small { color: var(--sheet); opacity: 0.7; }
+.ev-thread p { margin: 0; font-size: 0.92rem; line-height: 1.45; }
+.ev-thread code { background: rgba(255, 255, 255, 0.12); color: inherit; }
+
 /* ---------- 1.1: the server stack ---------- */
 
 .stack { margin: 2.4rem 0 1rem; border: 1px solid var(--rule-2); border-radius: 14px; overflow: hidden; }
@@ -704,6 +751,10 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   dl.terms > div { grid-template-columns: 1fr; gap: 0.3rem; }
   .stack-hw { grid-template-columns: 1fr 1fr; }
   .compile { grid-template-columns: 1fr; }
+  .cases { grid-template-columns: 1fr; }
+  .ev-conns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ev-row { grid-template-columns: 1fr; }
+  .cpu-line { grid-template-columns: repeat(2, 1fr); }
   .pt-procs, .pt-hw { grid-template-columns: 1fr; }
   .pt-wall { width: auto; height: 1.6rem; background-size: 100% 3px; }
   .pt-wall span { padding: 0 0.5rem; writing-mode: horizontal-tb; transform: none; }

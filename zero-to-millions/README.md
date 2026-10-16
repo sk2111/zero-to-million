@@ -33,12 +33,12 @@ without internet the fonts fall back to Segoe UI.
 | 7 | Beyond a million | 10M | Planned |
 | 8 | When things break | every stage | Planned |
 
-Chapter 1 has 15 pages in five parts. Each resource goes from how it works, to how it behaves
+Chapter 1 has 16 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
 
 | Part | Pages |
 |---|---|
-| CPU | How a CPU works · Processes and threads · CPU-bound and I/O-bound work · Serving many requests at once |
+| CPU | How a CPU works · Processes and threads · CPU-bound and I/O-bound work · What to look for in a CPU · Serving many requests at once |
 | Memory | How memory works · Memory in practice |
 | Disk | How disks work · Writing data safely |
 | Network | How networks work · Networks in practice |

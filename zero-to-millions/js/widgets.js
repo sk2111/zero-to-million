@@ -378,6 +378,150 @@ window.ZTM = window.ZTM || {};
     }
   };
 
+  /* ---------- How a CPU works: the clock and the pipeline ---------- */
+
+  W['clock-pipeline'] = function (el) {
+    var STAGES = [
+      { name: 'Fetch', short: 'F', verb: 'being fetched' },
+      { name: 'Decode', short: 'D', verb: 'being decoded' },
+      { name: 'Execute', short: 'E', verb: 'executing' },
+      { name: 'Store', short: 'S', verb: 'storing its result' }
+    ];
+    var INSTR = ['Load price', 'Load 1.18', 'Multiply', 'Store the answer'];
+    var TICKS = INSTR.length + STAGES.length - 1;          /* 7 */
+    var NS = 1 / 3;                                         /* one tick at 3 GHz */
+    var t = 0, timer = null;
+
+    var wave = '<svg viewBox="0 0 40 20" preserveAspectRatio="none" aria-hidden="true"><path d="M0 17 H9 V3 H29 V17 H40"/></svg>';
+    var g = '<span class="pl-lab"></span>';
+    for (var c = 1; c <= TICKS; c++) g += '<span class="pl-head" data-t="' + c + '"><span class="l">Tick </span>' + c + '</span>';
+    g += '<span class="pl-lab">Clock</span>';
+    for (c = 1; c <= TICKS; c++) g += '<span class="pl-clock" data-t="' + c + '">' + wave + '</span>';
+    INSTR.forEach(function (name, i) {
+      g += '<span class="pl-lab"><b>' + (i + 1) + '</b> ' + esc(name) + '</span>';
+      for (var c = 1; c <= TICKS; c++) {
+        var st = c - 1 - i;
+        g += st >= 0 && st < STAGES.length
+          ? '<span class="pl-cell s' + st + '" data-t="' + c + '"><span class="l">' + STAGES[st].name + '</span><span class="s">' + STAGES[st].short + '</span></span>'
+          : '<span class="pl-empty" data-t="' + c + '"></span>';
+      }
+    });
+
+    el.innerHTML =
+      '<div class="pl-controls"><button type="button" class="btn-sm" data-play>Play</button>' +
+        '<div class="w-field"><label for="plT">Tick</label><input type="range" id="plT" min="0" max="' + TICKS + '" value="0"><output for="plT"></output></div></div>' +
+      legend(STAGES.map(function (s, i) { return ['st' + i, s.name]; })) +
+      '<div class="pl-grid" style="--ticks:' + TICKS + '">' + g + '</div>' +
+      '<p class="readout" aria-live="polite"></p>' +
+      '<p class="w-note">Simplified: real cores split the work into 14–20 smaller stages, but the idea is the same.</p>';
+    var input = el.querySelector('#plT'), out = el.querySelector('.readout'), play = el.querySelector('[data-play]');
+
+    function draw() {
+      input.value = t;
+      el.querySelector('#plT + output').textContent = t + ' of ' + TICKS;
+      el.querySelectorAll('.pl-grid [data-t]').forEach(function (n) {
+        var k = +n.getAttribute('data-t');
+        n.classList.toggle('future', k > t);
+        n.classList.toggle('now', k === t);
+      });
+      if (t === 0) { out.innerHTML = 'Press Play, or drag the slider, to run the clock one tick at a time.'; return; }
+      var busy = [], done = 0;
+      INSTR.forEach(function (name, i) {
+        var st = t - 1 - i;
+        if (st >= STAGES.length) done++;
+        else if (st >= 0) busy.push('instruction ' + (i + 1) + ' is ' + STAGES[st].verb);
+      });
+      if (t === TICKS) {
+        out.innerHTML = 'All 4 instructions finished in <strong>' + TICKS + ' ticks</strong>, about ' + fmtNum(TICKS * NS) + ' ns at 3 GHz. ' +
+          'One at a time, without overlapping, they would have taken ' + INSTR.length * STAGES.length + ' ticks.';
+        return;
+      }
+      out.innerHTML = '<strong>Tick ' + t + '</strong>, ' + fmtNum(t * NS) + ' ns in: ' + busy.join(', ') + '.' +
+        (done ? ' ' + done + ' finished.' : '');
+    }
+    function stop() { clearInterval(timer); timer = null; play.textContent = 'Play'; }
+    play.addEventListener('click', function () {
+      if (timer) { stop(); return; }
+      if (t >= TICKS) t = 0;
+      play.textContent = 'Pause';
+      t++; draw();
+      timer = setInterval(function () {
+        if (!el.isConnected || t >= TICKS) { stop(); return; }
+        t++; draw();
+        if (t >= TICKS) stop();
+      }, 900);
+    });
+    input.addEventListener('input', function () { stop(); t = +input.value; draw(); });
+    draw();
+  };
+
+  /* ---------- Processes and threads: what's inside a process, and turns on a core ---------- */
+
+  W['process-thread'] = function (el) {
+    var PROCS = [
+      { id: 'A', cls: 'pa', name: 'Process A', what: 'a web server, PID 1207',
+        mem: 'your code, objects and caches', files: 'sockets to users and to the database, a log file',
+        threads: [['A1', 'handling request 1'], ['A2', 'handling request 2'], ['A3', 'handling request 3']] },
+      { id: 'B', cls: 'pb', name: 'Process B', what: 'a database, PID 2290',
+        mem: 'table pages cached in RAM', files: 'data files, its network socket',
+        threads: [['B1', 'running a query'], ['B2', 'writing to its log']] }
+    ];
+    var SLICES = [
+      { cores: ['A1', 'B1'], queue: ['A2', 'B2'], sleep: { A3: 'waiting for the database' },
+        say: 'A1 and B1 have the two cores. A2 and B2 are ready but wait in line. A3 is waiting for the database, so it sleeps and uses no CPU at all.' },
+      { cores: ['A2', 'B2'], queue: ['A1', 'B1'], sleep: { A3: 'waiting for the database' },
+        say: 'A few milliseconds later the kernel swaps them: A2 and B2 get the cores, and A1 and B1 go to the back of the line.' },
+      { cores: ['A3', 'A1'], queue: ['B1', 'A2'], sleep: { B2: 'waiting for the disk' },
+        say: 'The database answered, so A3 is ready again and gets a core. B2 has asked the disk for data, so now it sleeps.' },
+      { cores: ['B1', 'A2'], queue: ['A3', 'A1'], sleep: { B2: 'waiting for the disk' },
+        say: 'And round it goes: every ready thread gets a turn. With 4 threads ready and 2 cores, the load average is 4: 2 running, 2 waiting.' }
+    ];
+    var k = 0;
+    function procOf(th) { return PROCS.filter(function (p) { return p.id === th[0]; })[0]; }
+    function chip(th) { return '<span class="pt-chip ' + procOf(th).cls + '">' + th + '</span>'; }
+
+    el.innerHTML =
+      '<div class="pt-procs">' + PROCS.map(function (p, i) {
+        return (i ? '<div class="pt-wall" aria-hidden="true"><span>Separate memory</span></div>' : '') +
+          '<div class="pt-proc ' + p.cls + '">' +
+            '<p class="pt-title"><b>' + p.name + '</b><span>' + esc(p.what) + '</span></p>' +
+            '<div class="pt-mem"><b>Private memory</b><span>' + esc(p.mem) + '</span></div>' +
+            '<div class="pt-mem"><b>Open files and connections</b><span>' + esc(p.files) + '</span></div>' +
+            '<div class="pt-threads">' + p.threads.map(function (t) {
+              return '<div class="pt-thread" data-th="' + t[0] + '"><b>Thread ' + t[0] + '</b><span class="pt-job">' + esc(t[1]) + '</span>' +
+                '<span class="pt-own">own stack, own place in the code</span><span class="pt-state"></span></div>';
+            }).join('') + '</div>' +
+            '<p class="pt-note">' + (p.threads.length > 1 ? 'All ' + p.threads.length + ' threads share this memory and these files' : 'Its threads share this memory and these files') + '</p>' +
+          '</div>';
+      }).join('') + '</div>' +
+      '<div class="pt-kernel"><b>Kernel scheduler</b><span>gives each ready thread a turn on a core, a few milliseconds at a time</span></div>' +
+      '<div class="pt-hw">' +
+        '<div class="pt-cores"><div class="pt-core"><small>Core 1</small><span class="pt-slot"></span></div><div class="pt-core"><small>Core 2</small><span class="pt-slot"></span></div></div>' +
+        '<div class="pt-queue"><small>Ready, waiting in line for a core</small><span class="pt-slot"></span></div>' +
+      '</div>' +
+      '<div class="pt-controls"><button type="button" class="btn-sm" data-next>Next time slice</button><span class="pt-count"></span></div>' +
+      '<p class="readout" aria-live="polite"></p>';
+
+    var slots = el.querySelectorAll('.pt-core .pt-slot'), queue = el.querySelector('.pt-queue .pt-slot'),
+        out = el.querySelector('.readout'), count = el.querySelector('.pt-count');
+    function draw() {
+      var s = SLICES[k];
+      s.cores.forEach(function (th, i) { slots[i].innerHTML = chip(th); });
+      queue.innerHTML = s.queue.map(chip).join('');
+      el.querySelectorAll('.pt-thread').forEach(function (n) {
+        var th = n.getAttribute('data-th'), ci = s.cores.indexOf(th), st = n.querySelector('.pt-state');
+        n.classList.remove('running', 'ready', 'sleeping');
+        if (ci >= 0) { n.classList.add('running'); st.textContent = 'Running on core ' + (ci + 1); }
+        else if (s.queue.indexOf(th) >= 0) { n.classList.add('ready'); st.textContent = 'Ready, waiting for a core'; }
+        else { n.classList.add('sleeping'); st.textContent = 'Sleeping: ' + s.sleep[th]; }
+      });
+      count.textContent = 'Time slice ' + (k + 1) + ' of ' + SLICES.length;
+      out.innerHTML = s.say;
+    }
+    el.querySelector('[data-next]').addEventListener('click', function () { k = (k + 1) % SLICES.length; draw(); });
+    draw();
+  };
+
   /* ---------- Processes and threads: Amdahl's Law ---------- */
 
   W['amdahl'] = function (el) {
@@ -389,11 +533,15 @@ window.ZTM = window.ZTM || {};
         '<div class="w-field"><label for="amC">Cores</label><input type="range" id="amC" min="0" max="7" value="' + ci + '"><output for="amC"></output></div>' +
       '</div>' +
       '<div class="ut-read" aria-live="polite"><b class="ut-big"></b><span class="ut-say"></span></div>' +
-      legend([['ideal', 'Perfect scaling'], ['real', 'Your program']]) +
+      legend([['ideal', 'Perfect scaling'], ['real', 'Your program'], ['usl', 'Your program, with coordination costs']]) +
       '<div class="chart"></div>';
     var box = el.querySelector('.chart'), inP = el.querySelector('#amP'), inC = el.querySelector('#amC'),
         big = el.querySelector('.ut-big'), say = el.querySelector('.ut-say');
     function S(f, n) { return 1 / ((1 - f) + f / n); }
+    /* Gunther's Universal Scalability Law: the serial share (as in Amdahl) plus a small cost
+       for every pair of threads that must coordinate (locks, shared memory). */
+    var BETA = 0.0005;
+    function U(f, n) { return n / (1 + (1 - f) * (n - 1) + BETA * n * (n - 1)); }
 
     function draw() {
       var f = p / 100, n = CORES[ci], sp = S(f, n), limit = f < 1 ? 1 / (1 - f) : Infinity;
@@ -402,10 +550,12 @@ window.ZTM = window.ZTM || {};
       var m = { l: 44, r: 16, t: 30, b: 42 }, iw = Wd - m.l - m.r, ih = H - m.t - m.b;
       function x(c) { return m.l + Math.log2(c) / 7 * iw; }
       function y(v) { return m.t + ih - Math.min(v, ax.max) / ax.max * ih; }
-      var real = [], ideal = [];
+      var real = [], ideal = [], usl = [];
+      var peakN = Math.min(128, Math.max(1, Math.sqrt(f / BETA))), peak = U(f, peakN);
       for (var i = 0; i <= 140; i++) {
         var c = Math.pow(2, 7 * i / 140);
         real.push(x(c).toFixed(1) + ',' + y(S(f, c)).toFixed(1));
+        usl.push(x(c).toFixed(1) + ',' + y(U(f, c)).toFixed(1));
         if (c <= ax.max) ideal.push(x(c).toFixed(1) + ',' + y(c).toFixed(1));
       }
       if (ax.max < 128) ideal.push(x(ax.max).toFixed(1) + ',' + y(ax.max).toFixed(1));
@@ -430,6 +580,9 @@ window.ZTM = window.ZTM || {};
         '<text class="axis" x="' + m.l + '" y="14">Speed-up</text>' +
         '<polyline class="curve ideal" points="' + ideal.join(' ') + '"/>' +
         '<polyline class="curve" points="' + real.join(' ') + '"/>' +
+        '<polyline class="curve usl" points="' + usl.join(' ') + '"/>' +
+        '<circle class="dot usl" cx="' + x(peakN) + '" cy="' + y(peak) + '" r="5"/>' +
+        '<text class="usl-label" x="' + x(peakN) + '" y="' + (y(peak) + 20) + '" text-anchor="middle">sweet spot, about ' + Math.round(peakN) + ' cores</text>' +
         '<line class="cross" x1="' + x(n) + '" x2="' + x(n) + '" y1="' + y(sp) + '" y2="' + (m.t + ih) + '"/>' +
         '<circle class="dot" cx="' + x(n) + '" cy="' + y(sp) + '" r="6"/>' +
         '<rect class="hit" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '"/>' +
@@ -444,7 +597,8 @@ window.ZTM = window.ZTM || {};
       big.textContent = fmtNum(sp) + '×';
       say.innerHTML = 'faster on ' + n + ' core' + (n === 1 ? '' : 's') + (f < 1
         ? ', with ' + (100 - p) + '% of the work serial. <strong>No number of cores can beat ' + fmtNum(limit) + '×.</strong>'
-        : '. With nothing serial, speed-up equals the core count. Real programs never quite get there.');
+        : '. With nothing serial, speed-up equals the core count. Real programs never quite get there.') +
+        ' Add coordination costs and the speed-up peaks at about <strong>' + Math.round(peakN) + ' cores</strong>, then falls.';
     }
     inP.addEventListener('input', function () { p = +inP.value; draw(); });
     inC.addEventListener('input', function () { ci = +inC.value; draw(); });

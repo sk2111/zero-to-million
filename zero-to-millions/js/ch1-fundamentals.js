@@ -52,12 +52,13 @@ ZTM.content[1] = {
           <div class="cp-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
           <div class="cp-panel">
             <p class="cp-head"><b>2. Python bytecode</b><span>4 steps</span></p>
-<pre class="cp-code"><span data-k="load">LOAD_FAST     price</span>
-<span data-k="const">LOAD_CONST    1.18</span>
-<span data-k="mul">BINARY_OP     *</span>
+<pre class="cp-code"><span class="cp-dim">RESUME        0</span>
+<span data-k="load">LOAD_FAST     0 (price)</span>
+<span data-k="const">LOAD_CONST    1 (1.18)</span>
+<span data-k="mul">BINARY_OP     5 (*)</span>
 <span data-k="ret">RETURN_VALUE</span></pre>
           </div>
-          <div class="cp-panel cp-machine">
+          <div class="cp-panel cp-dark cp-wide">
             <p class="cp-head"><b>3. What the CPU runs for one step, <code>BINARY_OP *</code></b><span>dozens of instructions</span></p>
 <pre class="cp-code">mov     rdi, [rsp+8]         <span class="cp-dim">; get the price object</span>
 cmp     [rdi+8], rbx         <span class="cp-dim">; is it really a float?</span>
@@ -68,20 +69,62 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
 <span class="cp-dim">…       then reference counting, and fetching the next step</span></pre>
           </div>
         </div>
-        <p class="caption">Simplified x86-64. Point at a piece of the code to see where it goes. You can see the bytecode for
-        your own code with <code>python -m dis yourfile.py</code>.</p>
+        <p class="caption">Point at a piece of the code to see where it goes. The bytecode is real output from
+        <code>python -m dis</code> on Python 3.13; the machine instructions are simplified x86-64.</p>
         <ol class="points">
-          <li>One line of Python became 4 bytecode steps, and each step becomes dozens to hundreds of machine instructions, depending on the types involved.</li>
+          <li>One line of Python became 4 bytecode steps. (<code>RESUME</code> is a marker Python puts at the start of every function. The numbers are slots: <code>price</code> is local variable 0, <code>1.18</code> is constant 1, and 5 is the code for multiply.)</li>
+          <li>Each bytecode step becomes dozens to hundreds of machine instructions, depending on the types involved.</li>
           <li>At 3 GHz and about one instruction per tick, a few hundred instructions take about a tenth of a microsecond.</li>
-          <li>Compiled languages such as Go, Rust and C (and Java once its JIT has warmed up) turn the same line into a handful of machine instructions. That’s one reason they run CPU-heavy code 10–100 times faster than standard Python.</li>
         </ol>
+
+        <aside class="note tip">
+          <h3>Tip: why compiled languages run this 10–100 times faster</h3>
+          <ol class="points">
+            <li>Python’s bytecode is never turned into machine code. Standard Python (CPython) is an <strong>interpreter</strong>: a program written in C, already compiled, that reads your bytecode one step at a time and runs its own general-purpose machine code for each step.</li>
+            <li>So every time <code>price * 1.18</code> runs, the CPU also does the interpreter’s work: fetch the next step, check what type <code>price</code> is, find the right multiply, create a new object for the answer, update reference counts.</li>
+            <li>Go, Rust and C <strong>compile ahead of time</strong>: once, before the program runs. The compiler already knows <code>price</code> is a 64-bit float, so it emits just the multiply, on a value that sits in a CPU register.</li>
+          </ol>
+          <div class="compile">
+            <div class="cp-panel">
+              <p class="cp-head"><b>Go</b><span>the same function</span></p>
+<pre class="cp-code">func addGST(price float64) float64 {
+    return price * 1.18
+}</pre>
+            </div>
+            <div class="cp-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+            <div class="cp-panel cp-dark">
+              <p class="cp-head"><b>What the CPU runs</b><span>2 instructions</span></p>
+<pre class="cp-code">mulsd   xmm0, [1.18]  <span class="cp-dim">; price × 1.18</span>
+ret                   <span class="cp-dim">; answer is ready</span></pre>
+            </div>
+          </div>
+          <table class="data">
+            <thead><tr><th></th><th>Python (CPython)</th><th>Go</th></tr></thead>
+            <tbody>
+              <tr><td>Becomes machine code</td><td>Never: the interpreter runs the bytecode</td><td>Once, before the program runs</td></tr>
+              <tr><td>Knows the types</td><td>Only while running, checked on every operation</td><td>At compile time</td></tr>
+              <tr><td>Where <code>price</code> lives</td><td>A 24-byte object in memory</td><td>A CPU register</td></tr>
+              <tr><td>Instructions for <code>price * 1.18</code></td><td>Dozens to hundreds</td><td>1 or 2</td></tr>
+            </tbody>
+          </table>
+          <ol class="points" start="4">
+            <li>Java and C# sit in between: they start as bytecode, and a <strong>JIT</strong> (just-in-time compiler) turns the hot parts into machine code while the program runs, which is why they speed up after a warm-up.</li>
+            <li>Python is catching up the same way: PyPy uses a JIT and is often several times faster than CPython, and Python 3.13 ships an experimental JIT of its own.</li>
+          </ol>
+        </aside>
 
         <h2>The clock: what a “tick” is</h2>
         <ol class="points">
-          <li>Everything inside a CPU moves in step with a clock, like a metronome that beats billions of times a second.</li>
-          <li>On each beat, or tick, a core moves its instructions one stage further: fetch the next instruction, decode it, execute it, store the result.</li>
+          <li>Every CPU has a <strong>clock</strong>: a tiny circuit that sends out an electrical pulse, on and off, billions of times a second. Each pulse is one <strong>tick</strong>.</li>
+          <li>Each tick is the signal for every part of the core to move its work one stage forward. An instruction goes through four stages: <strong>fetch</strong> it from memory, <strong>decode</strong> what it means, <strong>execute</strong> it, <strong>store</strong> the result.</li>
           <li><strong>Clock speed</strong> is the number of ticks per second, measured in gigahertz (GHz). 3 GHz means 3 billion ticks a second, so one tick lasts a third of a nanosecond.</li>
-          <li>Modern cores overlap those stages and work on several instructions at once, so at best a core finishes 4 or more instructions per tick. Real server code averages around 1, because the core often waits for data from memory.</li>
+        </ol>
+        <p>Run the clock and watch four instructions from the example above move through a core:</p>
+        <div class="widget" data-widget="clock-pipeline"></div>
+        <ol class="points" start="4">
+          <li>The stages overlap. While instruction 1 executes, instruction 2 is being decoded and instruction 3 fetched. This is a <strong>pipeline</strong>, like an assembly line.</li>
+          <li>Once the pipeline is full, one instruction finishes every tick. Modern cores have several pipelines side by side, so at best they finish 4 or more per tick.</li>
+          <li>Real server code averages around 1 per tick, because the pipeline often stalls while it waits for data from memory.</li>
           <li>Put together: instructions per second ≈ clock speed × instructions per tick × number of cores. 3 GHz × 1 × 8 cores is about 24 billion instructions a second.</li>
         </ol>
 
@@ -91,27 +134,12 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
           <div class="fig"><small>Number of cores</small><b>4–64 vCPUs</b><span>A typical cloud server. On Intel and AMD, one vCPU is half a physical core.</span></div>
         </div>
 
-        <h2>What to look for in a CPU</h2>
-        <table class="data">
-          <thead><tr><th>Parameter</th><th>Typical server value</th><th>What it tells you</th><th>Matters most for</th></tr></thead>
-          <tbody>
-            <tr><td>Clock speed</td><td>2–3.5 GHz base, up to about 4 GHz boost</td><td>Ticks per second for each core. Boost is the top speed when the chip is cool and not fully loaded.</td><td>How long one CPU-heavy request takes</td></tr>
-            <tr><td>Physical cores</td><td>8 to over 100 per chip</td><td>How many things truly run at the same instant</td><td>Throughput: requests served in parallel</td></tr>
-            <tr><td>Threads per core</td><td>1 or 2</td><td>Hyper-threading: one core presenting itself as two, so it can work on a second thread while the first waits for memory</td><td>About 10–30% more throughput, not twice as much</td></tr>
-            <tr><td>vCPUs</td><td>2 to 192+ per cloud instance</td><td>What the cloud bills you for: one hyper-thread on Intel and AMD, a whole core on AWS Graviton</td><td>Comparing instance sizes and prices</td></tr>
-            <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How much work each tick does. A newer core at the same GHz can be 1.5 times faster than one from ten years earlier.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
-            <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much hot data stays right next to the cores</td><td>Databases, caches, anything with a big working set</td></tr>
-            <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which machine instructions the chip understands</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
-            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>Two chips means two groups of memory (NUMA)</td><td>Very large databases</td></tr>
-          </tbody>
-        </table>
-
         <h2>Clock speed stopped growing, so cores multiplied</h2>
         <ol class="points">
           <li>Until about 2005, every new CPU had a faster clock, and old code simply got quicker.</li>
-          <li>Then clock speeds hit a wall at around 3–4 GHz: going faster made the chips too hot to cool.</li>
+          <li>Then clock speeds hit a wall at around 3–5 GHz: going faster made the chips too hot to cool.</li>
           <li>Chip makers spent their extra transistors on more cores instead.</li>
-          <li>That is the root of this whole workshop. One core isn’t getting much faster, so the only way to do more work is in parallel: first more cores, then more machines.</li>
+          <li>One core isn’t getting much faster, so the only way to do more work is in parallel: first more cores, then more machines.</li>
         </ol>
 
         <h2>A core spends most of its life waiting</h2>
@@ -134,18 +162,12 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
 
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> lscpu | grep -E '^CPU\\(s\\)|Model name|per core|per socket|Socket\\(s\\)'
-<span class="o">CPU(s):                  8
-  Model name:            Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz
-    Thread(s) per core:  2
-    Core(s) per socket:  4
-    Socket(s):           1</span>
-<span class="p">$</span> sudo perf stat -a sleep 5        <span class="c"># count what the whole machine did for 5 seconds</span>
+<pre><span class="p">$</span> sudo perf stat -a sleep 5        <span class="c"># count what the whole machine did for 5 seconds</span>
 <span class="o">    21,034,551,201      cycles
     14,302,694,817      instructions       #    0.68  insn per cycle</span></pre>
           <ol class="points term-note">
-            <li>8 vCPUs, but only 4 real cores with 2 threads each, running at a 2.9 GHz base clock.</li>
-            <li>0.68 instructions per cycle (per tick): the cores spend much of their “busy” time waiting for memory.</li>
+            <li>A cycle is one tick. In 5 seconds this machine’s cores ticked 21 billion times while busy, and finished 14 billion instructions.</li>
+            <li>That’s 0.68 instructions per tick: the cores spend much of their “busy” time waiting for memory.</li>
           </ol>
         </figure>
 
@@ -154,10 +176,6 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
           <ol class="points">
             <li><strong>CPU % is not how much work you’re doing.</strong> A core stalled on memory shows as 100% busy.
             <code>perf stat</code> shows instructions per cycle; well below 1 usually means memory stalls, not heavy computation.</li>
-            <li><strong>With hyper-threads, 50% is not half full.</strong> 16 vCPUs at 50% can mean the 8 physical cores
-            are already close to busy. The remaining “half” adds only 10–30% more throughput.</li>
-            <li><strong>Parallelism buys throughput, not speed.</strong> More cores let you serve more requests at once.
-            A request that needs 200 ms of CPU still takes 200 ms, however many cores you buy.</li>
             <li><strong>Language choice is a capacity decision.</strong> The same CPU-heavy endpoint can need ten times
             the servers in an interpreted language as in a compiled one. For I/O-bound work, the difference mostly disappears.</li>
           </ol>
@@ -165,7 +183,12 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Buy more cores to serve more requests. Buy faster cores, or write faster code, to make each request quicker.</p>
+          <p>Clock speeds aren’t getting much faster. To get more out of a CPU:</p>
+          <ol class="points">
+            <li><strong>Run fewer instructions</strong> per request: do less work, or use a compiled language for CPU-heavy code.</li>
+            <li><strong>Make fewer trips to memory</strong>: keep hot data small and close together.</li>
+            <li><strong>Use more cores</strong> to serve more requests at once.</li>
+          </ol>
         </aside>`
     },
 
@@ -199,7 +222,7 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
             <tr><td>Cost to start</td><td>Higher: up to milliseconds for a large program</td><td>Lower: tens of microseconds</td></tr>
             <tr><td>If it crashes</td><td>Only that process dies</td><td>The whole process dies with it</td></tr>
             <tr><td>Sharing data</td><td>Pipes, sockets, shared memory: slower</td><td>Read the same variable, guarded by a lock</td></tr>
-            <tr><td>You’ll see it in</td><td>PostgreSQL connections, gunicorn workers, Chrome tabs</td><td>Java and Go servers, Puma, MySQL connections</td></tr>
+            <tr><td>You’ll see it in</td><td>PostgreSQL connections, gunicorn workers, Chrome tabs</td><td>Java and Go servers</td></tr>
           </tbody>
         </table>
 
@@ -217,9 +240,25 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
           <li>When more threads are runnable than there are cores, they queue.</li>
           <li>That queue is what <strong>load average</strong> measures. On Linux it also counts threads stuck waiting on disk.</li>
           <li>A load of 12 on 8 cores means that, on average, 4 threads are waiting for a turn.</li>
-          <li>Moving a core from one thread to another is a <strong>context switch</strong>. It takes a few microseconds and leaves the caches full of the previous thread’s data.</li>
-          <li>Tens of thousands of context switches a second is normal for a busy server. Far beyond that, the machine spends real time just switching.</li>
+          <li>Moving a core from one thread to another is a <strong>context switch</strong>. The kernel saves where the old thread was, loads the new one, and the new thread starts with the caches full of the old thread’s data.</li>
+          <li>One switch costs only a few microseconds, but servers switch thousands of times a second, so it adds up. Say each switch costs 3 µs:</li>
         </ol>
+        <table class="data">
+          <thead><tr><th class="num">Switches per second</th><th class="num">CPU time spent switching, every second</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1,000</td><td class="num">3 ms, 0.3% of one core</td><td>Nothing to see</td></tr>
+            <tr><td class="num">10,000</td><td class="num">30 ms, 3% of one core</td><td>Normal for a busy server</td></tr>
+            <tr><td class="num">100,000</td><td class="num">0.3 s, 30% of one core</td><td>Worth a look</td></tr>
+            <tr><td class="num">300,000</td><td class="num">0.9 s, almost a whole core</td><td>A core lost to switching instead of working</td></tr>
+          </tbody>
+        </table>
+        <ol class="points" start="6">
+          <li>The usual causes are far more busy threads than cores, or threads that keep waking up for tiny bits of work or fighting over the same lock.</li>
+        </ol>
+
+        <h2>How they fit together</h2>
+        <p>One server with two processes and two cores. Step through a few time slices:</p>
+        <div class="widget" data-widget="process-thread"></div>
 
         <h2>Why more threads isn’t always faster</h2>
         <ol class="points">
@@ -230,7 +269,9 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
         <div class="widget" data-widget="amdahl"></div>
         <ol class="points" start="4">
           <li>It can get worse than flat. When threads keep fighting over the same locks and the same memory, adding cores can make the system slower.</li>
-          <li>Neil Gunther’s Universal Scalability Law describes this. You’ll see the same shape again with servers and databases in later chapters.</li>
+          <li>Neil Gunther’s Universal Scalability Law describes this, and it’s the third curve in the chart. You’ll see the same shape again with servers and databases in later chapters.</li>
+          <li><strong>So there is always a sweet spot.</strong> Throughput rises as you add threads, levels off, then falls. Past the peak, every extra thread makes the whole system slower, not faster. Where the sweet spot sits depends on the kind of work, which the next page covers.</li>
+          <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or p99 latency starts to climb.</li>
         </ol>
 
         <figure class="term">
@@ -240,33 +281,73 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
     812    1 27144 postgres: checkpointer
     815    1 11380 postgres: walwriter
    2290    1 14012 postgres: app orders 10.0.1.17(51544) idle</span>
-<span class="p">$</span> pidstat -w -p 2290 1                             <span class="c"># context switches per second</span>
+<span class="p">$</span> vmstat 1                                         <span class="c"># cs = context switches per second, whole machine</span>
+<span class="o">procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+ r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+ 3  0      0 319488  82112 4413920    0    0     4    96 2210 9840 22  4 74  0  0</span>
+<span class="p">$</span> pidstat -w -p 2290 1                             <span class="c"># context switches per second, one process</span>
 <span class="o">14:02:11      UID       PID   cswch/s nvcswch/s  Command
 14:02:12      113      2290    412.00      3.00  postgres</span></pre>
           <ol class="points term-note">
             <li>Every PostgreSQL connection is its own process with a single thread.</li>
-            <li>This one gives up its core voluntarily 412 times a second (<code>cswch</code>): it’s waiting on disk and network.</li>
+            <li>The whole machine switches about 9,800 times a second (<code>cs</code>): normal for a busy server, going by the table above. <code>r</code> shows 3 threads ready to run.</li>
+            <li>The connection process gives up its core voluntarily 412 times a second (<code>cswch</code>): it’s waiting on disk and network.</li>
             <li>It is almost never pushed off its core (<code>nvcswch</code>), so the CPU is not its problem.</li>
           </ol>
         </figure>
 
+        <h3 class="read-head">How to read these columns</h3>
+        <table class="data cols">
+          <thead><tr><th>Column</th><th>What it means</th><th>In this example</th></tr></thead>
+          <tbody>
+            <tr class="group"><td colspan="3"><code>ps -o pid,nlwp,rss,cmd</code>: one line per process</td></tr>
+            <tr><td><code>PID</code></td><td>Process ID: the number the OS uses to identify the process</td><td>2290 is one database connection</td></tr>
+            <tr><td><code>NLWP</code></td><td>Number of threads in the process (“light-weight processes”)</td><td>1: each has a single thread</td></tr>
+            <tr><td><code>RSS</code></td><td>Memory the process is really using in RAM, in KB</td><td>14,012 KB, about 14 MB</td></tr>
+            <tr><td><code>CMD</code></td><td>What the process is. PostgreSQL writes each connection’s details here.</td><td>User <code>app</code>, database <code>orders</code>, connected from 10.0.1.17, currently idle</td></tr>
+
+            <tr class="group"><td colspan="3"><code>vmstat 1</code>: one line every second for the whole machine. When you run it, ignore the very first line: it’s the average since boot.</td></tr>
+            <tr><td><code>r</code></td><td>Threads ready to run: running now or waiting for a core</td><td>3 on this machine</td></tr>
+            <tr><td><code>b</code></td><td>Threads blocked, waiting for the disk</td><td>0</td></tr>
+            <tr><td><code>in</code></td><td>Interrupts per second: network cards, disks and timers asking the CPU for attention</td><td>2,210</td></tr>
+            <tr><td><code>cs</code></td><td>Context switches per second</td><td>9,840: normal for a busy server</td></tr>
+            <tr><td><code>us sy id wa st</code></td><td>How CPU time is split, as in <code>top</code>: your code, the kernel, idle, waiting for disk, taken by the hypervisor</td><td>22% your code, 4% kernel, 74% idle</td></tr>
+            <tr><td><code>swpd free buff cache</code>, <code>si so</code>, <code>bi bo</code></td><td>Memory, swapping, and blocks read from and written to disk per second</td><td>Covered on the memory and disk pages</td></tr>
+
+            <tr class="group"><td colspan="3"><code>pidstat -w -p 2290 1</code>: one line every second for process 2290</td></tr>
+            <tr><td><code>UID</code></td><td>The user the process runs as</td><td>113, the <code>postgres</code> user</td></tr>
+            <tr><td><code>cswch/s</code></td><td>Voluntary switches: the thread gave up its core because it had to wait for disk, network or a lock</td><td>412: it waits a lot</td></tr>
+            <tr><td><code>nvcswch/s</code></td><td>Involuntary switches: the kernel took the core away because its time slice ran out and others were waiting</td><td>3: almost never</td></tr>
+          </tbody>
+        </table>
+
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>Isolation costs memory; sharing costs safety.</strong> Processes are why one bad request can’t
-            corrupt another’s data, and why 100 workers hold 100 copies of your app in memory.</li>
-            <li><strong>PostgreSQL runs a process per connection.</strong> A few hundred connections means a few hundred
-            processes, which is why production Postgres sits behind a connection pooler such as PgBouncer.</li>
+            <li><strong>Isolation costs memory; sharing costs safety.</strong> Separate processes mean one bad request
+            can’t corrupt another’s data, but 100 worker processes hold 100 copies of your app in memory. Threads share
+            one copy, and a bug in one can break them all.</li>
             <li><strong>Standard Python runs one thread at a time.</strong> The GIL lets only one thread execute Python
-            code at once (a thread waiting on I/O lets go of it). To use 8 cores, run 8 processes.</li>
-            <li><strong>Involuntary context switches mean CPU shortage.</strong> Voluntary switches mean threads are
-            waiting on I/O. Involuntary ones mean threads were pushed off a core that someone else needed.</li>
+            code at once (a thread waiting on I/O lets go of it). For CPU-heavy Python, run several processes, not more threads.</li>
+            <li><strong>Default pool sizes are guesses.</strong> Tomcat allows up to 200 threads; many connection pools
+            default to 10. Neither knows your workload, so measure the sweet spot. Databases need this most: PostgreSQL
+            runs a process per connection, which is why production Postgres sits behind a pooler such as PgBouncer that
+            keeps the count near what the database can handle.</li>
+            <li><strong>A busy lock is a serial part.</strong> If every request takes the same lock (a global cache, a
+            shared counter, a single log writer), that lock lets one thread through at a time and Amdahl’s limit applies.
+            Split the lock, give each thread its own copy, or move the shared state to something built for it.</li>
+            <li><strong>Involuntary context switches mean CPU shortage.</strong> In <code>pidstat</code>, a high
+            <code>cswch/s</code> means threads are waiting on I/O; a high <code>nvcswch/s</code> means they were pushed
+            off a core that someone else needed.</li>
           </ol>
         </aside>
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Count runnable threads, not threads. 2,000 sleeping threads are fine; 50 runnable threads on 8 cores are not.</p>
+          <ol class="points">
+            <li><strong>Count ready threads, not threads.</strong> 2,000 sleeping threads cost almost nothing; 50 ready threads on 8 cores are queuing.</li>
+            <li><strong>Grow thread and connection pools only while throughput keeps rising.</strong> Past the sweet spot, more threads make things slower.</li>
+          </ol>
         </aside>`
     },
 
@@ -290,22 +371,57 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
           <div>
             <h3>CPU-bound work</h3>
             <ol class="points">
-              <li>Time goes into computing: resizing images, hashing passwords, compression, PDFs, ML inference, parsing huge JSON.</li>
-              <li>Throughput = cores ÷ CPU time per request.</li>
-              <li>8 cores at 10 ms each top out near 800 requests a second.</li>
+              <li>Time goes into computing: resizing images, hashing passwords, compressing files, generating PDFs, encryption, ML inference, parsing huge JSON.</li>
+              <li>The CPU is the limit, so throughput = cores ÷ CPU time per request.</li>
+              <li>Example: each request needs 10 ms of CPU, so one core finishes 100 requests a second, and 8 cores finish 800. That is the ceiling, however many threads you add.</li>
+              <li>So the best setup is about one busy thread per core. 50 threads on 8 cores just take turns on the same 8 cores: more context switches, no extra work done.</li>
             </ol>
           </div>
           <div>
             <h3>I/O-bound work</h3>
             <ol class="points">
-              <li>Time goes into waiting for a database, another service or the disk.</li>
-              <li>Throughput is set by how many requests are in flight.</li>
-              <li>8 workers at 50 ms each top out at 160 requests a second, with the CPU over 90% idle.</li>
+              <li>Time goes into waiting for something outside the CPU: a database query, a network call to another service or API (a payment gateway, an internal microservice), a cache such as Redis, the disk, or an upload to S3.</li>
+              <li>While a request waits, its worker can’t do anything else, so throughput is set by how many requests are in flight at once.</li>
+              <li>Example: each request takes 50 ms, but only 4 ms of that is CPU. One worker finishes 20 requests a second, so 8 workers finish 160, and the CPU is only 8% busy. The limit is the number of workers, not the CPU.</li>
+              <li>So add workers, many more than cores. Throughput keeps rising until something else fills up: the CPU (see the table below), or whatever the requests wait on, such as the database.</li>
             </ol>
           </div>
         </div>
 
-        <h2>Reading the CPU line in top</h2>
+        <p>Adding workers to the I/O-bound example (8 cores, 50 ms per request, 4 ms of it CPU):</p>
+        <table class="data">
+          <thead><tr><th class="num">Workers</th><th class="num">Requests a second</th><th class="num">CPU busy</th><th>What limits it</th></tr></thead>
+          <tbody>
+            <tr><td class="num">8</td><td class="num">160</td><td class="num">8%</td><td>Too few workers</td></tr>
+            <tr><td class="num">40</td><td class="num">800</td><td class="num">40%</td><td>Still too few workers</td></tr>
+            <tr><td class="num">100</td><td class="num">2,000</td><td class="num">100%</td><td>The CPU: the service has become CPU-bound</td></tr>
+            <tr><td class="num">200</td><td class="num">About 2,000</td><td class="num">100%</td><td>The CPU. Extra workers just queue for a core, so each request gets slower.</td></tr>
+          </tbody>
+        </table>
+        <p class="caption">Simplified: this assumes the database keeps up. In real systems it often fills up before the CPU does.</p>
+
+        <h2>How to tell which kind you have</h2>
+        <ol class="points">
+          <li><strong>CPU-bound:</strong> <code>us</code> in <code>top</code> is high, and the load average is at or above the number of cores.</li>
+          <li><strong>Waiting on disk:</strong> <code>wa</code> is high. The CPU is idle, but threads are stuck on reads and writes.</li>
+          <li><strong>Waiting on the network</strong> (a database, another API): the CPU just looks idle, because <code>top</code> can’t see network waits. If requests are slow while the CPU is mostly idle, the time is going into waiting.</li>
+        </ol>
+        <figure class="term">
+          <figcaption>Try it on a Linux server</figcaption>
+<pre><span class="p">$</span> nproc
+<span class="o">4</span>
+<span class="p">$</span> uptime
+<span class="o"> 14:02:11 up 12 days,  3 users,  load average: 3.92, 3.10, 2.45</span>
+<span class="p">$</span> top            <span class="c"># press 1 to see each core</span>
+<span class="o">%Cpu(s): 88.1 us,  4.0 sy,  0.0 ni,  6.9 id,  0.6 wa,  0.0 hi,  0.1 si,  0.3 st</span></pre>
+          <ol class="points term-note">
+            <li>4 cores and a load average of 3.92: almost exactly one ready thread per core.</li>
+            <li>88% of CPU time is <code>us</code> (your code) and almost none is <code>wa</code>: this server is CPU-bound and nearly full.</li>
+            <li>The three load numbers are 1, 5 and 15 minute averages. Rising from 2.45 to 3.92 means it’s getting busier.</li>
+          </ol>
+        </figure>
+
+        <p>The CPU line in <code>top</code>, field by field:</p>
         <table class="data">
           <thead><tr><th>Field</th><th>Time spent</th><th>If it’s high</th></tr></thead>
           <tbody>
@@ -355,20 +471,15 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
         </aside>
 
         <figure class="term">
-          <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> uptime
-<span class="o"> 14:02:11 up 12 days,  3 users,  load average: 3.92, 3.10, 2.45</span>
-<span class="p">$</span> top            <span class="c"># press 1 to see each core</span>
-<span class="o">%Cpu(s): 88.1 us,  4.0 sy,  0.0 ni,  6.9 id,  0.6 wa,  0.0 hi,  0.1 si,  0.3 st</span>
-<span class="p">$</span> cat /sys/fs/cgroup/cpu.stat     <span class="c"># inside a container (cgroup v2)</span>
+          <figcaption>Try it inside a container</figcaption>
+<pre><span class="p">$</span> cat /sys/fs/cgroup/cpu.stat     <span class="c"># cgroup v2</span>
 <span class="o">usage_usec 912334871
 nr_periods 51231
 nr_throttled 8840
 throttled_usec 664210334</span></pre>
           <ol class="points term-note">
-            <li>On this 4-core box, load 3.92 and 88% <code>us</code>: CPU-bound and nearly full.</li>
             <li>The container was throttled in 8,840 of 51,231 periods (17%) and lost 664 seconds of running time.</li>
-            <li>Users see that as random latency spikes.</li>
+            <li>Users see that as random latency spikes, even when the machine itself is mostly idle.</li>
           </ol>
         </figure>
 
@@ -379,6 +490,8 @@ throttled_usec 664210334</span></pre>
             requests (a report, an export) slow down every cheap one. Give heavy work its own pool, or a queue (chapter 6).</li>
             <li><strong>I/O-bound services scale with concurrency.</strong> If CPU is low and throughput is capped, you
             need more requests in flight (more workers, async I/O), not more cores.</li>
+            <li><strong>Parallelism buys throughput, not speed.</strong> More cores let you serve more requests at once.
+            A request that needs 200 ms of CPU still takes 200 ms, however many cores you buy.</li>
             <li><strong>Be careful with CPU limits.</strong> Many teams run latency-sensitive services on Kubernetes with
             CPU requests but no CPU limits, or limits well above normal use, because of the throttling above.</li>
           </ol>
@@ -390,6 +503,82 @@ throttled_usec 664210334</span></pre>
         </aside>`
     },
 
+    /* ------------------------------------------------------------------ */
+    {
+      group: 'CPU',
+      slug: 'choosing-a-cpu',
+      title: 'What to look for in a CPU',
+      sub: 'The numbers on a spec sheet or a cloud instance type, and which ones matter for your work.',
+      html: `
+        <ol class="points lede">
+          <li>Every CPU, and every cloud instance type, comes with a list of numbers. Only a few of them matter for a server.</li>
+          <li>Which ones matter depends on the work. CPU-bound work cares about speed per core and the number of cores. I/O-bound work cares far more about memory and network than about the CPU.</li>
+        </ol>
+
+        <table class="data">
+          <thead><tr><th>Parameter</th><th>Typical server value</th><th>What it tells you</th><th>Matters most for</th></tr></thead>
+          <tbody>
+            <tr><td>Clock speed</td><td>2–3.5 GHz base, up to about 4 GHz boost</td><td>Ticks per second for each core. Boost is the top speed when the chip is cool and not fully loaded.</td><td>How long one CPU-heavy request takes</td></tr>
+            <tr><td>Physical cores</td><td>8 to over 100 per chip</td><td>How many things truly run at the same instant</td><td>Throughput: requests served in parallel</td></tr>
+            <tr><td>Threads per core</td><td>1 or 2</td><td>Hyper-threading: one core presenting itself as two, so it can work on a second thread while the first waits for memory</td><td>About 10–30% more throughput, not twice as much</td></tr>
+            <tr><td>vCPUs</td><td>2 to 192+ per cloud instance</td><td>What the cloud bills you for: one hyper-thread on Intel and AMD, a whole core on AWS Graviton</td><td>Comparing instance sizes and prices</td></tr>
+            <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How much work each tick does. A newer core at the same GHz can be 1.5 times faster than one from ten years earlier.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
+            <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much hot data stays right next to the cores</td><td>Databases, caches, anything with a big working set</td></tr>
+            <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which machine instructions the chip understands</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
+            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>Two chips means two groups of memory (NUMA)</td><td>Very large databases</td></tr>
+          </tbody>
+        </table>
+        <h2>Reading a cloud instance type</h2>
+        <p>Cloud providers pack these choices into the instance name. On AWS, <code>c7g.2xlarge</code> reads like this:</p>
+        <table class="data">
+          <thead><tr><th>Part</th><th>Here</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td>Family</td><td><code>c</code></td><td>Compute-optimised: about 2 GB of RAM per vCPU. <code>m</code> is general purpose (4 GB), <code>r</code> is memory-optimised (8 GB), <code>t</code> is burstable.</td></tr>
+            <tr><td>Generation</td><td><code>7</code></td><td>Higher is newer: usually faster per vCPU and cheaper for the same work.</td></tr>
+            <tr><td>Processor</td><td><code>g</code></td><td>AWS Graviton (ARM). <code>i</code> is Intel, <code>a</code> is AMD.</td></tr>
+            <tr><td>Extras</td><td>none here</td><td><code>d</code> adds a local NVMe disk, <code>n</code> adds network bandwidth.</td></tr>
+            <tr><td>Size</td><td><code>2xlarge</code></td><td>8 vCPUs and 16 GB. Each size up doubles both: <code>large</code> has 2 vCPUs, <code>xlarge</code> 4, <code>2xlarge</code> 8, <code>4xlarge</code> 16.</td></tr>
+          </tbody>
+        </table>
+        <p class="caption">Google Cloud and Azure name things differently, but encode the same choices: family, generation, processor and size.</p>
+
+        <figure class="term">
+          <figcaption>Try it on a Linux server</figcaption>
+<pre><span class="p">$</span> lscpu | grep -E 'Architecture|^CPU\\(s\\)|Model name|per core|per socket|Socket\\(s\\)'
+<span class="o">Architecture:            x86_64
+CPU(s):                  8
+  Model name:            Intel(R) Xeon(R) Platinum 8375C CPU @ 2.90GHz
+    Thread(s) per core:  2
+    Core(s) per socket:  4
+    Socket(s):           1</span></pre>
+          <ol class="points term-note">
+            <li><code>x86_64</code>: an Intel or AMD chip, so binaries and Docker images must be built for amd64.</li>
+            <li>8 vCPUs, but 2 threads per core: really 4 physical cores.</li>
+            <li>The model name gives the generation (the 8375C is a 2021 Intel Xeon, code-named Ice Lake) and the base clock, 2.9 GHz.</li>
+          </ol>
+        </figure>
+
+        <aside class="note design">
+          <h3>For system design</h3>
+          <ol class="points">
+            <li><strong>Match the CPU to the bottleneck.</strong> CPU-bound services want the newest generation and a
+            compute-optimised family. For I/O-bound services you’re mostly buying memory and network; more vCPUs won’t help.</li>
+            <li><strong>Compare price per unit of work, not price per vCPU.</strong> Run your own service on two or three
+            instance types. Generation and architecture often matter more than GHz.</li>
+            <li><strong>With hyper-threads, 50% is not half full.</strong> 16 vCPUs at 50% can mean the 8 physical cores
+            are already close to busy. The remaining “half” adds only 10–30% more throughput.</li>
+            <li><strong>Try ARM.</strong> Graviton instances are often cheaper for the same throughput, but every binary,
+            base image and native library you use needs an ARM64 build.</li>
+            <li><strong>Be careful with burstable types.</strong> The <code>t</code> family is fine for development and low,
+            spiky traffic, but steady production load spends the CPU credits and then runs slowly.</li>
+          </ol>
+        </aside>
+
+        <aside class="note rule">
+          <h3>Rule of thumb</h3>
+          <p>Spec sheets tell you where to start. Benchmarking your own workload tells you what to buy.</p>
+        </aside>`
+    },
     /* ------------------------------------------------------------------ */
     {
       group: 'CPU',

@@ -1,6 +1,6 @@
-# Zero to a million
+# Zero to a million users
 
-A practical way to scale your application from 0 to a million users. It's a plain
+A practical guide to scaling your app from zero to a million users. It's a plain
 chapter-by-chapter walkthrough with no story: a chapter sidebar, readable pages, and a few small
 interactive pieces where a number is easier to feel than to read.
 
@@ -93,8 +93,6 @@ The building blocks used in Chapter 1's HTML are `.lede`, `.figures`, `.split`, 
 `.note.rule` (rule of thumb), `figure.term`, and
 `<div class="widget" data-widget="…">`.
 
-Layout: text sits in one centred reading column (`--measure`, about 72 characters a line).
-Widgets, terminals, `.compile`, `.cases`, `.split`, `.figures`, `.stack`, `.cpu-line` and tables
-with four or more columns step out to the wider column (`--wide`) on the same centre line. A
-caption right after one of those figures lines up with it. Type is IBM Plex Sans and IBM Plex Mono;
+Layout: every block on a page (text, notes, tables, terminals, widgets and diagrams) shares one
+centred column (`--column`), so all the edges line up. Type is IBM Plex Sans and IBM Plex Mono;
 sizes come from the `--fs-*` tokens at the top of `css/style.css`.

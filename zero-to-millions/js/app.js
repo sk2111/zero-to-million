@@ -1,4 +1,4 @@
-/* Zero to a million: routing, sidebar and page rendering.
+/* Zero to a million users: routing, sidebar and page rendering.
    Pages are addressed by hash: #/ is home, #/1 is chapter 1's cover,
    #/1/cpu is a section. ← and → walk the pages in order. */
 (function () {
@@ -75,8 +75,8 @@
   function homeHtml() {
     var ready = chapters.filter(function (c) { return c.status === 'ready'; }).length;
     return '<section class="hero">' +
-        '<h1 class="hero-title">Zero to<br>a million</h1>' +
-        '<p class="hero-sub">A practical way to scale your application from 0&nbsp;to a million users.</p>' +
+        '<h1 class="hero-title">Zero to<br>a million users</h1>' +
+        '<p class="hero-sub">A practical guide to scaling your app from zero to a&nbsp;million users.</p>' +
         '<div class="us" data-widget="user-scale"></div>' +
         '<div class="hero-actions"><a class="btn primary" href="#/1">Start chapter 1</a>' +
         '<button type="button" class="btn" data-scroll="roadmap">See all chapters</button></div>' +
@@ -171,14 +171,14 @@
     });
     renderToc(p);
 
-    document.getElementById('crumb').innerHTML = p.kind === 'home' ? '<b>Zero to a million</b>'
+    document.getElementById('crumb').innerHTML = p.kind === 'home' ? '<b>Zero to a million users</b>'
       : p.kind === 'cover' ? '<span>Chapter ' + p.ch.n + '</span><b>' + esc(p.ch.title) + '</b>'
       : '<a href="#/' + p.ch.n + '">' + esc(p.ch.title) + '</a><span class="sep" aria-hidden="true">/</span><b>' + p.num + ' ' + esc(p.sec.title) + '</b>';
     var inCh = p.ch ? pages.filter(function (x) { return x.ch === p.ch; }) : [];
     document.getElementById('count').textContent = inCh.length > 1 ? (inCh.indexOf(p) + 1) + ' of ' + inCh.length : '';
     document.getElementById('prevBtn').disabled = i === 0;
     document.getElementById('nextBtn').disabled = i === pages.length - 1;
-    document.title = p.kind === 'home' ? 'Zero to a Million' : p.title + ' – Zero to a Million';
+    document.title = p.kind === 'home' ? 'Zero to a Million Users' : p.title + ' – Zero to a Million Users';
 
     window.scrollTo(0, 0);
     pageEl.focus({ preventScroll: true });

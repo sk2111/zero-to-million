@@ -1,9 +1,9 @@
-/* Zero to a million
+/* Zero to a million users
    Type: IBM Plex Sans for every word and IBM Plex Mono for every command. It is an
    engineering manual's typeface, and it keeps I, l and 1 apart in text full of I/O.
-   Layout: one reading column of about 72 characters, centred. Widgets, terminals,
-   wide tables and diagrams step out to a wider column on the same centre line, and
-   a section's number hangs in the margin beside its title, as in a manual.
+   Layout: one centred column that text, tables, terminals and diagrams all share, so
+   every edge on a page lines up. A section's number hangs in the margin beside its
+   title when the screen has room for it, as in a manual.
    Colour: teal marks where you are and what to do; amber marks what runs out.
    Chart colours keep one meaning everywhere: orange = CPU, blue = disk,
    aqua = network and waiting. */
@@ -91,8 +91,7 @@
   --fs-h2: 1.625rem;      /* 26 */
   --fs-h1: 2.5rem;        /* 40 */
 
-  --measure: 41rem;       /* the reading column: about 72 characters a line */
-  --wide: 60rem;          /* widgets, terminals, wide tables, diagrams */
+  --column: 60rem;        /* one width for text, tables, terminals and diagrams */
   --side-w: 20rem;
   --bar-h: 3.25rem;
   --toc-dot: 12px;        /* sidebar: the dot on the rail, and the gap after it */
@@ -232,19 +231,15 @@ kbd {
 .pager { display: flex; align-items: center; gap: 0.125rem; }
 .count { margin-right: 0.5rem; font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* ---------- page: one centred reading column, figures step out ---------- */
+/* ---------- page: one centred column for text and diagrams alike ---------- */
 
 .page {
   container: page / inline-size;
   padding: 3.5rem clamp(1.25rem, 4vw, 3.5rem) 6rem;
   font-size: var(--fs-body); line-height: 1.65; outline: none;
 }
-.page-inner { max-width: var(--wide); margin-inline: auto; }
-.page .page-inner > * { max-width: var(--measure); margin-inline: auto; }
-.page .page-inner > :is(.widget, .term, .compile, .cases, .split, .figures, .stack, .cpu-line,
-                        .table-wrap:has(tr > :nth-child(4)), .legend:has(+ .cases)) { max-width: var(--wide); }
-/* A caption lines up with the figure it describes. */
-.page .page-inner > :is(.compile, .cases, .stack, .cpu-line, .figures) + p.caption { max-width: var(--wide); }
+.page-inner { max-width: var(--column); margin-inline: auto; }
+.page .page-inner > * { max-width: none; }   /* every block takes the full column, so the edges line up */
 
 .page-inner > p { margin-block: 1rem; }
 .page h2 { margin-block: 3.5rem 0.875rem; font-size: var(--fs-h2); font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; }
@@ -257,8 +252,8 @@ kbd {
 .sec-num { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
 .sec-group { color: var(--muted); }
 .sec-head h1 { margin: 0; font-size: var(--fs-h1); font-weight: 600; line-height: 1.12; letter-spacing: -0.022em; }
-.sec-sub { margin: 0.875rem 0 0; max-width: 34rem; font-size: var(--fs-sub); line-height: 1.5; color: var(--ink-2); text-wrap: balance; }
-@container page (min-width: 57rem) {
+.sec-sub { margin: 0.875rem 0 0; max-width: 40rem; font-size: var(--fs-sub); line-height: 1.5; color: var(--ink-2); text-wrap: balance; }
+@container page (min-width: 74rem) {   /* the column plus room for the number on both sides */
   .sec-kicker {
     position: absolute; top: 0; right: calc(100% + 1.75rem);
     flex-direction: column; align-items: flex-end; gap: 0.3rem; margin: 0; white-space: nowrap;
@@ -365,7 +360,7 @@ table.cols td:first-child code { white-space: nowrap; }
 .term .o { color: var(--term-out); }
 .term .c { color: var(--term-dim); }
 .term .wrap { white-space: pre-wrap; overflow-wrap: anywhere; }   /* one long log line that may wrap */
-.term-note { max-width: 46rem; margin: 1rem 0 0; padding-top: 0.9rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: var(--fs-md); line-height: 1.6; }
+.term-note { margin: 1rem 0 0; padding-top: 0.9rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: var(--fs-md); line-height: 1.6; }
 ol.term-note { padding-left: 1.5rem; }
 ol.term-note > li { margin: 0.35rem 0; }
 ol.term-note > li::marker { color: var(--term-prompt); }
@@ -844,7 +839,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .page-home .page-inner { max-width: 62rem; }
 .page.page-home .page-inner > * { max-width: none; }
 .hero { padding: 1rem 0 4rem; }
-.hero-title { margin: 0; font-size: clamp(3.25rem, 8vw, 6.25rem); font-weight: 700; line-height: 0.95; letter-spacing: -0.04em; }
+.hero-title { margin: 0; font-size: clamp(2.75rem, 8vw, 6.25rem); font-weight: 700; line-height: 0.95; letter-spacing: -0.04em; }
 .hero-sub { margin: 1.4rem 0 0; max-width: 32rem; text-wrap: balance; font-size: clamp(1.125rem, 1.6vw, 1.375rem); line-height: 1.45; color: var(--ink-2); }
 
 .us { margin: 3rem 0 2.5rem; }

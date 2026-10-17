@@ -32,22 +32,28 @@ ZTM.chapters = [
     n: 5, slug: 'make-it-fast', title: 'Make it fast', users: 100000, status: 'ready', minutes: 45,
     question: 'The database is the bottleneck. Now what?',
     summary: 'Find what the database is busy with, scale its reads with replicas, and handle the consistency trade-offs that copies bring.',
-    topics: ['Indexes and query plans', 'Caching with Redis', 'Cache invalidation', 'Read replicas and replication lag', 'CDNs for static content']
+    topics: ['Finding what the database is busy with', 'Read replicas and replication lag', 'CAP and PACELC', 'Living with stale reads']
   },
   {
-    n: 6, slug: 'do-it-later', title: 'Do it later', users: 1000000, status: 'planned',
+    n: 6, slug: 'cache-it', title: 'Cache it', users: 500000, status: 'ready', minutes: 45,
+    question: 'Every server looks healthy, but pages are slow. Why?',
+    summary: 'Find the work you repeat for every shopper, keep the answer in Redis, and keep the cache honest when the data changes.',
+    topics: ['Finding repeated work', 'Redis and cache-aside', 'TTLs and hit rate', 'Cache invalidation', 'Stampedes and lagging replicas']
+  },
+  {
+    n: 7, slug: 'do-it-later', title: 'Do it later', users: 1000000, status: 'planned',
     question: 'Which work doesn’t need to happen while the user waits?',
     summary: 'Queues, background workers and events: moving slow work out of the request path.',
     topics: ['Message queues', 'Background workers', 'At-least-once delivery and idempotency', 'Events and pub/sub', 'Backpressure']
   },
   {
-    n: 7, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
+    n: 8, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
     question: 'What do we do when one database can’t hold it all?',
     summary: 'Sharding, partitioning and multiple regions, and the consistency trade-offs that come with them.',
     topics: ['Partitioning and sharding', 'Choosing a shard key', 'Multiple regions', 'Consistency vs availability (CAP in practice)', 'Picking the right database']
   },
   {
-    n: 8, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
+    n: 9, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
     question: 'How do we keep working while parts of the system fail?',
     summary: 'Timeouts, retries, circuit breakers, rate limits and monitoring. These apply at every stage, not just at the end.',
     topics: ['Timeouts and retries with backoff', 'Circuit breakers', 'Rate limiting and load shedding', 'Logs, metrics and traces', 'Alerts that mean something']

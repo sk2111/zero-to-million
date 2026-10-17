@@ -507,7 +507,7 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
             8 workers and two endpoints: product pages (50 ms, mostly waiting on the database) and PDF invoices (2 seconds
             of pure CPU each). If 8 people download an invoice at the same moment, all 8 workers are busy for 2 seconds,
             and every product page waits behind them, even though it needs only 50 ms. The fix is to give heavy work its
-            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue (chapter 6)
+            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue (chapter 7)
             and let the user collect the PDF when it’s ready.</li>
             <li><strong>I/O-bound services scale with concurrency.</strong> If CPU is low and throughput is capped, you
             need more requests in flight (more workers, async I/O), not more cores.</li>
@@ -770,7 +770,7 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
             <li><strong>A cache trades memory for speed.</strong> It keeps a copy of something that was slow to get, such as
             a database result, a rendered page or a file, in RAM. The next request reads that copy in microseconds instead of
             going back to the database, the disk or another server. You pay in RAM, and you save CPU, disk reads or network
-            round trips. The page cache above is exactly this: Linux spends spare RAM so it doesn’t have to read the disk again.</li>
+            round trips. The page cache above is exactly this: Linux spends spare RAM so it doesn’t have to read the disk again. Chapter 6 puts the same idea to work with Redis.</li>
           </ol>
         </aside>
 

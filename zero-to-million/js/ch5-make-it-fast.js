@@ -212,7 +212,7 @@ def add_to_cart(cart_id, product_id, quantity):
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>Replicas scale reads, not writes.</strong> Every replica still has to replay every write. If writes are
-            the bottleneck, more replicas won’t help (chapter 7).</li>
+            the bottleneck, more replicas won’t help (chapter 8).</li>
             <li><strong>A replica is also a spare.</strong> If the primary fails, a replica can be promoted to take its place.
             Amazon RDS Multi-AZ does this automatically.</li>
             <li><strong>Keep replicas as big as the primary.</strong> A smaller replica can fall behind just replaying a busy
@@ -377,6 +377,12 @@ def my_orders(request: Request):
             <tr><td>Sales dashboards</td><td>Replicas</td><td>Nobody notices if a count is a few seconds old</td></tr>
           </tbody>
         </table>
+
+        <h2>Where this leads</h2>
+        <ol class="points">
+          <li>With the replicas sharing the reads, the database is calm again, and Tomazon keeps growing.</li>
+          <li>But every replica still answers the same questions over and over: the same home page and the same popular products, rebuilt for every shopper. Chapter 6 keeps the answers instead.</li>
+        </ol>
 
         <aside class="note design">
           <h3>For system design</h3>

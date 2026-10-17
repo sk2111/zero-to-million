@@ -666,6 +666,11 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .lag-mark b { position: absolute; top: 0; left: 0.35rem; font-size: 0.76rem; white-space: nowrap; }
 .lag-result { margin: 0.9rem 0 0; padding: 0.6rem 0.9rem; border-radius: 8px; }
 
+/* Chapter 6: load balancer, app servers and Redis on top; the database tier below */
+.c6-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3rem; align-items: start; padding-bottom: 2.6rem; }
+.c6-lb { grid-area: 1 / 1; } .c6-app { grid-area: 1 / 2; } .c6-redis { grid-area: 1 / 3; }
+.c6-primary { grid-area: 2 / 1; } .c6-reps { grid-area: 2 / 2; } .c6-inv { grid-area: 2 / 3; }
+
 /* 5.3: CAP and PACELC on one small diagram; a cut replication link is drawn red and dashed */
 .cap-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; }
 .cap-verdict { margin: 0 0 1.25rem; }
@@ -1007,6 +1012,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .ar5-apps, .ar5-db { gap: 0.8rem; }
   .lag-tl { --lag-name: 4.6rem; }
   .cap-dbs { gap: 4.25rem; }
+  .c6-grid { gap: 2.4rem 1.2rem; }
   .cap-app .nd { width: auto; }
   .ar4-lb { width: auto; }
   .sa-to { transform: rotate(90deg); }

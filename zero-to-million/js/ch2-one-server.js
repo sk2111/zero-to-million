@@ -183,8 +183,8 @@ ZTM.content[2] = {
             <tr><td>Several servers and a load balancer</td><td>A handful of users fit easily on one machine</td><td>Traffic is real, or the product must survive a server failure (chapter 4)</td></tr>
             <tr><td>Microservices</td><td>They slow down every change while the product is still moving</td><td>The team and the codebase are big enough that one codebase gets in the way</td></tr>
             <tr><td>Kubernetes</td><td>A lot to learn and run for one small app</td><td>You run many services and need to automate deploying them</td></tr>
-            <tr><td>Caches, queues, read replicas</td><td>They solve problems you don’t have yet</td><td>Measurements show a real bottleneck (chapters 5 and 6)</td></tr>
-            <tr><td>Several regions</td><td>The users are in one place</td><td>Users are spread across the world, or you must survive a region going down (chapter 7)</td></tr>
+            <tr><td>Caches, queues, read replicas</td><td>They solve problems you don’t have yet</td><td>Measurements show a real bottleneck (chapters 5, 6 and 7)</td></tr>
+            <tr><td>Several regions</td><td>The users are in one place</td><td>Users are spread across the world, or you must survive a region going down (chapter 8)</td></tr>
           </tbody>
         </table>
 

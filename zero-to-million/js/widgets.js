@@ -280,7 +280,8 @@ window.ZTM = window.ZTM || {};
     bolt: '<path d="M18 5l-9 13h7l-2 9 9-13h-7z"/>',
     db: '<ellipse cx="16" cy="9" rx="8" ry="3"/><path d="M8 9v14c0 1.7 3.6 3 8 3s8-1.3 8-3V9M8 16c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
     disk: '<rect x="7" y="9" width="18" height="14" rx="2"/><path d="M11 13h10M11 17h6"/><circle cx="21" cy="19" r="1"/>',
-    snap: '<path d="M8 12h4l2-3h4l2 3h4v11H8z"/><circle cx="16" cy="17" r="3.5"/>'
+    snap: '<path d="M8 12h4l2-3h4l2 3h4v11H8z"/><circle cx="16" cy="17" r="3.5"/>',
+    cache: '<rect x="7" y="8" width="18" height="6" rx="1.5"/><rect x="7" y="18" width="18" height="6" rx="1.5"/><path d="M11 11h.01M11 21h.01M15 11h6M15 21h6"/>'
   };
   function icon(g, cat) {
     return '<span class="ic ' + cat + '" aria-hidden="true"><svg viewBox="0 0 32 32">' + G[g] + '</svg></span>';
@@ -1109,6 +1110,150 @@ window.ZTM = window.ZTM || {};
       });
     }
     chooser();
+    draw();
+  };
+
+  /* ---------- Chapter 6: Redis between the app and the database ---------- */
+
+  /* One layout for both cache diagrams: load balancer, app servers and Redis on top;
+     the primary, the replicas and (for invalidation) the cache invalidator below. */
+  function cacheLayout(withInvalidator) {
+    var node = archNode;
+    return '<div class="ar2-left">' +
+        node('users', 'user', 'c-user', withInvalidator ? 'Shoppers and staff' : 'Shoppers', '500,000 of them') +
+        node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
+      '</div>' +
+      '<div class="ar2-region">' +
+        '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+        '<div class="ar2-vpc"><p class="ar2-k">VPC: only the load balancer is in a public subnet</p>' +
+          '<div class="c6-grid">' +
+            '<div class="c6-lb">' + node('lb', 'proxy', 'c-net', 'Load balancer', 'least connections') + '</div>' +
+            '<div class="c6-app">' + node('app', 'bolt', 'c-cpu', 'App servers', '3 × FastAPI, check Redis first') + '</div>' +
+            '<div class="c6-redis">' + node('redis', 'cache', 'c-db', 'Redis', 'r7g.large, 16 GB, finished pages') + '</div>' +
+            '<div class="c6-primary">' + node('primary', 'db', 'c-db', 'Primary', 'every write') + '</div>' +
+            '<div class="c6-reps">' + node('reps', 'db', 'c-db', 'Replicas 1 and 2', 'reads on a miss') + '</div>' +
+            (withInvalidator ? '<div class="c6-inv">' + node('inv', 'bolt', 'c-sw', 'Cache invalidator', 'LISTENs on the primary') + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  W['cache-arch'] = function (el) {
+    liveArch(el, {
+      joints: true,
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'lb', 'h', 'HTTPS'],
+        ['lbapp', 'lb', 'app', 'h', ''],
+        ['hit', 'app', 'redis', 'h', 'GET'],
+        ['miss', 'app', 'reps', 'v', 'on a miss'],
+        ['wal', 'primary', 'reps', 'h', 'WAL', true]
+      ],
+      request: [['in', 0], ['lbapp', 0], ['hit', 0], ['hit', 1], ['lbapp', 1], ['in', 1]],
+      steps: [
+        { on: ['users', 'lb', 'app'], run: [['in', 0], ['lbapp', 0]], t: 'as before',
+          say: '<strong>A shopper opens the home page.</strong> The request reaches an app server through the load balancer.' },
+        { on: ['app', 'redis'], run: [['hit', 0]], t: '~0.2 ms round trip',
+          say: '<strong>Ask Redis first.</strong> The app sends <code>GET home:v1</code> to Redis over the private network.' },
+        { on: ['redis', 'app', 'lb', 'users'], run: [['hit', 1], ['lbapp', 1], ['in', 1]], t: 'about 2 ms in the app',
+          say: '<strong>A hit.</strong> Redis has the page, so the app returns it at once, and the database isn’t touched. During the sale, almost every request ends here.' },
+        { on: ['app', 'reps'], run: [['miss', 0], ['miss', 1]], t: '120 queries, about 1 s',
+          say: '<strong>A miss.</strong> Once every 5 minutes the key has expired, so the app builds the page from the replicas, as it always did.' },
+        { on: ['app', 'redis'], run: [['hit', 0], ['hit', 1]], t: 'the next request is a hit',
+          say: '<strong>Store it.</strong> The app saves the page with <code>SET home:v1 … EX 300</code>, then returns it. Every request for the next 5 minutes is a hit.' }
+      ],
+      html: cacheLayout(false)
+    });
+  };
+
+  W['invalidate-arch'] = function (el) {
+    liveArch(el, {
+      joints: true,
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'lb', 'h', 'HTTPS'],
+        ['lbapp', 'lb', 'app', 'h', ''],
+        ['hit', 'app', 'redis', 'h', 'GET'],
+        ['miss', 'app', 'reps', 'v', ''],
+        ['write', 'app', 'primary', 'v', ''],
+        ['wal', 'primary', 'reps', 'h', 'WAL', true],
+        ['note', 'primary', 'inv', 'u', 'NOTIFY', true],
+        ['del', 'redis', 'inv', 'v', 'DEL']
+      ],
+      request: [['in', 0], ['lbapp', 0], ['write', 0], ['write', 1], ['note', 0], ['del', 1]],
+      start: 'Follow a price change',
+      idle: 'A price change, from the database to Redis. Press <strong>Follow a price change</strong> to go through it step by step.',
+      steps: [
+        { on: ['users', 'lb', 'app', 'primary'], run: [['in', 0], ['lbapp', 0], ['write', 0], ['write', 1]], t: 'a normal write',
+          say: '<strong>The team changes a price.</strong> The update goes to the primary, like every write, and commits.' },
+        { on: ['primary', 'inv'], run: [['note', 0]], t: 'when the transaction commits',
+          say: '<strong>The database announces it.</strong> The trigger on the products table calls NOTIFY. When the transaction commits, PostgreSQL delivers the message to the cache invalidator, which is listening.' },
+        { on: ['inv', 'redis'], run: [['del', 1]], t: 'about a millisecond',
+          say: '<strong>Forget the old copies.</strong> The invalidator deletes <code>home:v1</code> and the product’s own key in Redis. A second later it deletes them again, in case a lagging replica put an old copy back.' },
+        { on: ['users', 'lb', 'app', 'redis', 'reps'], run: [['in', 0], ['lbapp', 0], ['hit', 0], ['hit', 1], ['miss', 0], ['miss', 1]], t: 'one rebuild',
+          say: '<strong>The next shopper rebuilds it.</strong> Their request misses in Redis, so the app builds the page again, with the new price, and stores it. Everyone after them gets the new price straight from Redis.' }
+      ],
+      html: cacheLayout(true)
+    });
+  };
+
+  /* ---------- Chapter 6: what a TTL costs, for one hot key and for many ---------- */
+
+  W['ttl-tradeoff'] = function (el) {
+    var WHAT = [
+      { value: 'home', label: 'Home page', keys: 1, rate: 500, q: 120 },
+      { value: 'products', label: '10,000 products', keys: 10000, rate: 5000, q: 9 }
+    ];
+    var TTLS = [{ value: '10', label: '10 s' }, { value: '60', label: '1 min' }, { value: '300', label: '5 min' }, { value: '3600', label: '1 hour' }];
+    var st = { what: 'home', ttl: '300', inval: false };
+    var AS_WORD = { 10: '10-second', 60: '1-minute', 300: '5-minute', 3600: '1-hour' };
+    el.innerHTML =
+      '<div class="calc">' +
+        '<div class="w-field"><span class="lbl">What’s cached</span><span class="cores tt-what"></span></div>' +
+        '<div class="w-field"><span class="lbl">TTL</span><span class="cores tt-ttl"></span></div>' +
+        '<label class="ql-check"><input type="checkbox" id="ttInv"> Also delete the keys whenever the data changes</label>' +
+      '</div>' +
+      '<div class="tiles tiles-3" aria-live="polite">' +
+        '<div class="tile"><span>Hit rate</span><b data-o="hit"></b><small data-o="hitwhy"></small></div>' +
+        '<div class="tile"><span>Database queries a second</span><b data-o="db"></b><small data-o="dbwhy"></small></div>' +
+        '<div class="tile key"><span>A wrong price can show for</span><b data-o="stale"></b><small data-o="stalewhy"></small></div>' +
+      '</div>' +
+      '<p class="calc-math" data-o="say"></p>';
+    el.querySelector('.tt-what').appendChild(segmented('What’s cached', WHAT, st.what, function (v) { st.what = v; draw(); }));
+    el.querySelector('.tt-ttl').appendChild(segmented('TTL', TTLS, st.ttl, function (v) { st.ttl = v; draw(); }));
+    el.querySelector('#ttInv').addEventListener('change', function (e) { st.inval = e.target.checked; draw(); });
+    function o(n) { return el.querySelector('[data-o="' + n + '"]'); }
+    function pct(f) {
+      var p = f * 100, d = p >= 99.9 ? 3 : p >= 99 ? 2 : 1, k = Math.pow(10, d);
+      return (Math.floor(p * k) / k).toFixed(d) + '%';
+    }
+
+    function draw() {
+      var w = WHAT.filter(function (x) { return x.value === st.what; })[0], ttl = +st.ttl;
+      var perKey = w.rate / w.keys;                       /* requests a second for each key */
+      /* After a copy expires, the next request misses; then the copy lives for one TTL.
+         So each key misses once every (TTL + time to its next request). */
+      var hit = perKey * ttl / (perKey * ttl + 1);
+      var dbq = w.rate * (1 - hit) * w.q, without = w.rate * w.q;
+      o('hit').textContent = pct(hit);
+      o('hitwhy').textContent = fmtNum(perKey) + ' request' + (perKey === 1 ? '' : 's') + ' a second for each key';
+      o('db').textContent = dbq >= 100 ? fmtInt(dbq) : fmtNum(dbq);
+      o('dbwhy').textContent = 'instead of ' + fmtInt(without) + ' without the cache';
+      o('stale').textContent = st.inval ? 'about a second' : fmtHuman(ttl);
+      o('stalewhy').textContent = st.inval ? 'deleted on change; the TTL is a safety net' : 'until the copy expires';
+
+      var say;
+      if (w.keys === 1) {
+        say = 'The home page is asked for 500 times a second, so even a 10-second copy is used thousands of times before it expires. ' +
+          'The TTL barely changes the database’s load: <b>' + o('db').textContent + ' queries a second</b> instead of 60,000. What it does decide is how long a wrong price can stay up.';
+      } else {
+        say = 'Each product page is asked for only about once every 2 seconds. With a ' + AS_WORD[ttl] + ' TTL, ' + ((1 - hit) * 100).toFixed(1) + '%' +
+          ' of visits arrive after their copy has expired, and the database still runs <b>' + o('db').textContent + ' queries a second</b>. ' +
+          'Longer TTLs cut the load, but leave old prices up for longer.';
+      }
+      if (st.inval) say += ' Deleting keys when the data changes keeps prices right within about a second, so the TTL can stay long and the database stays quiet.';
+      o('say').innerHTML = say;
+    }
     draw();
   };
 

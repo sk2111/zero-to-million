@@ -287,7 +287,7 @@ server {
         <ol class="points">
           <li><strong>The load balancer is now a single point of failure.</strong> If its server stops, nothing gets through. The usual fixes are an AWS Application Load Balancer, which runs across zones for you, or two Nginx servers sharing an Elastic IP that moves to the healthy one.</li>
           <li><strong>Everything is still in one zone.</strong> If that zone has an outage, all of it goes down. Spreading the app servers across two zones is the next step.</li>
-          <li><strong>The database is still one server.</strong> It was fine at 10,000 users, but it’s the next thing to watch. Caching and read replicas come in chapter 5.</li>
+          <li><strong>The database is still one server.</strong> It was fine at 10,000 users, but it’s the next thing to watch. Read replicas come in chapter 5, and caching in chapter 6.</li>
         </ol>
 
         <aside class="note design">

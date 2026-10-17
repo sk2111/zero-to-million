@@ -29,10 +29,11 @@ without internet the fonts fall back to Segoe UI.
 | 2 | One server | 100 | Written |
 | 3 | Scale up, split out | 1K | Started |
 | 4 | Scale out | 10K | Written |
-| 5 | Make it fast | 100K | Started |
-| 6 | Do it later | 1M | Planned |
-| 7 | Beyond a million | 10M | Planned |
-| 8 | When things break | every stage | Planned |
+| 5 | Make it fast | 100K | Written |
+| 6 | Cache it | 500K | Written |
+| 7 | Do it later | 1M | Planned |
+| 8 | Beyond a million | 10M | Planned |
+| 9 | When things break | every stage | Planned |
 
 Chapter 1 has 14 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
@@ -70,6 +71,12 @@ visit is about 90% reads) · Read replicas (streaming replication, routing reads
 and the CAP theorem (a lag timeline, CAP and PACELC, shades of consistency) · Living with stale reads
 (read your own writes and five other strategies).
 
+Chapter 6 has 3 pages: Fast servers, slow pages (counting the queries behind one request, what is
+worth caching) · Redis: a cache in memory (why it is fast, cache-aside in FastAPI, a live diagram,
+sizing and eviction) · Keeping the cache honest (a TTL trade-off calculator, deleting on change,
+PostgreSQL triggers with LISTEN/NOTIFY and a cache invalidator, and the traps: lost notifications,
+lagging replicas, stampedes and an empty cache).
+
 ## Files
 
 ```
@@ -81,6 +88,7 @@ js/ch2-one-server.js     Chapter 2's pages
 js/ch3-scale-up.js       Chapter 3's pages
 js/ch4-scale-out.js      Chapter 4's pages
 js/ch5-make-it-fast.js   Chapter 5's pages
+js/ch6-cache-it.js       Chapter 6's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

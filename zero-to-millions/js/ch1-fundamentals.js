@@ -969,8 +969,11 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
             <li><strong>Network traffic has a price.</strong> In AWS, traffic between zones costs about $0.01 per GB each
             way, and traffic out to the internet about $0.09 per GB. A chatty service spread across zones can cost more than
             its servers.</li>
-            <li><strong>Big files don’t belong on app servers.</strong> 2 MB images to 100 users a second is 200 MB/s,
-            1.6 Gbps: more than a 1 Gbps link. That’s work for a CDN and object storage (chapter 5).</li>
+            <li><strong>Big files don’t belong on app servers.</strong> Sending 2 MB images to 100 users a second is
+            200 MB/s, or 1.6 Gbps. The c7g.large that chapter 3 uses as the app server is sold as “up to 12.5 Gbps”, but
+            that’s a burst: its steady baseline is 0.937 Gbps, and it can burst above that only for about 5 to 60 minutes
+            before it drops back. The images alone need almost twice its steady bandwidth. Serve big files from object
+            storage behind a CDN, and keep the app server for requests.</li>
           </ol>
         </aside>
 
@@ -1018,11 +1021,17 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
         </ol>
 
         <aside class="note rule">
-          <h3>The one idea of this chapter</h3>
+          <h3>The chapter so far</h3>
           <ol class="points">
-            <li>A system is only as fast as its busiest part.</li>
-            <li>Adding cores does nothing when the server is short of memory, and more RAM does nothing when the disk is the limit.</li>
-            <li>Before you scale anything, find out which part is full.</li>
+            <li><strong>CPU:</strong> a core is very fast, but it spends most of its time waiting for data.</li>
+            <li><strong>Processes and threads:</strong> the OS shares a few cores by letting threads take turns. Past a sweet spot, more threads make things slower.</li>
+            <li><strong>CPU-bound or I/O-bound:</strong> most web requests wait far more than they compute. Check <code>top</code> before you buy more CPU.</li>
+            <li><strong>Memory:</strong> keep the working set in RAM. When it runs out, the server swaps, slows to a crawl, and the OOM killer stops processes.</li>
+            <li><strong>Disk:</strong> the slowest part inside the server. Know whether you need low latency, more IOPS or more throughput; cloud disks sell each one separately.</li>
+            <li><strong>Network:</strong> distance sets a floor on latency that no code can beat, so count the round trips.</li>
+            <li><strong>A system is only as fast as its busiest part.</strong> Adding cores does nothing when the server is short of memory, and more RAM does nothing when the disk is the limit.</li>
+            <li><strong>The network can be the limit when everything else is fine.</strong> CPU, RAM and disk can all have room to spare while large responses, such as images, files and exports, fill the server’s bandwidth (page 1.8).</li>
+            <li><strong>Before you scale anything, find out which part is full.</strong></li>
           </ol>
         </aside>`
     },

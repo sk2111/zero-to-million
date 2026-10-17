@@ -26,7 +26,7 @@ without internet the fonts fall back to Segoe UI.
 | # | Chapter | Starts at | Status |
 |---|---|---|---|
 | 1 | Fundamentals | 0 users | Written |
-| 2 | One server | 1 | Written |
+| 2 | One server | 100 | Written |
 | 3 | Scale up, split out | 1K | Started |
 | 4 | Scale out | 10K | Written |
 | 5 | Make it fast | 100K | Started |

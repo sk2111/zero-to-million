@@ -555,6 +555,77 @@ window.ZTM = window.ZTM || {};
     });
   };
 
+  /* ---------- 3.2: the two servers again, with PgBouncer on the app server ---------- */
+
+  W['pool-arch'] = function (el) {
+    var node = archNode;
+    liveArch(el, {
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'eip', 'h', 'HTTPS'],
+        ['fw', 'eip', 'sga', 'v', ''],
+        ['ng', 'sga', 'nginx', 'h', ''],
+        ['app', 'nginx', 'app', 'h', ''],
+        ['pool', 'app', 'pgb', 'h', ''],
+        ['net', 'pgb', 'sgd', 'v', '20 connections'],
+        ['sql', 'sgd', 'db', 'h', ''],
+        ['io', 'db', 'disk', 'h', ''],
+        ['bak', 'disk', 'snap', 'v', 'daily', true]
+      ],
+      request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['pool', 0], ['net', 0], ['sql', 0],
+                ['sql', 1], ['net', 1], ['pool', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
+      steps: [
+        { on: ['users', 'eip', 'sga', 'nginx', 'app'], run: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0]], t: 'as on page 3.1',
+          say: '<strong>A request arrives.</strong> It reaches a FastAPI worker through the Elastic IP, the security group and Nginx, as before.' },
+        { on: ['app', 'pgb'], run: [['pool', 0]], t: 'microseconds, over localhost',
+          say: '<strong>Borrow a connection.</strong> FastAPI’s own pool hands the request a connection to PgBouncer on <code>localhost:6432</code>. It’s already open, so there’s no handshake and no login.' },
+        { on: ['pgb', 'sgd', 'db'], run: [['net', 0], ['sql', 0]], t: '~0.2–0.5 ms per round trip',
+          say: '<strong>Share a real connection.</strong> PgBouncer lends this transaction one of its 20 open connections to PostgreSQL, across the private network. Up to 400 app connections share those 20, so PostgreSQL never runs more than 20 connection processes.' },
+        { on: ['db', 'disk'], run: [['io', 0], ['io', 1], ['sql', 1], ['net', 1]], t: 'usually straight from RAM',
+          say: '<strong>Answer from RAM.</strong> PostgreSQL answers from its cache, and the rows travel back to PgBouncer.' },
+        { on: ['pgb', 'app', 'nginx', 'users'], run: [['pool', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]], t: 'nothing opened, nothing closed',
+          say: '<strong>Give it back.</strong> When the transaction ends, PgBouncer takes the real connection back for the next one, and the response goes out through Nginx to the browser.' }
+      ],
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Users', 'in Bangalore and beyond') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1, one zone</p>' +
+          '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
+            '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
+              '<div class="ar2-row">' +
+                '<div class="ar2-edge ar3-edge">' +
+                  node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
+                  node('sga', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
+                '</div>' +
+                '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'App server: EC2 c7g.large, 2 vCPUs, 4 GB</p>' +
+                  '<div class="ar2-sw">' +
+                    node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443') +
+                    node('app', 'bolt', 'c-sw', 'FastAPI', '2 workers, a small pool each') +
+                    node('pgb', 'proxy', 'c-db', 'PgBouncer', 'port 6432: 400 in, 20 out') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private"><p class="ar2-k">Private subnet: no public address</p>' +
+              '<div class="ar2-row">' +
+                '<div class="ar2-edge ar3-edge">' + node('sgd', 'shield', 'c-sec', 'Security group', '5432 from the app server only') + '</div>' +
+                '<div class="ar2-ec2 ar3-db"><p class="ar2-k">' + icon('db', 'c-db') + 'Database server: EC2 r7g.large, 2 vCPUs, 16 GB</p>' +
+                  '<div class="ar3-two">' +
+                    node('db', 'db', 'c-sw', 'PostgreSQL', 'at most 20 connections') +
+                    node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB') +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ar2-bak">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
+        '</div>'
+    });
+  };
+
   /* ---------- Chapter 2: before and after splitting the app and the database ---------- */
 
   W['split-arch'] = function (el) {
@@ -751,6 +822,7 @@ window.ZTM = window.ZTM || {};
   W['scaleout-live'] = function (el) {
     var node = archNode;
     liveArch(el, {
+      joints: true,
       wires: [
         ['dns', 'users', 'dns', 'v', 'DNS lookup'],
         ['in', 'users', 'eip', 'h', 'HTTPS'],
@@ -758,13 +830,14 @@ window.ZTM = window.ZTM || {};
         ['lb', 'sg', 'lb', 'h', ''],
         ['a1', 'lb', 'app1', 'v', ''],
         ['a2', 'lb', 'app2', 'v', 'least connections'],
-        ['d1', 'app1box', 'db', 'v', ''],
-        ['d2', 'app2box', 'db', 'v', ''],
+        ['d1', 'app1box', 'pgb', 'v', ''],
+        ['d2', 'app2box', 'pgb', 'v', ''],
+        ['pool', 'pgb', 'db', 'h', ''],
         ['io', 'db', 'disk', 'h', ''],
         ['bak', 'disk', 'snap', 'v', 'daily', true]
       ],
-      request: [['in', 0], ['fw', 0], ['lb', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['lb', 1], ['fw', 1], ['in', 1],
-                ['in', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['d2', 0], ['d2', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]],
+      request: [['in', 0], ['fw', 0], ['lb', 0], ['a1', 0], ['d1', 0], ['pool', 0], ['pool', 1], ['d1', 1], ['a1', 1], ['lb', 1], ['fw', 1], ['in', 1],
+                ['in', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['d2', 0], ['pool', 0], ['pool', 1], ['d2', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]],
       steps: [
         { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
           say: '<strong>Find the service.</strong> DNS now points <code>tomazon.com</code> at the load balancer’s Elastic IP. Users never see the app servers directly.' },
@@ -772,8 +845,8 @@ window.ZTM = window.ZTM || {};
           say: '<strong>Connect to the load balancer.</strong> The browser’s HTTPS connection ends at Nginx, which holds the TLS certificate. Behind it, everything stays on the private network.' },
         { on: ['lb', 'app1', 'app2'], run: [['a2', 0]], t: 'a fraction of a millisecond',
           say: '<strong>Choose a server.</strong> Nginx uses least connections: app server 1 has 7 requests in progress, app server 2 has 3, so this one goes to server 2.' },
-        { on: ['app2', 'db', 'disk'], run: [['d2', 0], ['d2', 1]], t: '~0.2–0.5 ms per query',
-          say: '<strong>Do the work.</strong> FastAPI on server 2 queries PostgreSQL over the private network, through its connection pool. Both app servers share the same database.' },
+        { on: ['app2', 'pgb', 'db', 'disk'], run: [['d2', 0], ['pool', 0], ['pool', 1], ['d2', 1]], t: '~0.2–0.5 ms per query',
+          say: '<strong>Do the work.</strong> FastAPI on server 2 sends its query across the private network to PgBouncer on the database server, which lends it one of 20 real connections to PostgreSQL over <code>localhost</code>. Both app servers share that one pool, so PostgreSQL sees 20 connections in all.' },
         { on: ['app2', 'lb', 'users'], run: [['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
           say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. The user can’t tell, and doesn’t need to know, which server answered.' },
         { on: ['lb', 'app2'], run: [['a2', 0]], t: 'after 3 failed attempts',
@@ -806,8 +879,9 @@ window.ZTM = window.ZTM || {};
             '</div>' +
             '<div class="ar3-subnet ar3-private ar4-c"><p class="ar2-k">Private subnet: database</p>' +
               '<div class="ar2-ec2 ar3-db">' +
-                '<div class="ar3-two">' +
-                  node('db', 'db', 'c-sw', 'PostgreSQL', 'shared by both app servers') +
+                '<div class="ar2-sw">' +
+                  node('pgb', 'proxy', 'c-db', 'PgBouncer', 'port 6432: one pool of 20') +
+                  node('db', 'db', 'c-sw', 'PostgreSQL', 'at most 20 connections') +
                   node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB') +
                 '</div>' +
                 '<p class="ar2-k ar4-cap">' + icon('db', 'c-db') + 'Database server: EC2 r7g.large, 2 vCPUs, 16 GB</p>' +

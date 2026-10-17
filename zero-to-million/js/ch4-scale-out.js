@@ -190,9 +190,6 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
           <li><strong>Least connections</strong> sends each request to the server with fewer in progress, so a fast request goes wherever a worker is free. Switch between them:</li>
         </ol>
         <div class="widget" data-widget="lb-sim"></div>
-        <ol class="points" start="4">
-          <li>The typical product page is about as fast either way. The difference is in the tail: the slowest 5% of product pages wait several times less with least connections, and the tail is what users remember (page 1.11).</li>
-        </ol>
 
         <h2>The Nginx configuration</h2>
         <figure class="term">
@@ -252,7 +249,7 @@ server {
       html: `
         <ol class="points lede">
           <li>Nginx moves to a small server of its own at the front, and the app runs on two app servers behind it.</li>
-          <li>The database stays as it was: at 10,000 users it still has room. Step through a request:</li>
+          <li>The database stays on one server: at 10,000 users it still has room. One thing moves onto it: PgBouncer. Step through a request:</li>
         </ol>
         <div class="widget" data-widget="scaleout-live"></div>
 
@@ -262,7 +259,28 @@ server {
           <li><strong>Health checks.</strong> Open-source Nginx only notices a broken server when real requests to it fail. For active checks that call a <code>/health</code> endpoint every few seconds, use an AWS load balancer or Nginx Plus.</li>
           <li><strong>Rolling deploys.</strong> Take one app server out of the <code>upstream</code>, deploy to it, put it back, then do the next. Users never see an outage.</li>
           <li><strong>Logs and metrics in one place.</strong> Logging in to a server to read its logs no longer works when there are two. Send them all to one place, such as CloudWatch Logs.</li>
-          <li><strong>Database connections add up.</strong> Two app servers × 8 workers × a pool of 10 = 160 connections. PgBouncer keeps the number PostgreSQL actually sees small (page 3.2).</li>
+          <li><strong>Database connections add up.</strong> Two app servers × 8 workers × a pool of 10 = 160 connections from the app. One PgBouncer in front of the database turns them into 20 (below).</li>
+        </ol>
+
+        <h2>Move PgBouncer next to the database</h2>
+        <ol class="points">
+          <li>In chapter 3, PgBouncer ran on the app server, and PostgreSQL saw its 20 connections (page 3.2).</li>
+          <li>Scaling out copies the app server, and its PgBouncer with it. Each copy opens its own 20 connections: two app servers mean 40, and ten would mean 200. Every one of them is a PostgreSQL process with its own memory (page 1.2).</li>
+          <li>So PgBouncer moves onto the database server. Every app server connects to it on port 6432, and PostgreSQL sees one pool of 20, however many app servers there are.</li>
+          <li>Each query still crosses the network once. Before, it crossed after PgBouncer; now it crosses before it.</li>
+        </ol>
+        <table class="data">
+          <thead><tr><th>What changes</th><th>Before (page 3.2)</th><th>Now</th></tr></thead>
+          <tbody>
+            <tr><td>Where PgBouncer runs</td><td>On the app server</td><td>On the database server</td></tr>
+            <tr><td>The app connects to</td><td><code>localhost:6432</code></td><td><code>10.0.2.14:6432</code></td></tr>
+            <tr><td>PgBouncer reaches PostgreSQL at</td><td><code>10.0.2.14:5432</code>, over the network</td><td><code>127.0.0.1:5432</code>, on the same server</td></tr>
+            <tr><td>The database’s security group lets in</td><td>Port 5432, from the app server</td><td>Port 6432 only, from the app servers</td></tr>
+            <tr><td>Connections PostgreSQL sees</td><td>20 for each app server</td><td>20 in total</td></tr>
+          </tbody>
+        </table>
+        <ol class="points" start="5">
+          <li><strong>The trade-off:</strong> one PgBouncer now serves every app server, so if it stops, the whole app loses the database. Because it runs on the database server, that’s the same failure as losing the database itself. Chapter 5’s replicas will need a pooler address that can follow the primary when it moves. On Amazon RDS, RDS Proxy does this job as a managed service.</li>
         </ol>
 
         <h2>The new weak spots</h2>

@@ -141,7 +141,6 @@ for p in products:
           <li>Opening a new PostgreSQL connection is expensive: a TCP handshake across the network, authentication, and a new process on the database server (page 1.2). That’s a few milliseconds before the first query even starts.</li>
           <li><strong>A pool in the app</strong> keeps a few connections open and lends one to each request. SQLAlchemy does this by default; size it with <code>pool_size</code>.</li>
           <li><strong>PgBouncer</strong> sits in front of PostgreSQL and shares a small number of real database connections between many app processes. In transaction mode, 400 app connections can share 20 database connections, keeping PostgreSQL near its sweet spot (page 1.2).</li>
-          <li>One catch: in transaction mode, session settings such as <code>SET</code> commands or advisory locks don’t carry over from one transaction to the next. Keep them out of the app, or use session mode.</li>
         </ol>
         <figure class="term">
           <figcaption>A minimal pgbouncer.ini, running on the app server</figcaption>
@@ -158,6 +157,9 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
             <li>PgBouncer keeps 20 connections to the database at <code>10.0.2.14</code> open, and hands them out one transaction at a time.</li>
           </ol>
         </figure>
+
+        <p>Here’s where the pools sit in the architecture. Step through it to follow one query:</p>
+        <div class="widget" data-widget="pool-arch"></div>
 
         <h2>Measure it</h2>
         <ol class="points">
@@ -243,8 +245,6 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
           <ol class="points">
             <li><strong>Pick the family by what runs out.</strong> The app runs out of CPU, so c. The database runs out of
             memory and disk, so r, or i when the disk is the limit.</li>
-            <li><strong>Local NVMe is fast and temporary.</strong> Treat any data on it as gone the moment the server stops,
-            unless a replica and tested backups exist somewhere else.</li>
             <li><strong>Graviton (the g in c7g and r7g) is usually the cheapest per unit of work,</strong> as long as
             everything you run has an ARM64 build (page 1.4).</li>
             <li><strong>The bottleneck moves.</strong> Every change shifts it somewhere else, so measure again after each step.</li>

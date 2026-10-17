@@ -53,19 +53,25 @@ ZTM.chapters = [
     topics: ['Message queues and logs', 'Kafka: topics, partitions, consumer groups', 'Change data capture with Debezium', 'The outbox pattern', 'At-least-once delivery and idempotency', 'Consumer lag']
   },
   {
-    n: 9, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'planned',
+    n: 9, slug: 'serve-it-nearby', title: 'Serve it nearby', users: 3000000, status: 'ready', minutes: 45,
+    question: 'Shoppers abroad say pages crawl, and the bandwidth bill keeps climbing. Why?',
+    summary: 'See why distance makes pages slow, put the photos on a CDN in front of a private S3 bucket, name files so they can be cached for a year, and send fewer bytes.',
+    topics: ['Round trips and the speed of light', 'How a CDN works', 'CloudFront in front of S3', 'Versioned names and cache lifetimes', 'Smaller images', 'What a CDN really saves']
+  },
+  {
+    n: 10, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'planned',
     question: 'Dozens of programs on dozens of servers: who starts, restarts and moves them?',
     summary: 'Package each service as a container, and let Kubernetes run them, restart them, roll out new versions and let services find each other.',
     topics: ['Containers and images', 'Why you need an orchestrator', 'Kubernetes: pods, deployments and services', 'Rolling updates and health probes', 'Service discovery']
   },
   {
-    n: 10, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
+    n: 11, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
     question: 'What do we do when one database can’t hold it all?',
     summary: 'Sharding, partitioning and multiple regions, and the consistency trade-offs that come with them.',
     topics: ['Partitioning and sharding', 'Choosing a shard key', 'Multiple regions', 'Consistency vs availability (CAP in practice)', 'Picking the right database']
   },
   {
-    n: 11, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
+    n: 12, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
     question: 'How do we keep working while parts of the system fail?',
     summary: 'Timeouts, retries, circuit breakers, rate limits and monitoring. These apply at every stage, not just at the end.',
     topics: ['Timeouts and retries with backoff', 'Circuit breakers', 'Rate limiting and load shedding', 'Logs, metrics and traces', 'Alerts that mean something']

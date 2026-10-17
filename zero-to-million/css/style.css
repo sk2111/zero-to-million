@@ -676,7 +676,7 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .sf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.6rem 3.2rem; align-items: center; }
 .sf-lb { grid-area: 1 / 1 / 3 / 2; } .sf-core { grid-area: 1 / 2; } .sf-cat { grid-area: 2 / 2; } .sf-data { grid-area: 1 / 3 / 3 / 4; }
 .sf-idle .ar2-wires path[data-w="cat"], .sf-idle .ar2-wires path[data-w="ad"] { stroke-dasharray: 2 5; }
-.sf-hint { display: none; }
+.arch-hint { display: none; }
 
 /* 8.2: the same price changes through LISTEN/NOTIFY and through a Kafka topic */
 .kl { display: grid; gap: 1.1rem; }
@@ -704,6 +704,14 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .c8-app { grid-area: 1 / 1; } .c8-primary { grid-area: 1 / 2; } .c8-dbz { grid-area: 1 / 3; }
 .c8-redis { grid-area: 2 / 1; } .c8-inv { grid-area: 2 / 2; } .c8-kafka { grid-area: 2 / 3; }
 .c8-search { grid-area: 3 / 1; } .c8-idx { grid-area: 3 / 2; }
+
+/* 9.1 and 9.2: photos from Mumbai or from an edge; the edge location beside the Mumbai region */
+.el-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; }
+.el-rows .wf-row { grid-template-columns: 7.5rem 1fr 4.5rem; }
+.c9-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 3.4rem; align-items: start; padding-bottom: 2.8rem; }
+.c9-edge { padding: 0.7rem 0.9rem 0.9rem; border: 2px dashed #8c4fff; border-radius: 12px; }
+.c9-mum { display: grid; gap: 2.4rem; }
+.c9-grid .nd { min-height: 6.6rem; justify-content: center; }
 
 /* 5.3: CAP and PACELC on one small diagram; a cut replication link is drawn red and dashed */
 .cap-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; }
@@ -1048,12 +1056,12 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .cap-dbs { gap: 4.25rem; }
   .c6-grid { gap: 2.4rem 1.2rem; }
   .c8-grid { gap: 2.2rem 1.2rem; }
-  /* The strangler diagram keeps its wide layout on phones, and scrolls sideways */
-  .sf-arch > div { overflow-x: auto; padding-bottom: 0.4rem; }
-  .sf-arch .ar2 { grid-template-columns: 8.5rem minmax(0, 1fr); gap: 2rem; min-width: 42rem; }
-  .sf-arch .ar2-left { flex-direction: column; gap: 3rem; padding-top: 4.6rem; }
-  .sf-arch .ar2-left .nd { flex: none; }
-  .sf-hint { display: block; }
+  /* Diagrams too tangled to stack keep their wide layout on phones, and scroll sideways */
+  .arch-scroll > div { overflow-x: auto; padding-bottom: 0.4rem; }
+  .arch-scroll .ar2 { grid-template-columns: 8.5rem minmax(0, 1fr); gap: 2rem; min-width: 42rem; }
+  .arch-scroll .ar2-left { flex-direction: column; gap: 3rem; padding-top: 4.6rem; }
+  .arch-scroll .ar2-left .nd { flex: none; }
+  .arch-hint { display: block; }
   .sf-grid { gap: 2.4rem 2.4rem; }
   .kl-cells { gap: 3px; }
   .kl-cells i { height: 1.7rem; font-size: 0.7rem; }

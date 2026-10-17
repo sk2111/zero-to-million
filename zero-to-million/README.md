@@ -33,9 +33,10 @@ without internet the fonts fall back to Segoe UI.
 | 6 | Cache it | 500K | Written |
 | 7 | Split the monolith | 1M | Written |
 | 8 | Publish events | 2M | Written |
-| 9 | Run many services | 5M | Planned |
-| 10 | Beyond a million | 10M | Planned |
-| 11 | When things break | every stage | Planned |
+| 9 | Serve it nearby | 3M | Written |
+| 10 | Run many services | 5M | Planned |
+| 11 | Beyond a million | 10M | Planned |
+| 12 | When things break | every stage | Planned |
 
 Chapter 1 has 14 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
@@ -91,6 +92,13 @@ widget that sends the same changes through NOTIFY and through a topic) · Captur
 WAL (the dual-write problem, Debezium, the new cache invalidator as a Kafka consumer, the outbox
 pattern) · The price of a log (Amazon MSK or your own, safe settings, consumer lag, the traps).
 
+Chapter 9 has 4 pages: Slow abroad, expensive at home (round trips and the speed of light, TCP slow
+start, a photo-load calculator by city, the egress bill) · A CDN: copies near the shopper (edges,
+hits and misses, regional edge caches, a live diagram, what belongs on a CDN) · Photos through
+CloudFront (a private bucket with origin access control, the distribution, content-hash names cached
+for a year, resizing to WebP on upload) · What the CDN changed (speed, why the bill fell mostly for
+other reasons, flat-rate pricing, the traps).
+
 ## Files
 
 ```
@@ -105,6 +113,7 @@ js/ch5-make-it-fast.js   Chapter 5's pages
 js/ch6-cache-it.js       Chapter 6's pages
 js/ch7-split-the-monolith.js  Chapter 7's pages
 js/ch8-publish-events.js      Chapter 8's pages
+js/ch9-serve-it-nearby.js     Chapter 9's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

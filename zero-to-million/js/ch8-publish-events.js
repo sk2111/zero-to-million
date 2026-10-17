@@ -399,9 +399,9 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
 
         <h2>Where this leads</h2>
         <ol class="points">
-          <li>Tomazon now runs many kinds of program: the core API, the catalogue service, two cache invalidators, the search indexer, the email sender and Debezium. Each runs on servers set up by hand, and each is deployed its own way.</li>
-          <li>Questions that were easy with one app are hard now. If a server dies, who starts its programs somewhere else? If one crashes, who restarts it? How do you replace 40 running copies with a new version without downtime? And how does the catalogue service find the core API, when copies come and go?</li>
-          <li>Chapter 9 packages each service as a container, and hands the running of them to an orchestrator: Kubernetes.</li>
+          <li>Changes now reach every service that needs them, even one that was down when they happened.</li>
+          <li>The next problem comes from outside. Tomazon starts delivering abroad, and its first shoppers in Dubai, London and New York say product pages crawl. In the same month, sending data to the internet becomes one of the biggest lines on the AWS bill.</li>
+          <li>Chapter 9 shows that both have the same cause, and fixes them at the edge of the network.</li>
         </ol>
 
         <aside class="note design">

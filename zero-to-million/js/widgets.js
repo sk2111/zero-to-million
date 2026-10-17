@@ -283,6 +283,8 @@ window.ZTM = window.ZTM || {};
     snap: '<path d="M8 12h4l2-3h4l2 3h4v11H8z"/><circle cx="16" cy="17" r="3.5"/>',
     cache: '<rect x="7" y="8" width="18" height="6" rx="1.5"/><rect x="7" y="18" width="18" height="6" rx="1.5"/><path d="M11 11h.01M11 21h.01M15 11h6M15 21h6"/>',
     log: '<rect x="5" y="11" width="22" height="10" rx="1.5"/><path d="M10.5 11v10M16 11v10M21.5 11v10"/>',
+    edge: '<circle cx="16" cy="16" r="2.5"/><path d="M11 11a7 7 0 0 0 0 10M21 11a7 7 0 0 1 0 10M7.5 7.5a12 12 0 0 0 0 17M24.5 7.5a12 12 0 0 1 0 17"/>',
+    bucket: '<ellipse cx="16" cy="9" rx="9" ry="2.5"/><path d="M7 9l2.5 15c.3 1.4 3 2 6.5 2s6.2-.6 6.5-2L25 9"/>',
     search: '<circle cx="14" cy="14" r="6.5"/><path d="M19 19l6 6"/>'
   };
   function icon(g, cat) {
@@ -1331,8 +1333,8 @@ window.ZTM = window.ZTM || {};
     };
 
     el.innerHTML = '<div class="w-controls"><span class="sf-stage"></span></div>' +
-      '<p class="calc-math sf-say" aria-live="polite"></p><div class="sf-arch"></div>' +
-      '<p class="w-note sf-hint">Swipe the diagram sideways to see all of it.</p>';
+      '<p class="calc-math sf-say" aria-live="polite"></p><div class="sf-arch arch-scroll"></div>' +
+      '<p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
     el.querySelector('.sf-stage').appendChild(segmented('Rollout stage', STAGES, st.stage, function (v) { st.stage = v; draw(); }));
 
     function draw() {
@@ -1550,6 +1552,107 @@ window.ZTM = window.ZTM || {};
             '<div class="c8-kafka">' + node('kafka', 'log', 'c-sto', 'Kafka', '3 brokers, one per zone') + '</div>' +
             '<div class="c8-search">' + node('search', 'search', 'c-db', 'OpenSearch', 'the search index') + '</div>' +
             '<div class="c8-idx">' + node('idx', 'bolt', 'c-sw', 'Search indexer', 'its own consumer group') + '</div>' +
+          '</div>' +
+        '</div>'
+    });
+  };
+
+  /* ---------- Chapter 9: a product page's photos, from Mumbai or from an edge in the shopper's city ---------- */
+
+  W['edge-latency'] = function (el) {
+    var CITIES = [
+      { value: 'blr', label: 'Bangalore', rtt: 20 },
+      { value: 'dxb', label: 'Dubai', rtt: 35 },
+      { value: 'sin', label: 'Singapore', rtt: 60 },
+      { value: 'lon', label: 'London', rtt: 120 },
+      { value: 'nyc', label: 'New York', rtt: 200 }
+    ];
+    var SIZES = [{ value: '1000', label: 'Five 200 KB JPEGs: 1 MB' }, { value: '140', label: 'Right-sized WebP: 140 KB' }];
+    var EDGE = 10, WINDOW = 14.6;   /* ms to an edge in the shopper's own city; KB in TCP's first window of 10 packets */
+    var st = { city: 'nyc', size: '1000' };
+
+    el.innerHTML = '<div class="w-controls el-controls"><span class="el-city"></span><span class="el-size"></span></div>' +
+      legend([['conn', 'Connecting: TCP and TLS'], ['net', 'Sending the photos'], ['dbw', 'The edge fetching from Mumbai']]) +
+      '<div class="wf el-rows"></div><p class="readout" aria-live="polite"></p>' +
+      '<p class="w-note">A model that counts round trips only: a fast connection, and HTTP/2 sending all five photos over one connection. Real pages also wait for DNS, the HTML and the shopper’s own bandwidth.</p>';
+    var wf = el.querySelector('.wf'), out = el.querySelector('.readout');
+    el.querySelector('.el-city').appendChild(segmented('Where the shopper is', CITIES, st.city, function (v) { st.city = v; draw(); }));
+    el.querySelector('.el-size').appendChild(segmented('Photos on the page', SIZES, st.size, function (v) { st.size = v; draw(); }));
+
+    /* TCP's slow start: the first round trip carries about 14.6 KB, and each one after it twice as much. */
+    function rounds(kb) { return Math.ceil(Math.log2(kb / WINDOW + 1)); }
+    function t(ms) { return ms >= 1000 ? (ms / 1000).toFixed(1) + ' s' : Math.round(ms) + ' ms'; }
+
+    function draw() {
+      var city = CITIES.filter(function (c) { return c.value === st.city; })[0], r = city.rtt, n = rounds(+st.size);
+      var rows = [
+        { name: 'From Mumbai', segs: [['conn', 'TCP and TLS', 2 * r], ['net', n + ' round trips of photos', n * r]] },
+        { name: 'Edge: a hit', segs: [['conn', 'TCP and TLS', 2 * EDGE], ['net', n + ' round trips of photos', n * EDGE]] },
+        { name: 'Edge: a miss', segs: [['conn', 'TCP and TLS', 2 * EDGE], ['dbw', 'one trip to Mumbai', r], ['net', n + ' round trips of photos', n * EDGE]] }
+      ];
+      var totals = rows.map(function (row) { return row.segs.reduce(function (a, s) { return a + s[2]; }, 0); });
+      var max = Math.max.apply(null, totals), html = '';
+      rows.forEach(function (row, i) {
+        var at = 0, cells = '';
+        row.segs.forEach(function (s) {
+          cells += '<span class="wf-seg ' + s[0] + '" style="left:' + (at / max * 100) + '%;width:' + (s[2] / max * 100) + '%" tabindex="0" data-tip="<b>' +
+            esc(s[1]) + '</b><br>' + t(s[2]) + '" aria-label="' + esc(s[1]) + ', ' + t(s[2]) + '"><span class="seg-label">' + esc(s[1]) + '</span></span>';
+          at += s[2];
+        });
+        html += '<div class="wf-row"><span class="wf-name">' + row.name + '</span><span class="wf-track">' + cells + '</span><span class="wf-total">' + t(totals[i]) + '</span></div>';
+      });
+      wf.innerHTML = html;
+      fitLabels(wf);
+      var say = 'From ' + city.label + ', Mumbai is about <strong>' + r + ' ms</strong> away, and the photos need ' + (n + 2) + ' round trips: 2 to connect, and ' + n +
+        ' while TCP’s slow start opens up. That’s <strong>' + t(totals[0]) + '</strong> from Mumbai, and <strong>' + t(totals[1]) + '</strong> from an edge in the same city. ';
+      say += r <= 20
+        ? 'In India, Mumbai is already close, so the edge saves less; its bigger job here is taking the load off the origin.'
+        : 'Even a miss takes only <strong>' + t(totals[2]) + '</strong>: the handshakes and slow start happen over the short hop, and the edge crosses to Mumbai just once.';
+      if (st.size === '140') say += ' Smaller photos need ' + n + ' round trips of photos instead of 7, wherever they come from.';
+      out.innerHTML = say;
+    }
+    bindTips(el);
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(wf); }).observe(wf);
+  };
+
+  /* ---------- Chapter 9: photos through a CloudFront edge; the API still in Mumbai ---------- */
+
+  W['cdn-arch'] = function (el) {
+    var node = archNode;
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      wires: [
+        ['in', 'shop', 'edge', 'h', ''],
+        ['orig', 'edge', 's3', 'h', ''],
+        ['api', 'shop', 'api', 'u', 'the API: no CDN']
+      ],
+      request: [['in', 0], ['in', 1], ['in', 0], ['orig', 0], ['orig', 1], ['in', 1], ['api', 0], ['api', 1]],
+      start: 'Follow a product page',
+      idle: 'A shopper in New York opens a product page. Press <strong>Follow a product page</strong> to go through it step by step.',
+      steps: [
+        { on: ['shop', 'edge'], run: [], t: 'about 10 ms away',
+          say: '<strong>Find the nearest edge.</strong> The photo links point at <code>img.tomazon.com</code>, an alias for the CloudFront distribution. CloudFront’s DNS answers with an edge location near the shopper, here in New York, and the TCP and TLS handshakes happen with that edge.' },
+        { on: ['shop', 'edge'], run: [['in', 0], ['in', 1]], t: 'a hit: tens of milliseconds',
+          say: '<strong>A hit.</strong> The edge already has this photo, because a shopper nearby asked for it earlier. It sends it straight back, and Mumbai isn’t involved at all.' },
+        { on: ['shop', 'edge', 's3'], run: [['in', 0], ['orig', 0], ['orig', 1]], t: 'a miss: one trip to Mumbai, about 200 ms',
+          say: '<strong>A miss.</strong> Nobody near this edge has asked for this photo lately. The edge asks a regional edge cache, then the S3 bucket in Mumbai, over AWS’s own network and on a connection it keeps open. It keeps a copy for the next shopper.' },
+        { on: ['edge', 'shop'], run: [['in', 1]], t: 'still far faster than before',
+          say: '<strong>Back to the shopper.</strong> Even a miss crosses to Mumbai only once. The handshakes and TCP’s slow start happened over the short hop to the edge, not across the world.' },
+        { on: ['shop', 'api'], run: [['api', 0], ['api', 1]], t: 'about 200 ms a round trip, as before',
+          say: '<strong>Prices and the cart still come from Mumbai.</strong> They differ for every shopper and change by the second, so nothing caches them. These calls still cross the world, and they’re most of what’s left of the page’s load time.' }
+      ],
+      html:
+        '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shopper', 'in New York') + '</div>' +
+        '<div class="c9-grid">' +
+          '<div class="c9-edge"><p class="ar2-k">Edge location: New York</p>' +
+            node('edge', 'edge', 'c-net', 'CloudFront edge', 'copies of popular photos') +
+          '</div>' +
+          '<div class="ar2-region"><p class="ar2-k">AWS region: Asia Pacific (Mumbai)</p>' +
+            '<div class="c9-mum">' +
+              node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', 'private: only CloudFront reads it') +
+              node('api', 'proxy', 'c-net', 'Load balancer and API', 'prices, carts, checkout') +
+            '</div>' +
           '</div>' +
         '</div>'
     });

@@ -13,7 +13,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[1] = {
   intro: `
     <ol class="points lede">
-      <li>Every system you will ever scale, from a side project to a production application, runs on the same few parts: CPU, memory, disk and network.</li>
+      <li>Every system you will ever design &amp; scale, from a side project to a production application, runs on the same few parts: CPU, memory, disk and network.</li>
       <li>The operating system shares those parts out between all the programs on the machine.</li>
       <li>For each part we start with how it works, then how it behaves under load, then what it means when you design a system.</li>
     </ol>
@@ -74,7 +74,6 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
         <ol class="points">
           <li>One line of Python became 4 bytecode steps. (<code>RESUME</code> is a marker Python puts at the start of every function. The numbers are slots: <code>price</code> is local variable 0, <code>1.18</code> is constant 1, and 5 is the code for multiply.)</li>
           <li>Each bytecode step becomes dozens to hundreds of machine instructions, depending on the types involved.</li>
-          <li>At 3 GHz and about one instruction per tick, a few hundred instructions take about a tenth of a microsecond.</li>
         </ol>
 
         <aside class="note tip">
@@ -113,7 +112,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           </ol>
         </aside>
 
-        <h2>The clock: what a “tick” is</h2>
+        <h2>How a CPU processes instructions</h2>
         <ol class="points">
           <li>Every CPU has a <strong>clock</strong>: a tiny circuit that sends out an electrical pulse, on and off, billions of times a second. Each pulse is one <strong>tick</strong>.</li>
           <li>Each tick is the signal for every part of the core to move its work one stage forward. An instruction goes through four stages: <strong>fetch</strong> it from memory, <strong>decode</strong> what it means, <strong>execute</strong> it, <strong>store</strong> the result.</li>
@@ -127,12 +126,6 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           <li>Real server code averages around 1 per tick, because the pipeline often stalls while it waits for data from memory.</li>
           <li>Put together: instructions per second ≈ clock speed × instructions per tick × number of cores. 3 GHz × 1 × 8 cores is about 24 billion instructions a second.</li>
         </ol>
-
-        <div class="figures">
-          <div class="fig"><small>Clock speed</small><b>3 GHz</b><span>3 billion ticks a second for each core.</span></div>
-          <div class="fig"><small>Instructions per tick</small><b>About 1</b><span>What real server code often manages. Up to 4 or more at peak.</span></div>
-          <div class="fig"><small>Number of cores</small><b>4–64 vCPUs</b><span>A typical cloud server. On Intel and AMD, one vCPU is half a physical core.</span></div>
-        </div>
 
         <h2>Clock speed stopped growing, so cores multiplied</h2>
         <ol class="points">

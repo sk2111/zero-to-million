@@ -300,7 +300,7 @@ window.ZTM = window.ZTM || {};
         '<svg class="ar2-wires" aria-hidden="true"><defs><marker id="' + head + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs><g class="wires"></g><g class="joints"></g><g class="labels"></g><circle class="pkt" r="5" cx="-20" cy="-20"/></svg>' +
         spec.html +
       '</div>' +
-      '<div class="pt-controls"><button type="button" class="btn-sm" data-next>Follow a request</button><span class="pt-count"></span></div>' +
+      '<div class="pt-controls"><button type="button" class="btn-sm" data-next>' + (spec.start || 'Follow a request') + '</button><span class="pt-count"></span></div>' +
       '<p class="readout" aria-live="polite"></p>';
 
     var box = el.querySelector('.ar2'), svg = el.querySelector('.ar2-wires'), wiresG = svg.querySelector('.wires'),
@@ -409,14 +409,14 @@ window.ZTM = window.ZTM || {};
       highlight();
       if (!s) {
         count.textContent = '';
-        out.innerHTML = 'Live traffic: each dot is one request, orange on its way in and teal on its way back. Press <strong>Follow a request</strong> to go through it step by step.';
-        btn.textContent = 'Follow a request';
+        out.innerHTML = spec.idle || 'Live traffic: each dot is one request, orange on its way in and teal on its way back. Press <strong>Follow a request</strong> to go through it step by step.';
+        btn.textContent = spec.start || 'Follow a request';
         live();
         return;
       }
       count.textContent = 'Step ' + (k + 1) + ' of ' + STEPS.length + ': ' + s.t;
       out.innerHTML = s.say;
-      btn.textContent = k === STEPS.length - 1 ? 'Back to live traffic' : 'Next step';
+      btn.textContent = k === STEPS.length - 1 ? (spec.back || 'Back to live traffic') : 'Next step';
       animate(s.run);
     }
     btn.addEventListener('click', function () { k = k === STEPS.length - 1 ? -1 : k + 1; draw(); });
@@ -1000,6 +1000,115 @@ window.ZTM = window.ZTM || {};
         ? 'For a short window after this shopper writes, their reads go to the primary, which always has the latest data. Everyone else keeps reading from the replicas.'
         : 'The shopper places an order at 0 ms, and “My orders” reloads 150 ms later. Drag the lag past 150 ms to see the problem, then turn on read your own writes.';
     }
+    draw();
+  };
+
+  /* ---------- 5.3: CAP and PACELC, as the same diagram with two switches ---------- */
+
+  W['cap-pacelc'] = function (el) {
+    var node = archNode;
+    var st = { when: 'cap', choose: 'c' };
+    var WHEN = [{ value: 'cap', label: 'The network breaks: CAP' }, { value: 'pacelc', label: 'The network works: PACELC' }];
+    var CHOOSE = {
+      cap: [{ value: 'c', label: 'Consistency' }, { value: 'a', label: 'Availability' }],
+      pacelc: [{ value: 'c', label: 'Consistency' }, { value: 'l', label: 'Low latency' }]
+    };
+    var VERDICT = {
+      'cap-c': '<strong>Consistency while the link is down:</strong> nobody sees an out-of-date list, but some reads fail or wait for the primary. Right for stock at checkout and payments.',
+      'cap-a': '<strong>Availability while the link is down:</strong> every read gets an answer, but replica 1’s answers are out of date until the link is back. Right for product pages and reviews.',
+      'pacelc-c': '<strong>Consistency while everything works:</strong> every read is up to date, but every write waits for the replica. Right when a stale read would cost money.',
+      'pacelc-l': '<strong>Low latency while everything works:</strong> writes are fast, and a read can be a few milliseconds behind. This is PostgreSQL’s default.'
+    };
+
+    /* The same shopper, app server, primary and replica in every scenario. */
+    var WRITE = [['in', 0], ['w', 0], ['w', 1], ['in', 1]], READ = [['in', 0], ['r', 0], ['r', 1], ['in', 1]];
+    var linkDown = { on: ['primary', 'rep'], run: [], t: 'replica 1 is cut off',
+      say: '<strong>The link breaks.</strong> The network between the primary and replica 1 fails. Replica 1 can’t receive any more changes, but shoppers can still reach it.' };
+    var orderOnPrimary = { on: ['shop', 'app', 'primary'], run: WRITE, t: 'saved on the primary only',
+      say: '<strong>A shopper places an order.</strong> It’s a write, so it goes to the primary, which saves it. Replica 1 never hears about it.' };
+    var SCENARIOS = {
+      'cap-c': {
+        request: WRITE,
+        steps: [linkDown, orderOnPrimary,
+          { on: ['shop', 'app', 'rep'], run: [['in', 0], ['r', 0]], t: 'replica 1 refuses',
+            say: '<strong>They open “My orders”.</strong> The read goes to replica 1. Replica 1 knows it’s cut off from the primary, so it refuses to answer rather than risk an old list.' },
+          { on: ['shop', 'app', 'primary'], run: READ.map(function (x) { return [x[0] === 'r' ? 'w' : x[0], x[1]]; }), t: 'slower, but correct',
+            say: '<strong>The app asks the primary instead.</strong> The list is right, new order included. The price: reads fail or slow down, and the primary takes extra load until the link is back.' }]
+      },
+      'cap-a': {
+        request: WRITE.concat(READ),
+        steps: [linkDown, orderOnPrimary,
+          { on: ['shop', 'app', 'rep'], run: READ, t: 'an answer, but an old one',
+            say: '<strong>They open “My orders”.</strong> The read goes to replica 1, which answers at once from its own copy. The new order isn’t in it: the shopper gets an answer, but an out-of-date one.' },
+          { on: ['primary', 'rep'], run: [['repl', 0]], t: 'when the link comes back',
+            say: '<strong>The link comes back.</strong> Replica 1 catches up on everything it missed, and the order appears. Until then, every read from it was a little more out of date.' }]
+      },
+      'pacelc-c': {
+        request: [['in', 0], ['w', 0], ['repl', 0], ['repl', 1], ['w', 1], ['in', 1]],
+        steps: [
+          { on: ['shop', 'app', 'primary'], run: [['in', 0], ['w', 0]], t: 'the primary saves it',
+            say: '<strong>A shopper places an order.</strong> The write reaches the primary, which saves it. The network is fine.' },
+          { on: ['primary', 'rep'], run: [['repl', 0], ['repl', 1]], t: '+1 round trip, about 0.5 ms in one zone',
+            say: '<strong>Wait for the replica.</strong> Before answering, the primary sends the order to replica 1 and waits until replica 1 confirms it has saved it.' },
+          { on: ['primary', 'app', 'shop'], run: [['w', 1], ['in', 1]], t: 'every write pays this',
+            say: '<strong>Then answer.</strong> Only now does the shopper see “done”. Every write waits for that extra round trip, and longer if the replica is in another zone or busy.' },
+          { on: ['shop', 'app', 'rep'], run: READ, t: 'always up to date',
+            say: '<strong>Any read is fresh.</strong> “My orders” reads from replica 1, which already has the order.' }]
+      },
+      'pacelc-l': {
+        request: WRITE.concat([['repl', 0]]),
+        steps: [
+          { on: ['shop', 'app', 'primary'], run: [['in', 0], ['w', 0]], t: 'the primary saves it',
+            say: '<strong>A shopper places an order.</strong> The write reaches the primary, which saves it. The network is fine.' },
+          { on: ['primary', 'app', 'shop'], run: [['w', 1], ['in', 1]], t: 'no waiting',
+            say: '<strong>Answer at once.</strong> The primary tells the shopper “done” without waiting for any replica. Writes stay fast.' },
+          { on: ['primary', 'rep'], run: [['repl', 0]], t: 'a few milliseconds later',
+            say: '<strong>Replicate a moment later.</strong> The order streams to replica 1 in the background, a few milliseconds behind the primary.' },
+          { on: ['shop', 'app', 'rep'], run: READ, t: 'fresh after those few milliseconds',
+            say: '<strong>A read in between misses it.</strong> If “My orders” reads from replica 1 inside those milliseconds, the order isn’t there yet. That’s the replication lag from the timeline above.' }]
+      }
+    };
+
+    el.innerHTML = '<div class="w-controls cap-controls"><span class="cap-when"></span><span class="cap-choose"></span></div>' +
+      '<p class="calc-math cap-verdict" aria-live="polite"></p><div class="cap-arch"></div>';
+    el.querySelector('.cap-when').appendChild(segmented('When', WHEN, st.when, function (v) { st.when = v; st.choose = 'c'; chooser(); draw(); }));
+    function chooser() {
+      var box = el.querySelector('.cap-choose');
+      box.innerHTML = '';
+      box.appendChild(segmented('Choose', CHOOSE[st.when], st.choose, function (v) { st.choose = v; draw(); }));
+    }
+
+    function draw() {
+      var key = st.when + '-' + st.choose, sc = SCENARIOS[key];
+      el.querySelector('.cap-verdict').innerHTML = VERDICT[key];
+      /* A fresh element each time, so the previous diagram's animation stops with it. */
+      var holder = el.querySelector('.cap-arch');
+      holder.innerHTML = '<div class="cap-live' + (st.when === 'cap' ? ' cap-broken' : '') + '"></div>';
+      liveArch(holder.firstChild, {
+        wires: [
+          ['in', 'shop', 'app', 'h', ''],
+          ['w', 'app', 'primary', 'v', ''],
+          ['r', 'app', 'rep', 'v', ''],
+          ['repl', 'primary', 'rep', 'h', st.when === 'cap' ? 'link down' : 'replication']
+        ],
+        request: sc.request,
+        steps: sc.steps,
+        start: 'Step through it',
+        back: 'Back to the start',
+        idle: 'Press <strong>Step through it</strong> to follow one order and one read.',
+        html:
+          '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shopper', 'places an order, then opens “My orders”') + '</div>' +
+          '<div class="ar2-region">' +
+            '<p class="ar2-k">Tomazon, in one region</p>' +
+            '<div class="cap-app">' + node('app', 'bolt', 'c-sw', 'App server', 'writes go to the primary, reads to the replica') + '</div>' +
+            '<div class="cap-dbs">' +
+              node('primary', 'db', 'c-db', 'Primary', 'takes every write') +
+              node('rep', 'db', 'c-db', 'Replica 1', 'answers reads') +
+            '</div>' +
+          '</div>'
+      });
+    }
+    chooser();
     draw();
   };
 

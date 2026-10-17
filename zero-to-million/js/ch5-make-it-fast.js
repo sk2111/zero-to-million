@@ -270,9 +270,22 @@ def add_to_cart(cart_id, product_id, quantity):
           </tbody>
         </table>
         <ol class="points" start="5">
-          <li>Even when the network is fine, there’s a smaller version of the same trade-off. Making every write wait for the replicas keeps them fresh, but slows every write; not waiting keeps writes fast, but lets reads be slightly stale. This extension is called <strong>PACELC</strong>.</li>
-          <li>PostgreSQL’s default, asynchronous replication, chooses fast writes, and accepts the lag you saw above.</li>
+          <li>CAP only covers the moment the network breaks. Most of the time it works, and the same choice comes back in a smaller form on every single write.</li>
+          <li>When a shopper places an order, the primary can tell them “done” in one of two ways:</li>
         </ol>
+        <table class="data">
+          <thead><tr><th>The primary</th><th>Each write</th><th>Reads from a replica</th></tr></thead>
+          <tbody>
+            <tr><td>Waits until a replica has saved the order too</td><td>Slower: it adds at least one round trip to the replica</td><td>Always up to date</td></tr>
+            <tr><td>Answers at once, and sends the order to the replicas a moment later</td><td>Fast</td><td>Can miss the newest order for a few milliseconds</td></tr>
+          </tbody>
+        </table>
+        <ol class="points" start="7">
+          <li>This extension of CAP is called <strong>PACELC</strong>. Read it as two choices: if there’s a <strong>P</strong>artition, choose <strong>A</strong>vailability or <strong>C</strong>onsistency (that’s CAP); <strong>E</strong>lse, when everything works, choose low <strong>L</strong>atency or <strong>C</strong>onsistency.</li>
+          <li>PostgreSQL’s default, asynchronous replication, doesn’t wait: it chooses low latency, and accepts the lag you saw above.</li>
+        </ol>
+        <p>All four choices on one diagram. Pick when, then what to keep, and step through one order and one read:</p>
+        <div class="widget" data-widget="cap-pacelc"></div>
 
         <h2>Shades of consistency</h2>
         <table class="data">

@@ -665,6 +665,14 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .lag-mark { position: absolute; top: 0; bottom: 1.3rem; border-left: 2px dashed var(--ink); }
 .lag-mark b { position: absolute; top: 0; left: 0.35rem; font-size: 0.76rem; white-space: nowrap; }
 .lag-result { margin: 0.9rem 0 0; padding: 0.6rem 0.9rem; border-radius: 8px; }
+
+/* 5.3: CAP and PACELC on one small diagram; a cut replication link is drawn red and dashed */
+.cap-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; }
+.cap-verdict { margin: 0 0 1.25rem; }
+.cap-app { display: flex; justify-content: center; margin: 0.4rem 0 2.8rem; }
+.cap-app .nd { width: 16rem; }
+.cap-dbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7rem; }
+.cap-broken .ar2-wires path[data-w="repl"] { stroke: #d03b3b; stroke-dasharray: 2 5; opacity: 1; }
 .lag-result.ok { background: var(--accent-soft); }
 .lag-result.bad { background: var(--amber-soft); }
 
@@ -998,6 +1006,8 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .lb-servers, .ar4-apps { grid-template-columns: 1fr; gap: 1rem; }
   .ar5-apps, .ar5-db { gap: 0.8rem; }
   .lag-tl { --lag-name: 4.6rem; }
+  .cap-dbs { gap: 4.25rem; }
+  .cap-app .nd { width: auto; }
   .ar4-lb { width: auto; }
   .sa-to { transform: rotate(90deg); }
   .ar2-left { flex-direction: row; gap: 2rem; padding-top: 0; }

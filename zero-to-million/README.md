@@ -31,9 +31,11 @@ without internet the fonts fall back to Segoe UI.
 | 4 | Scale out | 10K | Written |
 | 5 | Make it fast | 100K | Written |
 | 6 | Cache it | 500K | Written |
-| 7 | Do it later | 1M | Planned |
-| 8 | Beyond a million | 10M | Planned |
-| 9 | When things break | every stage | Planned |
+| 7 | Split the monolith | 1M | Written |
+| 8 | Publish events | 2M | Written |
+| 9 | Run many services | 5M | Planned |
+| 10 | Beyond a million | 10M | Planned |
+| 11 | When things break | every stage | Planned |
 
 Chapter 1 has 14 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
@@ -77,6 +79,18 @@ sizing and eviction) · Keeping the cache honest (a TTL trade-off calculator, de
 PostgreSQL triggers with LISTEN/NOTIFY and a cache invalidator, and the traps: lost notifications,
 lagging replicas, stampedes and an empty cache).
 
+Chapter 7 has 4 pages: Two squads, one codebase (a payment webhook broken by two changes that each
+passed their tests; Conway's law) · Monolith or microservices? (what splitting buys and costs, the
+cheaper fixes to try first) · Choosing the first service (four tests, the catalogue service, a
+database view as its first contract) · The strangler fig (Nginx `split_clients` routing, a rollout
+diagram from staff to everyone, and the new problems a network between services brings).
+
+Chapter 8 has 4 pages: The listener that went deaf (the cache invalidator fails quietly in a sale;
+why LISTEN/NOTIFY can't be fixed) · A queue or a log (RabbitMQ and SQS vs Kafka, Kafka's parts, a
+widget that sends the same changes through NOTIFY and through a topic) · Capture changes from the
+WAL (the dual-write problem, Debezium, the new cache invalidator as a Kafka consumer, the outbox
+pattern) · The price of a log (Amazon MSK or your own, safe settings, consumer lag, the traps).
+
 ## Files
 
 ```
@@ -89,6 +103,8 @@ js/ch3-scale-up.js       Chapter 3's pages
 js/ch4-scale-out.js      Chapter 4's pages
 js/ch5-make-it-fast.js   Chapter 5's pages
 js/ch6-cache-it.js       Chapter 6's pages
+js/ch7-split-the-monolith.js  Chapter 7's pages
+js/ch8-publish-events.js      Chapter 8's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

@@ -507,7 +507,7 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
             8 workers and two endpoints: product pages (50 ms, mostly waiting on the database) and PDF invoices (2 seconds
             of pure CPU each). If 8 people download an invoice at the same moment, all 8 workers are busy for 2 seconds,
             and every product page waits behind them, even though it needs only 50 ms. The fix is to give heavy work its
-            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue (chapter 7)
+            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue (chapter 8)
             and let the user collect the PDF when it’s ready.</li>
             <li><strong>I/O-bound services scale with concurrency.</strong> If CPU is low and throughput is capped, you
             need more requests in flight (more workers, async I/O), not more cores.</li>

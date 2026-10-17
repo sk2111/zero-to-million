@@ -41,19 +41,31 @@ ZTM.chapters = [
     topics: ['Finding repeated work', 'Redis and cache-aside', 'TTLs and hit rate', 'Cache invalidation', 'Stampedes and lagging replicas']
   },
   {
-    n: 7, slug: 'do-it-later', title: 'Do it later', users: 1000000, status: 'planned',
-    question: 'Which work doesn’t need to happen while the user waits?',
-    summary: 'Queues, background workers and events: moving slow work out of the request path.',
-    topics: ['Message queues', 'Background workers', 'At-least-once delivery and idempotency', 'Events and pub/sub', 'Backpressure']
+    n: 7, slug: 'split-the-monolith', title: 'Split the monolith', users: 1000000, status: 'ready', minutes: 45,
+    question: 'The servers are fine, but releases keep breaking. Why?',
+    summary: 'See when the team, not the servers, is the bottleneck, choose the first service to split out, and move traffic to it gradually with the strangler fig pattern.',
+    topics: ['Conway’s law', 'Monolith or microservices', 'Choosing the first service', 'Contracts between services', 'The strangler fig pattern with Nginx']
   },
   {
-    n: 8, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
+    n: 8, slug: 'publish-events', title: 'Publish events', users: 2000000, status: 'ready', minutes: 50,
+    question: 'How does every service hear about a change, even one that was down?',
+    summary: 'Replace a fragile listener with a durable log: queues and logs, Kafka, change data capture with Debezium, the outbox, and what it costs to run.',
+    topics: ['Message queues and logs', 'Kafka: topics, partitions, consumer groups', 'Change data capture with Debezium', 'The outbox pattern', 'At-least-once delivery and idempotency', 'Consumer lag']
+  },
+  {
+    n: 9, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'planned',
+    question: 'Dozens of programs on dozens of servers: who starts, restarts and moves them?',
+    summary: 'Package each service as a container, and let Kubernetes run them, restart them, roll out new versions and let services find each other.',
+    topics: ['Containers and images', 'Why you need an orchestrator', 'Kubernetes: pods, deployments and services', 'Rolling updates and health probes', 'Service discovery']
+  },
+  {
+    n: 10, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
     question: 'What do we do when one database can’t hold it all?',
     summary: 'Sharding, partitioning and multiple regions, and the consistency trade-offs that come with them.',
     topics: ['Partitioning and sharding', 'Choosing a shard key', 'Multiple regions', 'Consistency vs availability (CAP in practice)', 'Picking the right database']
   },
   {
-    n: 9, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
+    n: 11, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
     question: 'How do we keep working while parts of the system fail?',
     summary: 'Timeouts, retries, circuit breakers, rate limits and monitoring. These apply at every stage, not just at the end.',
     topics: ['Timeouts and retries with backoff', 'Circuit breakers', 'Rate limiting and load shedding', 'Logs, metrics and traces', 'Alerts that mean something']

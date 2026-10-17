@@ -212,7 +212,7 @@ def add_to_cart(cart_id, product_id, quantity):
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>Replicas scale reads, not writes.</strong> Every replica still has to replay every write. If writes are
-            the bottleneck, more replicas won’t help (chapter 8).</li>
+            the bottleneck, more replicas won’t help (chapter 10).</li>
             <li><strong>A replica is also a spare.</strong> If the primary fails, a replica can be promoted to take its place.
             Amazon RDS Multi-AZ does this automatically.</li>
             <li><strong>Keep replicas as big as the primary.</strong> A smaller replica can fall behind just replaying a busy

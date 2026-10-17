@@ -281,7 +281,9 @@ window.ZTM = window.ZTM || {};
     db: '<ellipse cx="16" cy="9" rx="8" ry="3"/><path d="M8 9v14c0 1.7 3.6 3 8 3s8-1.3 8-3V9M8 16c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
     disk: '<rect x="7" y="9" width="18" height="14" rx="2"/><path d="M11 13h10M11 17h6"/><circle cx="21" cy="19" r="1"/>',
     snap: '<path d="M8 12h4l2-3h4l2 3h4v11H8z"/><circle cx="16" cy="17" r="3.5"/>',
-    cache: '<rect x="7" y="8" width="18" height="6" rx="1.5"/><rect x="7" y="18" width="18" height="6" rx="1.5"/><path d="M11 11h.01M11 21h.01M15 11h6M15 21h6"/>'
+    cache: '<rect x="7" y="8" width="18" height="6" rx="1.5"/><rect x="7" y="18" width="18" height="6" rx="1.5"/><path d="M11 11h.01M11 21h.01M15 11h6M15 21h6"/>',
+    log: '<rect x="5" y="11" width="22" height="10" rx="1.5"/><path d="M10.5 11v10M16 11v10M21.5 11v10"/>',
+    search: '<circle cx="14" cy="14" r="6.5"/><path d="M19 19l6 6"/>'
   };
   function icon(g, cat) {
     return '<span class="ic ' + cat + '" aria-hidden="true"><svg viewBox="0 0 32 32">' + G[g] + '</svg></span>';
@@ -1255,6 +1257,302 @@ window.ZTM = window.ZTM || {};
       o('say').innerHTML = say;
     }
     draw();
+  };
+
+  /* ---------- Chapter 7: the strangler fig, one rollout stage at a time ---------- */
+
+  W['strangler-arch'] = function (el) {
+    var node = archNode, st = { stage: 'off' };
+    var STAGES = [
+      { value: 'off', label: 'Before' },
+      { value: 'staff', label: 'Staff only' },
+      { value: 'ten', label: '10% of shoppers' },
+      { value: 'all', label: 'Everyone' },
+      { value: 'done', label: 'Old code deleted' }
+    ];
+    /* Requests as runs of wires: browsing through the core or the catalogue, and a member of staff browsing. */
+    var CORE = [['in', 0], ['core', 0], ['cd', 0], ['cd', 1], ['core', 1], ['in', 1]],
+        CAT = [['in', 0], ['cat', 0], ['ad', 0], ['ad', 1], ['cat', 1], ['in', 1]],
+        STAFF = [['sin', 0], ['cat', 0], ['ad', 0], ['ad', 1], ['cat', 1], ['sin', 1]];
+    var checkout = { on: ['shop', 'lb', 'core', 'data'], run: CORE, t: 'always the core API',
+      say: '<strong>A shopper checks out.</strong> <code>/api/orders</code> isn’t one of the catalogue’s paths, so it goes to the core API at every stage.' };
+    var S = {
+      off: {
+        say: '<strong>Before.</strong> The catalogue service is deployed and healthy, but Nginx sends it nothing. Every request still goes to the core API.',
+        core: 'every request', cat: 'running, no traffic yet', idle: true, request: CORE,
+        steps: [
+          { on: ['shop', 'lb', 'core', 'data'], run: CORE, t: 'as before',
+            say: '<strong>A shopper opens a product page.</strong> Nginx sends it to the core API, which reads the product tables, exactly as before.' },
+          { on: ['cat'], run: [], t: 'ready, but idle',
+            say: '<strong>The new service waits.</strong> It runs on its own servers and passes its health checks, but no request reaches it yet.' }
+        ]
+      },
+      staff: {
+        say: '<strong>Staff only.</strong> Staff browsers carry the <code>tz_beta=1</code> cookie, so their browsing goes to the catalogue service. Shoppers see no change. The team uses the site, and compares errors and p95 with the core API’s.',
+        core: 'every shopper request', cat: 'staff browsing only', request: STAFF.concat(CORE),
+        steps: [
+          { on: ['staff', 'lb', 'cat', 'data'], run: STAFF, t: 'the cookie decides',
+            say: '<strong>A member of staff opens a product page.</strong> Nginx sees the <code>tz_beta</code> cookie and sends the request to the catalogue service, which reads the <code>catalogue_v1</code> view on the replicas.' },
+          { on: ['shop', 'lb', 'core', 'data'], run: CORE, t: 'no cookie: no change',
+            say: '<strong>A shopper opens the same page.</strong> No cookie, and no shoppers are in the split yet, so it goes to the core API as before.' }
+        ]
+      },
+      ten: {
+        say: '<strong>10% of shoppers.</strong> One line, <code>10% catalogue;</code>, sends one in ten visitors’ browsing to the new service. If its errors or p95 rise, deleting that line rolls it back in seconds.',
+        core: '90% of browsing, and carts, orders, payments', cat: '10% of browsing, and staff', request: CAT.concat(CORE),
+        steps: [
+          { on: ['shop', 'lb', 'cat', 'data'], run: CAT, t: '1 in 10 addresses',
+            say: '<strong>A shopper in the 10% browses.</strong> The hash of their address falls in the first 10%, so Nginx sends them to the catalogue service, on every visit.' },
+          { on: ['shop', 'lb', 'core', 'data'], run: CORE, t: 'the other 90%',
+            say: '<strong>Everyone else browses as before,</strong> on the core API.' },
+          checkout
+        ]
+      },
+      all: {
+        say: '<strong>Everyone.</strong> All browsing goes to the catalogue service. The old catalogue code is still in the core API, unused, so rolling back is still one line.',
+        core: 'carts, orders, payments; old catalogue code unused', cat: 'all browsing', request: CAT.concat(CORE),
+        steps: [
+          { on: ['shop', 'lb', 'cat', 'data'], run: CAT, t: 'every shopper',
+            say: '<strong>Every home page, product page and search</strong> is served by the catalogue service. During a sale, only its servers need to grow.' },
+          checkout
+        ]
+      },
+      done: {
+        say: '<strong>Old code deleted.</strong> After a couple of weeks without problems, the catalogue code comes out of the core API. The monolith is smaller, and the Shopping squad ships the catalogue on its own.',
+        core: 'accounts, carts, orders, payments', cat: 'all browsing, shipped by Shopping', request: CAT.concat(CORE),
+        steps: [
+          { on: ['shop', 'lb', 'cat', 'data'], run: CAT, t: 'its own code, its own deploys',
+            say: '<strong>Browsing</strong> is now only the catalogue service’s job. The Shopping squad deploys it whenever it’s ready, without waiting for the Orders squad.' },
+          checkout,
+          { on: ['core'], run: [], t: 'and repeat',
+            say: '<strong>Then the next service.</strong> The same steps, one part at a time. Each one is reversible until its old code is deleted.' }
+        ]
+      }
+    };
+
+    el.innerHTML = '<div class="w-controls"><span class="sf-stage"></span></div>' +
+      '<p class="calc-math sf-say" aria-live="polite"></p><div class="sf-arch"></div>' +
+      '<p class="w-note sf-hint">Swipe the diagram sideways to see all of it.</p>';
+    el.querySelector('.sf-stage').appendChild(segmented('Rollout stage', STAGES, st.stage, function (v) { st.stage = v; draw(); }));
+
+    function draw() {
+      var s = S[st.stage];
+      el.querySelector('.sf-say').innerHTML = s.say;
+      /* A fresh element each time, so the previous diagram's animation stops with it. */
+      var holder = el.querySelector('.sf-arch');
+      holder.innerHTML = '<div class="' + (s.idle ? 'sf-idle' : '') + '"></div>';
+      liveArch(holder.firstChild, {
+        joints: true,
+        wires: [
+          ['in', 'shop', 'lb', 'h', ''],
+          ['sin', 'staff', 'lb', 'h', ''],
+          ['core', 'lb', 'core', 'h', ''],
+          ['cat', 'lb', 'cat', 'h', ''],
+          ['cd', 'core', 'data', 'h', ''],
+          ['ad', 'cat', 'data', 'h', '']
+        ],
+        request: s.request,
+        steps: s.steps,
+        start: 'Step through it',
+        back: 'Back to the start',
+        idle: 'Press <strong>Step through it</strong> to follow the requests at this stage, or pick another stage above.',
+        html:
+          '<div class="ar2-left">' +
+            node('shop', 'user', 'c-user', 'Shoppers', 'a million of them') +
+            node('staff', 'user', 'c-user', 'Staff', 'with the tz_beta cookie') +
+          '</div>' +
+          '<div class="ar2-region">' +
+            '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+            '<div class="sf-grid">' +
+              '<div class="sf-lb">' + node('lb', 'proxy', 'c-net', 'Nginx', 'load balancer, routes by path') + '</div>' +
+              '<div class="sf-core">' + node('core', 'bolt', 'c-cpu', 'Core API', s.core) + '</div>' +
+              '<div class="sf-cat">' + node('cat', 'bolt', 'c-cpu', 'Catalogue service', s.cat) + '</div>' +
+              '<div class="sf-data">' + node('data', 'db', 'c-db', 'PostgreSQL and Redis', 'the core’s tables; the catalogue reads a view') + '</div>' +
+            '</div>' +
+          '</div>'
+      });
+    }
+    draw();
+  };
+
+  /* ---------- Chapter 8: the same price changes through LISTEN/NOTIFY and through a Kafka topic ---------- */
+
+  W['kafka-log'] = function (el) {
+    var SHOW = 12, PRODUCTS = [1042, 2210, 377, 5120, 918, 4410, 1311, 2875];
+    var MODES = [{ value: 'notify', label: 'LISTEN/NOTIFY' }, { value: 'kafka', label: 'A Kafka topic' }];
+    var st = { mode: 'notify' }, timer = null;
+
+    el.innerHTML =
+      '<div class="w-controls"><span class="kl-mode"></span></div>' +
+      '<div class="kl"></div>' +
+      '<p class="kl-key"><span><i class="kl-done"></i>handled</span><span class="k-wait"><i class="kl-wait"></i>waiting in the topic</span><span class="k-miss"><i class="kl-miss"></i>lost</span></p>' +
+      '<div class="pt-controls">' +
+        '<button type="button" class="btn-sm" data-act="change">Change a price</button>' +
+        '<button type="button" class="btn-sm" data-act="stop"></button>' +
+        '<button type="button" class="btn-sm" data-act="add"></button>' +
+        '<button type="button" class="btn-sm quiet" data-act="reset">Start again</button>' +
+      '</div>' +
+      '<p class="readout" aria-live="polite"></p>';
+    el.querySelector('.kl-mode').appendChild(segmented('How changes travel', MODES, st.mode, function (v) { st.mode = v; fresh(); }));
+
+    function fresh() {
+      st.msgs = [];
+      st.inv = { on: true, pos: 0, cells: {} };
+      st.search = null;
+      for (var i = 0; i < 4; i++) { append(); st.inv.cells[i] = 'done'; }
+      st.inv.pos = st.msgs.length;
+      st.say = 'Each square is one price change. Stop the invalidator, change a few prices, then start it again. ' +
+        (st.mode === 'notify' ? 'Then switch to <strong>A Kafka topic</strong> and do the same.' : 'Then add a search indexer.');
+      render();
+    }
+    function append() {
+      var off = st.msgs.length;
+      st.msgs.push({ off: off, pid: PRODUCTS[off % PRODUCTS.length] });
+      return off;
+    }
+    function groups() { return st.search ? [st.inv, st.search] : [st.inv]; }
+    function status(g, off) {
+      if (st.mode === 'kafka') return off < g.pos ? 'done' : 'wait';
+      return g.cells[off] || 'na';
+    }
+    function missed(g) {
+      return st.msgs.filter(function (m) { return g.cells[m.off] === 'miss'; }).length;
+    }
+    /* Kafka mode: a running consumer reads one message per tick until it has caught up. */
+    function tick() {
+      if (!el.isConnected) { clearInterval(timer); return; }
+      if (st.mode !== 'kafka') return;
+      var moved = false;
+      groups().forEach(function (g) {
+        if (g.on && g.pos < st.msgs.length) { g.pos = reduceMotion ? st.msgs.length : g.pos + 1; moved = true; }
+      });
+      if (moved) render();
+    }
+
+    function render() {
+      var from = Math.max(0, st.msgs.length - SHOW), shown = st.msgs.slice(from), pad = '';
+      for (var i = shown.length; i < SHOW; i++) pad += '<i class="kl-empty"></i>';
+      function row(name, note, cells) {
+        return '<div class="kl-row"><p class="kl-name"><b>' + name + '</b><span>' + note + '</span></p><div class="kl-cells">' + cells + pad + '</div></div>';
+      }
+      function groupRow(g, name) {
+        var note;
+        if (st.mode === 'kafka') {
+          var lag = st.msgs.length - g.pos;
+          note = (g.on ? 'running' : 'stopped') + ' · next offset ' + g.pos + ' · ' + (lag ? 'lag ' + lag : 'up to date');
+        } else {
+          var m = missed(g);
+          note = (g.on ? 'listening' : 'not listening') + (m ? ' · missed ' + m + ', gone for good' : '');
+        }
+        return row(name, note, shown.map(function (msg) { return '<i class="kl-' + status(g, msg.off) + '"></i>'; }).join(''));
+      }
+      var topic = shown.map(function (m) {
+        return '<i class="kl-msg" title="Offset ' + m.off + ': product ' + m.pid + '’s price changed">' + m.off + '</i>';
+      }).join('');
+      el.querySelector('.kl').className = 'kl ' + st.mode;
+      el.querySelector('.kl').innerHTML =
+        row(st.mode === 'kafka' ? 'tomazon.public.products' : 'Price changes', st.mode === 'kafka' ? 'a topic: every change kept for 7 days' : 'NOTIFY sends each one once, and keeps nothing', topic) +
+        groupRow(st.inv, 'Cache invalidator') +
+        (st.search ? groupRow(st.search, 'Search indexer') : '');
+      el.querySelector('[data-act="stop"]').textContent = st.inv.on ? 'Stop the invalidator' : 'Start the invalidator';
+      var add = el.querySelector('[data-act="add"]');
+      add.textContent = st.search ? 'Search indexer added' : 'Add a search indexer';
+      add.disabled = !!st.search;
+      el.querySelector('.readout').innerHTML = st.say;
+    }
+
+    el.querySelector('.pt-controls').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-act]');
+      if (!b || b.disabled) return;
+      var act = b.getAttribute('data-act'), inv = st.inv, kafka = st.mode === 'kafka';
+      if (act === 'reset') { fresh(); return; }
+      if (act === 'change') {
+        var off = append(), lag = st.msgs.length - inv.pos;
+        if (!kafka) groups().forEach(function (g) { g.cells[off] = g.on ? 'done' : 'miss'; });
+        if (kafka) st.say = inv.on
+          ? '<strong>Appended, and read.</strong> The change is written to the end of the topic as offset ' + off + '. The invalidator reads it and moves on, and the message stays in the topic.'
+          : '<strong>Kept.</strong> The change is appended as offset ' + off + '. The invalidator is stopped, so its lag grows to ' + lag + '. Nothing is lost: the messages wait in the topic.';
+        else st.say = inv.on
+          ? '<strong>Delivered.</strong> PostgreSQL sends the notification to every session listening right now, and the invalidator deletes the cached page.'
+          : '<strong>Lost.</strong> Nobody is listening, so PostgreSQL drops the notification. Product ' + st.msgs[off].pid + '’s old page stays in Redis until its TTL runs out, and nothing records that it was missed.';
+      } else if (act === 'stop') {
+        inv.on = !inv.on;
+        if (!inv.on) st.say = kafka
+          ? '<strong>The invalidator stops.</strong> Its position stays in Kafka: it will carry on from offset ' + inv.pos + '. Now change a price.'
+          : '<strong>The invalidator stops listening,</strong> like at 7:35, and nothing else notices. Now change a price.';
+        else if (kafka) {
+          var behind = st.msgs.length - inv.pos;
+          st.say = behind
+            ? '<strong>Catching up.</strong> The invalidator starts again from offset ' + inv.pos + ', and works through the ' + behind + ' change' + (behind > 1 ? 's' : '') + ' it missed, oldest first.'
+            : '<strong>Running again.</strong> Nothing changed while it was stopped, so there’s nothing to catch up on.';
+        } else {
+          var gone = missed(inv);
+          st.say = gone
+            ? '<strong>Listening again,</strong> but only to changes from now on. The ' + gone + ' it missed are gone, and it can’t even tell which products they were.'
+            : '<strong>Listening again.</strong> Nothing changed while it was stopped, so this time nothing was lost.';
+        }
+      } else if (act === 'add') {
+        st.search = { on: true, pos: 0, cells: {} };
+        st.say = kafka
+          ? '<strong>A new reader, with the history.</strong> The search indexer is a new consumer group. It starts at the oldest message still kept, offset 0, and reads every change, without slowing the invalidator.'
+          : '<strong>A new listener hears only the future.</strong> Everything before it started is gone. To fill its index, it would have to read every product from the tables.';
+      }
+      render();
+    });
+
+    fresh();
+    timer = setInterval(tick, 650);
+  };
+
+  /* ---------- Chapter 8: change data capture, from the WAL to Redis and search ---------- */
+
+  W['cdc-arch'] = function (el) {
+    var node = archNode;
+    liveArch(el, {
+      joints: true,
+      wires: [
+        ['in', 'staff', 'app', 'h', ''],
+        ['w', 'app', 'primary', 'h', ''],
+        ['slot', 'primary', 'dbz', 'h', 'WAL', true],
+        ['pub', 'dbz', 'kafka', 'v', ''],
+        ['sub', 'inv', 'kafka', 'h', ''],
+        ['del', 'redis', 'inv', 'h', 'DEL'],
+        ['six', 'idx', 'kafka', 'h', ''],
+        ['put', 'search', 'idx', 'h', '']
+      ],
+      request: [['in', 0], ['w', 0], ['w', 1], ['in', 1], ['slot', 0], ['pub', 0], ['sub', 1], ['del', 1], ['six', 1], ['put', 1]],
+      start: 'Follow a price change',
+      idle: 'A price change, from the database to everything that needs it. Press <strong>Follow a price change</strong> to go through it step by step.',
+      steps: [
+        { on: ['staff', 'app', 'primary'], run: [['in', 0], ['w', 0], ['w', 1], ['in', 1]], t: 'one write, nothing else',
+          say: '<strong>Staff change a price.</strong> The core API updates the products table on the primary, and commits. It doesn’t know Kafka exists.' },
+        { on: ['primary', 'dbz'], run: [['slot', 0]], t: 'milliseconds after the commit',
+          say: '<strong>Debezium reads the WAL.</strong> The committed change is in the WAL, and Debezium streams it through its replication slot, much as a replica would. The slot remembers how far Debezium has read.' },
+        { on: ['dbz', 'kafka'], run: [['pub', 0]], t: 'copied to 3 brokers',
+          say: '<strong>Publish it.</strong> Debezium turns the change into a message keyed by the product’s id, and sends it to <code>tomazon.public.products</code>. Kafka confirms it only when its in-sync copies, at least 2 of 3 in different zones, have it.' },
+        { on: ['kafka', 'inv', 'redis'], run: [['sub', 1], ['del', 1]], t: 'then commit the offset',
+          say: '<strong>The cache invalidator acts on it.</strong> One of its two copies reads the message, deletes <code>home:v1</code> and the product’s key in Redis, and only then commits its offset.' },
+        { on: ['kafka', 'idx', 'search'], run: [['six', 1], ['put', 1]], t: 'the same message, independently',
+          say: '<strong>Search reads it too.</strong> The search indexer is a separate consumer group with its own offset. It reads the same message and updates the product in OpenSearch, at its own pace.' },
+        { on: ['inv', 'kafka'], run: [], t: 'nothing is skipped',
+          say: '<strong>If an invalidator crashes,</strong> Kafka hands its partitions to the other copy within the session timeout. That copy carries on from the last committed offset, so a few messages may be handled twice, but none are skipped.' }
+      ],
+      html:
+        '<div class="ar2-left">' + node('staff', 'user', 'c-user', 'Staff', 'change a price') + '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+          '<div class="c8-grid">' +
+            '<div class="c8-app">' + node('app', 'bolt', 'c-cpu', 'Core API', 'writes to PostgreSQL only') + '</div>' +
+            '<div class="c8-primary">' + node('primary', 'db', 'c-db', 'Primary', 'wal_level = logical') + '</div>' +
+            '<div class="c8-dbz">' + node('dbz', 'bolt', 'c-sw', 'Debezium', 'on Kafka Connect') + '</div>' +
+            '<div class="c8-redis">' + node('redis', 'cache', 'c-db', 'Redis', 'cached pages') + '</div>' +
+            '<div class="c8-inv">' + node('inv', 'bolt', 'c-sw', 'Cache invalidator', '2 copies, one consumer group') + '</div>' +
+            '<div class="c8-kafka">' + node('kafka', 'log', 'c-sto', 'Kafka', '3 brokers, one per zone') + '</div>' +
+            '<div class="c8-search">' + node('search', 'search', 'c-db', 'OpenSearch', 'the search index') + '</div>' +
+            '<div class="c8-idx">' + node('idx', 'bolt', 'c-sw', 'Search indexer', 'its own consumer group') + '</div>' +
+          '</div>' +
+        '</div>'
+    });
   };
 
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */

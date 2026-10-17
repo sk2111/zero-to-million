@@ -671,6 +671,40 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .c6-lb { grid-area: 1 / 1; } .c6-app { grid-area: 1 / 2; } .c6-redis { grid-area: 1 / 3; }
 .c6-primary { grid-area: 2 / 1; } .c6-reps { grid-area: 2 / 2; } .c6-inv { grid-area: 2 / 3; }
 
+/* 7.4: the strangler fig. Nginx in front, the core API and the new catalogue service behind it */
+.sf-say { margin: 0 0 1.25rem; }
+.sf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.6rem 3.2rem; align-items: center; }
+.sf-lb { grid-area: 1 / 1 / 3 / 2; } .sf-core { grid-area: 1 / 2; } .sf-cat { grid-area: 2 / 2; } .sf-data { grid-area: 1 / 3 / 3 / 4; }
+.sf-idle .ar2-wires path[data-w="cat"], .sf-idle .ar2-wires path[data-w="ad"] { stroke-dasharray: 2 5; }
+.sf-hint { display: none; }
+
+/* 8.2: the same price changes through LISTEN/NOTIFY and through a Kafka topic */
+.kl { display: grid; gap: 1.1rem; }
+.kl-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.1rem 0.7rem; margin: 0 0 0.4rem; font-size: var(--fs-sm); }
+.kl-name span { font-size: var(--fs-xs); color: var(--muted); }
+.kl-cells { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.kl-cells i, .kl-key i { display: grid; place-items: center; height: 2rem; border-radius: 5px; font-style: normal; font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kl-msg { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule-2); color: var(--ink-2); }
+.kl.notify .kl-msg { background: transparent; box-shadow: inset 0 0 0 1px var(--rule-2); color: var(--muted); }
+.kl-done { background: var(--accent); }
+.kl-wait { background: var(--amber-soft); box-shadow: inset 0 0 0 1.5px var(--amber); }
+.kl-miss { background: repeating-linear-gradient(135deg, rgba(208, 59, 59, 0.22) 0 4px, transparent 4px 8px); box-shadow: inset 0 0 0 1.5px #d03b3b; }
+.kl-empty { box-shadow: inset 0 0 0 1px var(--rule); opacity: 0.6; }
+.kl-key { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin: 0.9rem 0 0; font-size: var(--fs-xs); color: var(--muted); }
+.kl-key span { display: inline-flex; align-items: center; }
+.kl.notify + .kl-key .k-wait, .kl.kafka + .kl-key .k-miss { display: none; }
+.kl-key i { display: inline-block; width: 0.95rem; height: 0.95rem; margin-right: 0.45rem; border-radius: 3px; }
+.btn-sm.quiet { background: transparent; color: var(--ink); }
+.btn-sm.quiet:hover { background: var(--paper); border-color: var(--ink); }
+.btn-sm:disabled { opacity: 0.45; cursor: default; }
+.btn-sm:disabled:hover { background: var(--ink); border-color: var(--ink); }
+
+/* 8.3: change data capture, from the WAL through Kafka to Redis and search */
+.c8-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.6rem 3.2rem; align-items: center; }
+.c8-app { grid-area: 1 / 1; } .c8-primary { grid-area: 1 / 2; } .c8-dbz { grid-area: 1 / 3; }
+.c8-redis { grid-area: 2 / 1; } .c8-inv { grid-area: 2 / 2; } .c8-kafka { grid-area: 2 / 3; }
+.c8-search { grid-area: 3 / 1; } .c8-idx { grid-area: 3 / 2; }
+
 /* 5.3: CAP and PACELC on one small diagram; a cut replication link is drawn red and dashed */
 .cap-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; }
 .cap-verdict { margin: 0 0 1.25rem; }
@@ -1013,6 +1047,16 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .lag-tl { --lag-name: 4.6rem; }
   .cap-dbs { gap: 4.25rem; }
   .c6-grid { gap: 2.4rem 1.2rem; }
+  .c8-grid { gap: 2.2rem 1.2rem; }
+  /* The strangler diagram keeps its wide layout on phones, and scrolls sideways */
+  .sf-arch > div { overflow-x: auto; padding-bottom: 0.4rem; }
+  .sf-arch .ar2 { grid-template-columns: 8.5rem minmax(0, 1fr); gap: 2rem; min-width: 42rem; }
+  .sf-arch .ar2-left { flex-direction: column; gap: 3rem; padding-top: 4.6rem; }
+  .sf-arch .ar2-left .nd { flex: none; }
+  .sf-hint { display: block; }
+  .sf-grid { gap: 2.4rem 2.4rem; }
+  .kl-cells { gap: 3px; }
+  .kl-cells i { height: 1.7rem; font-size: 0.7rem; }
   .cap-app .nd { width: auto; }
   .ar4-lb { width: auto; }
   .sa-to { transform: rotate(90deg); }

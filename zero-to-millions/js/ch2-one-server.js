@@ -332,14 +332,9 @@ ZTM.content[2] = {
         <ol class="points">
           <li>It fits, but only just. PostgreSQL has about 100 MB of page cache for its data, so once the data grows past that, queries start reading from disk (page 1.6).</li>
           <li>Add a 1 GB swap file as a safety net, so a sudden spike slows the server down instead of the OOM killer stopping PostgreSQL.</li>
-          <li>The next size up, t4g.small with 2 GB, costs only a little more each month and removes the worry. It also has four times the steady network and disk speed. Memory is likely to be the first thing this server runs out of.</li>
         </ol>
 
         <h2>Does it fit the estimates?</h2>
-        <ol class="points">
-          <li>Say each request needs about 10 ms of CPU. Two vCPUs at full speed could handle about 200 requests a second.</li>
-          <li>But a t4g.nano’s baseline is 5% per vCPU. Sustained, that’s about 10 requests a second. CPU credits cover short bursts above that; steady load above it either runs out of credits or, in unlimited mode, costs extra.</li>
-        </ol>
         <p>Every estimate from page 2.2, next to what this server gives:</p>
         <table class="data">
           <thead><tr><th>Resource</th><th>The pilot needs</th><th>A t4g.nano gives</th><th>Fits?</th></tr></thead>
@@ -351,10 +346,9 @@ ZTM.content[2] = {
             <tr><td>Network</td><td>About 8 Mbps, or 12 Mbps with 50% headroom</td><td>32 Mbps steady, bursts to 5 Gbps</td><td>Yes</td></tr>
           </tbody>
         </table>
-        <ol class="points" start="3">
+        <ol class="points">
           <li>The pilot fits on every count, with the most room on disk space and the least on memory.</li>
           <li><strong>A small instance limits its disk and network, not just its CPU.</strong> A gp3 volume offers 3,000 IOPS and 125 MB/s, but a t4g.nano can only use 250 IOPS and 5.4 MB/s steadily (page 1.7).</li>
-          <li>At 1,000 shoppers, four of the five no longer fit: half a core against 10%, about 670 MB against 512 MB, 10 MB/s of photos against 5.4 MB/s of disk, and about 80 Mbps against 32 Mbps of network. Moving the photos to object storage behind a CDN takes care of the last two.</li>
           <li>When traffic becomes steady rather than spiky, move to a bigger or non-burstable instance. That’s where chapter 3 starts.</li>
         </ol>
 
@@ -479,7 +473,6 @@ Swap:          1.0Gi       612Mi       412Mi</span>
             <li>Load 5.81 on 2 vCPUs: almost 3 threads ready for every core, and rising (page 1.3).</li>
             <li>Only 18 MB <code>available</code>, and 612 MB already swapped out to disk: the server has run out of memory (page 1.6).</li>
             <li><code>top</code> shows who is competing: PostgreSQL and both FastAPI workers want the same 2 vCPUs and the same 459 MB, and Nginx needs a share too.</li>
-            <li>CloudWatch adds one more: <code>CPUCreditBalance</code> is at 0, so the burstable CPU has nothing left to burst with.</li>
           </ol>
         </figure>
 
@@ -500,7 +493,6 @@ Swap:          1.0Gi       612Mi       412Mi</span>
         </div>
         <div class="legend budget-legend"><span><i class="sw b-os"></i>Ubuntu and system services</span><span><i class="sw b-db"></i>PostgreSQL, more connections and cache</span><span><i class="sw b-app"></i>FastAPI, 4 workers</span><span><i class="sw b-ng"></i>Nginx</span></div>
         <ol class="points" start="3">
-          <li>Worse, the parts make each other slower. A slow query keeps a FastAPI worker waiting. Waiting workers hold memory that PostgreSQL wanted for its cache. With less cache, PostgreSQL reads from disk, and its queries get slower still.</li>
           <li>And it’s still a single point of failure. When the OOM killer stops PostgreSQL, the whole product is down, for everyone.</li>
           <li>This is a time bomb. Nothing is wrong with the code, but every new user brings the explosion a little closer.</li>
         </ol>

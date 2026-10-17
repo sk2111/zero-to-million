@@ -431,6 +431,7 @@ window.ZTM = window.ZTM || {};
   W['pilot-arch'] = function (el) {
     var node = archNode;
     liveArch(el, {
+      joints: true,
       wires: [
         ['dns', 'users', 'dns', 'v', 'DNS lookup'],
         ['in', 'users', 'eip', 'h', 'HTTPS'],
@@ -439,6 +440,7 @@ window.ZTM = window.ZTM || {};
         ['app', 'nginx', 'app', 'h', ''],
         ['sql', 'app', 'db', 'h', ''],
         ['io', 'db', 'disk', 'v', ''],
+        ['photo', 'nginx', 'disk', 'v', ''],
         ['bak', 'disk', 'snap', 'v', 'daily', true]
       ],
       request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['sql', 0], ['sql', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
@@ -452,7 +454,9 @@ window.ZTM = window.ZTM || {};
         { on: ['app', 'db', 'disk'], run: [['sql', 0], ['sql', 1]], t: '~5 ms of work, ~1 ms per query',
           say: '<strong>Do the work.</strong> FastAPI runs the endpoint and queries PostgreSQL, also over <code>localhost</code>: no network round trip. If the data isn’t in RAM, PostgreSQL reads it from the disk.' },
         { on: ['nginx', 'app', 'users'], run: [['app', 1], ['ng', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
-          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. First request: about 85 ms in all. Later requests on the same connection skip DNS and the handshakes: about 25 ms. Product photos never reach FastAPI: Nginx reads them straight from the disk.' }
+          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. First request: about 85 ms in all. Later requests on the same connection skip DNS and the handshakes: about 25 ms.' },
+        { on: ['users', 'eip', 'sg', 'nginx', 'disk'], run: [['in', 0], ['fw', 0], ['ng', 0], ['photo', 0], ['photo', 1], ['ng', 1], ['fw', 1], ['in', 1]], t: 'about 1 MB per product page',
+          say: '<strong>Fetch the photos.</strong> The page then asks for its product photos. Nginx reads each one straight from the disk and sends it back: FastAPI and PostgreSQL never see it. Photos are most of the bytes this server sends (page 2.2).' }
       ],
       html:
         '<div class="ar2-left">' +

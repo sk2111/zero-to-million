@@ -462,7 +462,8 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
         <ol class="points">
           <li><code>nproc</code> prints how many cores the server has. <code>uptime</code> prints the <strong>load average</strong>: how many threads, on average, were running or waiting for a core.</li>
           <li>A load below the number of cores means there’s spare CPU. At or above it, threads are queuing for the CPU.</li>
-          <li>You get three numbers: the averages over the last 1, 5 and 15 minutes. If the first is higher than the others, the load is rising.</li>        </ol>
+          <li>You get three numbers: the averages over the last 1, 5 and 15 minutes. If the first is higher than the others, the load is rising.</li>
+        </ol>
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>
 <pre><span class="p">$</span> nproc
@@ -834,7 +835,8 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
           </tbody>
         </table>
         <ol class="points" start="6">
-          <li>The highlighted row is what many production databases run on: network-attached storage.</li>        </ol>
+          <li>The highlighted row is what many production databases run on: network-attached storage.</li>
+        </ol>
 
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>

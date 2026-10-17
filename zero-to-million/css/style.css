@@ -748,6 +748,30 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .c11-mum { grid-area: 1 / 2; } .c11-fra { grid-area: 2 / 2; }
 .c11-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3rem; }
 
+/* 12.3: customers and logical shards, coloured by the primary that holds them */
+.sm-label { margin: 1rem 0 0.45rem; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.sm-grid { display: grid; gap: 3px; }
+.sm-ls { grid-template-columns: repeat(16, minmax(0, 1fr)); }
+.sm-cust { grid-template-columns: repeat(24, minmax(0, 1fr)); }
+.sm-grid i { display: grid; place-items: center; height: 1.5rem; border-radius: 4px; font-style: normal; font-size: 0.66rem; font-weight: 600; color: #ffffff; font-variant-numeric: tabular-nums; }
+.sm-cust i { height: 1.15rem; }
+.sm-p.p0 { background: var(--accent); } .sm-p.p1 { background: #ed7100; } .sm-p.p2 { background: #8c4fff; }
+.sm-p.p3 { background: #2f74d0; } .sm-p.p4 { background: #c9a227; } .sm-p.p5 { background: #7a8699; }
+.sm-grid i.moved { box-shadow: inset 0 0 0 2px var(--ink); }
+.sm-moved-key { box-shadow: inset 0 0 0 2px var(--ink); }
+.sm-key .kl-key { margin: 0 0 0.2rem; }
+.sm-say { margin-top: 1.1rem; }
+
+/* 12.3: the router in the core API, fanning out to four primaries */
+.c12-app { display: flex; justify-content: center; margin: 0.4rem 0 3rem; }
+.c12-app .nd { width: 16rem; }
+.c12-shards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.4rem; }
+
+/* 13.2: the home region and a regional cell, with the front door at the left */
+.ar2 .c13-left { padding-top: 1.2rem; }
+.c13-regions { display: grid; gap: 2.6rem; }
+.c13-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.6rem; }
+
 /* 5.3: CAP and PACELC on one small diagram; a cut replication link is drawn red and dashed */
 .cap-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; }
 .cap-verdict { margin: 0 0 1.25rem; }

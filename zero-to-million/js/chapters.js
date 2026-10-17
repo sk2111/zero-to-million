@@ -71,13 +71,19 @@ ZTM.chapters = [
     topics: ['Processing time and network time', 'Time to first byte', 'Ending connections and caching pages at the edge', 'CloudFront Functions and Lambda@Edge', 'A second region for reads']
   },
   {
-    n: 12, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
-    question: 'What do we do when one database can’t take all the writes?',
-    summary: 'Sharding and partitioning: splitting the data across several primaries, and the trade-offs that come with it.',
-    topics: ['Partitioning and sharding', 'Choosing a shard key', 'Queries across shards', 'Moving data between shards', 'Picking the right database']
+    n: 12, slug: 'split-the-data', title: 'Split the data', users: 10000000, status: 'ready', minutes: 50,
+    question: 'One database takes every write. What happens when one launch could swamp it?',
+    summary: 'Tell a hot spot from a volume problem, keep a flash sale off the shared database, then shard the orders by customer, with logical shards and a map.',
+    topics: ['Noisy neighbours and hot spots', 'Flash sales: waiting rooms, Redis and queues', 'Choosing a shard key', 'Logical shards and the shard map', 'Moving to shards without stopping']
   },
   {
-    n: 13, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
+    n: 13, slug: 'go-global', title: 'Go global', users: 20000000, status: 'ready', minutes: 45,
+    question: 'How does Tomazon serve every continent, and survive losing one?',
+    summary: 'Run a complete cell in every region, choose a front door, feed each cell only the data it needs, put customers’ shards in their home region, and plan for losing a region.',
+    topics: ['Regional cells', 'DNS routing and anycast', 'Feeding regions with change data capture', 'Home regions for writes', 'Losing a region']
+  },
+  {
+    n: 14, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
     question: 'How do we keep working while parts of the system fail?',
     summary: 'Timeouts, retries, circuit breakers, rate limits and monitoring. These apply at every stage, not just at the end.',
     topics: ['Timeouts and retries with backoff', 'Circuit breakers', 'Rate limiting and load shedding', 'Logs, metrics and traces', 'Alerts that mean something']

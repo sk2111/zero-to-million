@@ -1976,6 +1976,158 @@ window.ZTM = window.ZTM || {};
     });
   };
 
+  /* ---------- Chapter 12: adding a primary, with hash-mod-N or with 64 logical shards ---------- */
+
+  W['shard-map'] = function (el) {
+    var LOGICAL = 64, CUSTOMERS = 96;
+    var MODES = [{ value: 'mod', label: 'Hash mod the number of primaries' }, { value: 'logical', label: '64 logical shards and a map' }];
+    var NS = [{ value: '4', label: '4 primaries' }, { value: '5', label: '5' }, { value: '6', label: '6' }];
+    var st = { mode: 'mod', n: 4 };
+    /* A small integer hash that spreads consecutive ids well. */
+    function hash(x) { var h = Math.imul(x ^ 0x9e3779b9, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; return (h ^ (h >>> 16)) >>> 0; }
+    /* The map starts as 4 blocks of 16; each new primary takes shards, one at a time, from the fullest. */
+    function mapFor(n) {
+      var m = [], i, k;
+      for (i = 0; i < LOGICAL; i++) m.push(Math.floor(i / 16));
+      for (k = 4; k < n; k++) {
+        for (var moved = 0; moved < Math.floor(LOGICAL / (k + 1)); moved++) {
+          var counts = []; for (i = 0; i < k; i++) counts.push(0);
+          m.forEach(function (p) { if (p < k) counts[p]++; });
+          var big = counts.indexOf(Math.max.apply(null, counts));
+          for (i = LOGICAL - 1; i >= 0; i--) if (m[i] === big) { m[i] = k; break; }
+        }
+      }
+      return m;
+    }
+    var ids = []; for (var c = 0; c < CUSTOMERS; c++) ids.push(48213 + c * 7919);
+
+    el.innerHTML = '<div class="w-controls el-controls"><span class="sm-mode"></span><span class="sm-n"></span></div>' +
+      '<div class="sm-key"></div><div class="sm-logical"></div>' +
+      '<p class="sm-label">96 customers, coloured by the primary that holds their orders</p><div class="sm-grid sm-cust"></div>' +
+      '<p class="calc-math sm-say" aria-live="polite"></p>';
+    el.querySelector('.sm-mode').appendChild(segmented('Routing', MODES, st.mode, function (v) { st.mode = v; draw(); }));
+    el.querySelector('.sm-n').appendChild(segmented('Primaries', NS, String(st.n), function (v) { st.n = +v; draw(); }));
+
+    function draw() {
+      var n = st.n, base = mapFor(4), map = mapFor(n), moved = 0;
+      function place(id, count, m) { var h = hash(id); return st.mode === 'mod' ? h % count : m[h % LOGICAL]; }
+      el.querySelector('.sm-key').innerHTML = '<p class="kl-key">' + [0, 1, 2, 3, 4, 5].slice(0, n).map(function (p) {
+        return '<span><i class="sm-p p' + p + '"></i>orders-' + (p + 1) + '</span>';
+      }).join('') + '<span><i class="sm-moved-key"></i>moved</span></p>';
+      var logical = '';
+      if (st.mode === 'logical') {
+        logical = '<p class="sm-label">The shard map: 64 logical shards, coloured by primary</p><div class="sm-grid sm-ls">' +
+          map.map(function (p, i) { return '<i class="sm-p p' + p + (p !== base[i] ? ' moved' : '') + '" title="Logical shard ' + i + ' → orders-' + (p + 1) + '">' + i + '</i>'; }).join('') + '</div>';
+      }
+      el.querySelector('.sm-logical').innerHTML = logical;
+      el.querySelector('.sm-cust').innerHTML = ids.map(function (id) {
+        var p = place(id, n, map), was = place(id, 4, base);
+        if (p !== was) moved++;
+        return '<i class="sm-p p' + p + (p !== was ? ' moved' : '') + '" title="Customer ' + id + ' → orders-' + (p + 1) + '"></i>';
+      }).join('');
+      var pct = Math.round(moved / CUSTOMERS * 100), say;
+      if (n === 4) say = 'The starting layout: four primaries. Now add a fifth, and see how many customers’ orders have to move.';
+      else if (st.mode === 'mod') say = '<strong>' + moved + ' of 96 customers move (' + pct + '%).</strong> With <code>hash % ' + n + '</code>, changing the number of primaries changes the answer for almost every customer, so almost all the data has to move at once.';
+      else say = '<strong>' + moved + ' of 96 customers move (' + pct + '%).</strong> Only the logical shards the new primar' + (n > 5 ? 'ies take' : 'y takes') + ' move, about ' + Math.round((1 - 4 / n) * 100) + '% of the data, the least possible. Each shard moves on its own, then one row of the map changes.';
+      el.querySelector('.sm-say').innerHTML = say;
+    }
+    draw();
+  };
+
+  /* ---------- Chapter 12: the shard router in the core API, and four primaries ---------- */
+
+  W['shard-arch'] = function (el) {
+    var node = archNode;
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      joints: true,
+      wires: [
+        ['in', 'shop', 'app', 'h', ''],
+        ['q1', 'app', 's1', 'v', ''],
+        ['q2', 'app', 's2', 'v', ''],
+        ['q3', 'app', 's3', 'v', ''],
+        ['q4', 'app', 's4', 'v', '']
+      ],
+      request: [['in', 0], ['q3', 0], ['q3', 1], ['in', 1], ['in', 0], ['q1', 0], ['q1', 1], ['in', 1]],
+      start: 'Follow a request',
+      steps: [
+        { on: ['shop', 'app'], run: [['in', 0]], t: 'customer 48213',
+          say: '<strong>“My orders”.</strong> Customer 48213 opens their orders, and the request reaches one of the core API’s pods.' },
+        { on: ['app'], run: [], t: 'microseconds, no network call',
+          say: '<strong>Find the shard.</strong> The router hashes 48213 to logical shard 37 of 64, and looks it up in the shard map, a 64-row table cached in every pod: shard 37 lives on orders-3.' },
+        { on: ['app', 's3', 'shop'], run: [['q3', 0], ['q3', 1], ['in', 1]], t: 'one primary, as before',
+          say: '<strong>Ask one primary.</strong> The query goes to orders-3 only, exactly as it used to go to the single primary. Everything about one customer lives on one shard, so “My orders” never needs another.' },
+        { on: ['shop', 'app', 's1'], run: [['in', 0], ['q1', 0], ['q1', 1], ['in', 1]], t: 'another customer, another primary',
+          say: '<strong>Another customer, another primary.</strong> Customer 1150 hashes to logical shard 9, on orders-1. The writes are spread over four primaries, each with its own replicas, disk and backups.' },
+        { on: ['app', 's1', 's2', 's3', 's4'], run: [['q1', 0], ['q2', 0], ['q3', 0], ['q4', 0]], t: 'every shard: avoid',
+          say: '<strong>A question about everyone,</strong> such as “today’s orders for one phone”, would have to ask all four primaries and merge the answers. Reports like that go to the data warehouse, fed from Kafka (chapter 8), not to the shards.' }
+      ],
+      html:
+        '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shopper', 'customer 48213') + '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai)</p>' +
+          '<div class="c12-app">' + node('app', 'bolt', 'c-cpu', 'Core API pods', 'router and shard map, in memory') + '</div>' +
+          '<div class="c12-shards">' +
+            node('s1', 'db', 'c-db', 'orders-1', 'logical shards 0–15') +
+            node('s2', 'db', 'c-db', 'orders-2', 'logical shards 16–31') +
+            node('s3', 'db', 'c-db', 'orders-3', 'logical shards 32–47') +
+            node('s4', 'db', 'c-db', 'orders-4', 'logical shards 48–63') +
+          '</div>' +
+        '</div>'
+    });
+  };
+
+  /* ---------- Chapter 13: a regional cell in Singapore, fed from the home region in Mumbai ---------- */
+
+  W['global-arch'] = function (el) {
+    var node = archNode;
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      wires: [
+        ['in', 'shop', 'door', 'v', ''],
+        ['w', 'door', 'core', 'h', ''],
+        ['r', 'door', 'cat', 'h', ''],
+        ['ws', 'core', 'prim', 'h', ''],
+        ['cdc', 'prim', 'kafka', 'h', 'CDC', true],
+        ['rd', 'cat', 'rdb', 'h', ''],
+        ['feed', 'kafka', 'apply', 'v', 'copied', true],
+        ['ap', 'rdb', 'apply', 'h', '']
+      ],
+      request: [['in', 0], ['r', 0], ['rd', 0], ['rd', 1], ['r', 1], ['in', 1], ['in', 0], ['w', 0], ['ws', 0], ['ws', 1], ['w', 1], ['in', 1], ['cdc', 0], ['feed', 0], ['ap', 1]],
+      start: 'Follow a shopper',
+      idle: 'A shopper in Singapore browses, then orders. Press <strong>Follow a shopper</strong> to go through it step by step.',
+      steps: [
+        { on: ['shop', 'door'], run: [['in', 0]], t: 'the nearest edge',
+          say: '<strong>The same front door everywhere.</strong> The shopper reaches CloudFront’s edge in Singapore, as anyone anywhere reaches their nearest one. The edge picks the region for each request.' },
+        { on: ['door', 'cat', 'rdb'], run: [['r', 0], ['rd', 0], ['rd', 1], ['r', 1], ['in', 1]], t: 'all within Singapore',
+          say: '<strong>Browsing stays in the cell.</strong> Product pages, prices and search are answered by the Singapore cell, from its own read database. Nothing crosses to Mumbai.' },
+        { on: ['shop', 'door', 'core', 'prim'], run: [['in', 0], ['w', 0], ['ws', 0], ['ws', 1], ['w', 1], ['in', 1]], t: 'one trip to the home region',
+          say: '<strong>Orders go home.</strong> Placing an order is a write, so it goes to the core API in Mumbai and to the shopper’s shard. One long round trip, at checkout.' },
+        { on: ['prim', 'kafka'], run: [['cdc', 0]], t: 'milliseconds',
+          say: '<strong>Every change is published.</strong> Debezium reads the primaries’ WAL into Kafka (page 8.3): price changes, stock levels, new products.' },
+        { on: ['kafka', 'apply', 'rdb'], run: [['feed', 0], ['ap', 1]], t: 'about a second, region to region',
+          say: '<strong>The cell feeds itself.</strong> MSK Replicator copies the catalogue topics into Singapore, and a small applier upserts each change into the read database. If the link breaks, the messages wait, and the cell keeps serving what it has.' }
+      ],
+      html:
+        '<div class="ar2-left c13-left">' +
+          node('shop', 'user', 'c-user', 'Shopper', 'in Singapore') +
+          node('door', 'edge', 'c-net', 'Front door', 'CloudFront, nearest edge') +
+        '</div>' +
+        '<div class="c13-regions">' +
+          '<div class="ar2-region"><p class="ar2-k">Home region: Mumbai, where every write goes</p><div class="c13-row">' +
+            node('core', 'bolt', 'c-cpu', 'Core API', 'carts, orders, payments') +
+            node('prim', 'db', 'c-db', 'Primaries', 'products, and orders-1 to orders-4') +
+            node('kafka', 'log', 'c-sto', 'Kafka', 'every committed change') +
+          '</div></div>' +
+          '<div class="ar2-region"><p class="ar2-k">Regional cell: Singapore</p><div class="c13-row">' +
+            node('cat', 'bolt', 'c-cpu', 'Catalogue and search', 'the cell’s own pods') +
+            node('rdb', 'db', 'c-db', 'Read database', 'catalogue data only') +
+            node('apply', 'bolt', 'c-sw', 'Applier', 'reads Kafka, upserts') +
+          '</div></div>' +
+        '</div>'
+    });
+  };
+
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */
 
   W['percentile-strip'] = function (el) {

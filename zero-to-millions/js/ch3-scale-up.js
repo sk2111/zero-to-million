@@ -58,12 +58,12 @@ ZTM.content[3] = {
 
         <figure class="term">
           <figcaption>Try it: copying the database during a maintenance window</figcaption>
-<pre><span class="p">$</span> pg_dump -Fc -d explorer -f explorer.dump                    <span class="c"># on the old server: a compressed copy</span>
-<span class="p">$</span> pg_restore -j 2 -h 10.0.2.14 -U app -d explorer explorer.dump   <span class="c"># load it into the new database server</span>
-<span class="p">$</span> psql -h 10.0.2.14 -U app -d explorer -c "select count(*) from products;"
+<pre><span class="p">$</span> pg_dump -Fc -d tomazon -f tomazon.dump                          <span class="c"># on the old server: a compressed copy</span>
+<span class="p">$</span> pg_restore -j 2 -h 10.0.2.14 -U app -d tomazon tomazon.dump     <span class="c"># load it into the new database server</span>
+<span class="p">$</span> psql -h 10.0.2.14 -U app -d tomazon -c "select count(*) from products;"
 <span class="o"> count
 -------
- 48211
+ 10482
 (1 row)</span></pre>
           <ol class="points term-note">
             <li><code>-Fc</code> writes PostgreSQL’s compressed custom format, which <code>pg_restore</code> can load with several jobs in parallel (<code>-j 2</code>).</li>
@@ -76,7 +76,7 @@ ZTM.content[3] = {
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>Split by resource first, by feature later.</strong> This split gives each kind of work its own
-            machine. The code is still one monolith (page 2.2).</li>
+            machine. The code is still one monolith (page 2.4).</li>
             <li><strong>The database is now your most important server.</strong> It holds the only copy of the data, so
             backups, monitoring and alarms matter most here.</li>
             <li><strong>Same zone, private network.</strong> Keep the hop short and the database unreachable from outside.
@@ -113,19 +113,19 @@ ZTM.content[3] = {
         </ol>
         <figure class="term">
           <figcaption>N+1 queries in SQLAlchemy, and the fix</figcaption>
-<pre><span class="c"># N+1: one query for the products, then one more for each product’s datasheets</span>
-<span class="o">products = session.scalars(select(Product).where(Product.family == "ADC").limit(20)).all()
+<pre><span class="c"># N+1: one query for the products, then one more for each product’s reviews</span>
+<span class="o">products = session.scalars(select(Product).where(Product.category == "headphones").limit(20)).all()
 for p in products:
-    print(p.name, len(p.datasheets))        </span><span class="c"># lazy load: a new query every time round</span>
+    print(p.name, len(p.reviews))           </span><span class="c"># lazy load: a new query every time round</span>
 
 <span class="c"># 2 queries in total, however many products there are</span>
 <span class="o">products = session.scalars(
-    select(Product).where(Product.family == "ADC").limit(20)
-    .options(selectinload(Product.datasheets))
+    select(Product).where(Product.category == "headphones").limit(20)
+    .options(selectinload(Product.reviews))
 ).all()</span></pre>
           <ol class="points term-note">
-            <li>The first version makes 21 round trips: 1 for the list, 20 for the datasheets.</li>
-            <li><code>selectinload</code> fetches every product’s datasheets in one extra query, using <code>IN (…)</code>. Same data, 2 round trips.</li>
+            <li>The first version makes 21 round trips: 1 for the list, 20 for the reviews.</li>
+            <li><code>selectinload</code> fetches every product’s reviews in one extra query, using <code>IN (…)</code>. Same data, 2 round trips.</li>
           </ol>
         </figure>
 
@@ -146,7 +146,7 @@ for p in products:
         <figure class="term">
           <figcaption>A minimal pgbouncer.ini, running on the app server</figcaption>
 <pre><span class="o">[databases]
-explorer = host=10.0.2.14 port=5432 dbname=explorer
+tomazon = host=10.0.2.14 port=5432 dbname=tomazon
 
 [pgbouncer]
 listen_port = 6432
@@ -206,7 +206,7 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
 
         <h2>The app server: tuned for CPU</h2>
         <ol class="points">
-          <li>From the server’s point of view, the app is the part that burns CPU (page 2.5), so start compute-optimised: a c7g.large has 2 vCPUs and 4 GB.</li>
+          <li>From the server’s point of view, the app is the part that burns CPU (page 2.7), so start compute-optimised: a c7g.large has 2 vCPUs and 4 GB.</li>
           <li>Run one FastAPI worker per vCPU with <code>async</code> endpoints, and watch CPU at the busiest hour.</li>
           <li>When CPU runs short, move up a size: a c7g.xlarge has 4 vCPUs. Later, run several app servers behind a load balancer (chapter 4).</li>
           <li>Keep optimising the code too, starting with the slowest endpoints. Cutting 10 ms of CPU from every request can be worth a whole server.</li>

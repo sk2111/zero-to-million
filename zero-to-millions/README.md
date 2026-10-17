@@ -45,7 +45,12 @@ in practice, to what it means for system design.
 | Network | How networks work |
 | Putting it together | What's inside a server · Latency numbers · Measuring performance · Serving many requests at once · How much can one server handle? · Recap |
 
-Chapter 2 has 5 pages: Start with a pilot · Start with a monolith · The first architecture
+From chapter 2 on, the running example is **Tomazon**, an online store like Amazon: the requirements
+and estimates in chapter 2 set the numbers the later chapters build on.
+
+Chapter 2 has 7 pages: Clarify the requirements (functional and non-functional, with Tomazon's
+answers) · Estimate the capacity (users, traffic, CPU, storage, photos, memory and network, for the
+pilot and for 1,000 shoppers) · Start with a pilot · Start with a monolith · The first architecture
 (one t4g.nano server in AWS Mumbai running Nginx, FastAPI and PostgreSQL, with a step-through of
 one request and a 512 MB memory budget) · Watching the pilot · When the pilot succeeds (growth to
 1,000 users, diagnosing the overloaded server, why everything on one machine is a time bomb).
@@ -60,8 +65,8 @@ scale out? (trade-offs, cost, sizing with N+1) · Load balancing (algorithms, a 
 connections simulator, the Nginx config) · The architecture for 10,000 users (live diagram, what
 scaling out needs, the new weak spots).
 
-Chapter 5 has 4 pages: 100,000 users, and the database runs hot (pg_stat_statements, a chatbot is
-about 70% reads) · Read replicas (streaming replication, routing reads and writes) · Replication lag
+Chapter 5 has 4 pages: 100,000 users, and the database runs hot (pg_stat_statements, a shopping
+visit is about 90% reads) · Read replicas (streaming replication, routing reads and writes) · Replication lag
 and the CAP theorem (a lag timeline, CAP and PACELC, shades of consistency) · Living with stale reads
 (read your own writes and five other strategies).
 

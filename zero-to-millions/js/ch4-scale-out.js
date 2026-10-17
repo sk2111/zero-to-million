@@ -131,7 +131,7 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
         <ol class="points">
           <li>In the cloud, the price per vCPU stays about the same as an instance gets bigger within one family: a c7g.4xlarge costs 8 times as much as a c7g.large, and has 8 times the vCPUs.</li>
           <li>So scaling out isn’t cheaper because small servers are cheaper. It’s cheaper because you pay for what you actually need: add one server when traffic grows a little, and remove servers at night and at weekends, instead of paying for the busiest hour all day.</li>
-          <li>For an internal tool that’s mostly used in office hours, that alone can cut the app servers’ bill by a third or more.</li>
+          <li>Shopping has a daily rhythm: busy evenings, quiet nights. Running fewer servers in the quiet hours alone can cut the app servers’ bill by a third or more.</li>
           <li>Scaling up also runs out. Each step doubles the bill in one go, and past the biggest instance there’s no next size at any price.</li>
         </ol>
 
@@ -185,8 +185,8 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
 
         <h2>Round robin vs least connections</h2>
         <ol class="points">
-          <li>This app mixes fast requests (product pages, about 100 ms) with slow ones (the chat assistant, about 2 seconds).</li>
-          <li><strong>Round robin</strong> sends every other request to each server, even when one server’s workers are all busy with chats. Fast requests then queue behind slow ones.</li>
+          <li>This app mixes fast requests (product pages, about 100 ms) with slow ones (checkout, about 2 seconds, because it waits for the payment gateway).</li>
+          <li><strong>Round robin</strong> sends every other request to each server, even when one server’s workers are all busy with checkouts. Fast requests then queue behind slow ones.</li>
           <li><strong>Least connections</strong> sends each request to the server with fewer in progress, so a fast request goes wherever a worker is free. Switch between them:</li>
         </ol>
         <div class="widget" data-widget="lb-sim"></div>
@@ -279,7 +279,7 @@ server {
             <li><strong>Check each tier for one missing server.</strong> The app tier survives losing a server now (with N+1).
             The load balancer and the database don’t yet.</li>
             <li><strong>Scaling out multiplies everything:</strong> servers, logs, deploys and connections. Automate the
-            setup so a new server is one command away (page 2.3).</li>
+            setup so a new server is one command away (page 2.5).</li>
           </ol>
         </aside>
 

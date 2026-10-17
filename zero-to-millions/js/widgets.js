@@ -639,7 +639,7 @@ window.ZTM = window.ZTM || {};
 
   W['lb-sim'] = function (el) {
     /* The model: 2 app servers with 4 workers each, 16 requests a second,
-       90% fast (a product page, 100 ms) and 10% slow (a chat answer, 2 s). */
+       90% fast (a product page, 100 ms) and 10% slow (a checkout, 2 s). */
     var P = { rate: 16, workers: 4, pSlow: 0.1, fast: 0.1, slow: 2, dt: 0.005 };
     function rng(seed) { var s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
     function fresh() { return [{ busy: [], q: [] }, { busy: [], q: [] }]; }
@@ -675,7 +675,7 @@ window.ZTM = window.ZTM || {};
     var alg = 'lc';
     el.innerHTML =
       '<div class="w-controls"></div>' +
-      legend([['lbfast', 'Product page: 100 ms of work'], ['lbslow', 'Chat answer: 2 s of work']]) +
+      legend([['lbfast', 'Product page: 100 ms of work'], ['lbslow', 'Checkout: 2 s, waiting for the payment gateway']]) +
       '<p class="lb-from">Nginx sends each new request to…</p>' +
       '<div class="lb-servers">' + [1, 2].map(function (i) {
         return '<div class="lb-card"><p class="lb-name"><b>App server ' + i + '</b><span>4 workers</span></p>' +
@@ -701,7 +701,7 @@ window.ZTM = window.ZTM || {};
       o('other').textContent = other.p95 + ' ms';
       o('otherk').textContent = 'p95 with ' + (alg === 'rr' ? 'least connections' : 'round robin');
       out.innerHTML = alg === 'rr'
-        ? '<strong>Round robin</strong> alternates between the servers without looking at them. When one server’s workers are all busy with chats, product pages still get sent there, and wait in its queue while the other server has free workers.'
+        ? '<strong>Round robin</strong> alternates between the servers without looking at them. When one server’s workers are all busy with checkouts, product pages still get sent there, and wait in its queue while the other server has free workers.'
         : '<strong>Least connections</strong> sends each request to the server with fewer requests in progress, so a product page goes wherever a worker is free. The typical page is just as fast, but the slow tail is about ' +
           Math.max(2, Math.round(stats.rr.p95 / stats.lc.p95)) + ' times shorter.';
     }
@@ -838,13 +838,13 @@ window.ZTM = window.ZTM || {};
                 ['in', 0], ['lb2', 0], ['q3', 0], ['q3', 1], ['lb2', 1], ['in', 1]],
       steps: [
         { on: ['users', 'lb', 'app1', 'rep1'], run: [['in', 0], ['lb1', 0], ['q1', 0], ['q1', 1], ['lb1', 1], ['in', 1]], t: 'a read',
-          say: '<strong>Open a conversation.</strong> The load balancer sends the request to app server 1. Loading the conversation only reads data, so the app sends the query to a replica, and replica 1 answers from its own copy.' },
+          say: '<strong>Open a product page.</strong> The load balancer sends the request to app server 1. Loading the product only reads data, so the app sends the query to a replica, and replica 1 answers from its own copy.' },
         { on: ['users', 'lb', 'app3', 'primary'], run: [['in', 0], ['lb3', 0], ['q2', 0], ['q2', 1], ['lb3', 1], ['in', 1]], t: 'a write',
-          say: '<strong>Ask a question.</strong> This request lands on app server 3. Saving the question changes data, so it goes to the primary, whichever app server sends it. Every <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> does.' },
+          say: '<strong>Add it to the cart.</strong> This request lands on app server 3. Saving the cart item changes data, so it goes to the primary, whichever app server sends it. Every <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> does.' },
         { on: ['primary', 'rep1', 'rep2'], run: [['wal1', 0], ['wal2', 0]], t: 'usually a few milliseconds',
-          say: '<strong>Stream the change.</strong> The primary appends the new message to its write-ahead log, and streams that record to both replicas over the private network.' },
+          say: '<strong>Stream the change.</strong> The primary appends the new cart item to its write-ahead log, and streams that record to both replicas over the private network.' },
         { on: ['rep1', 'rep2'], run: [], t: 'applied in the same order',
-          say: '<strong>Replay it.</strong> Each replica applies the record exactly as the primary did, in the same order. A few milliseconds after the write, both replicas have the question too.' },
+          say: '<strong>Replay it.</strong> Each replica applies the record exactly as the primary did, in the same order. A few milliseconds after the write, both replicas have the cart item too.' },
         { on: ['users', 'lb', 'app2', 'rep2'], run: [['in', 0], ['lb2', 0], ['q3', 0], ['q3', 1], ['lb2', 1], ['in', 1]], t: 'reads spread across replicas',
           say: '<strong>Spread the reads.</strong> Every app server can reach every database. The next read lands on app server 2 and goes to replica 2. The primary is left with the writes, and each new replica adds more read capacity.' }
       ],
@@ -887,9 +887,9 @@ window.ZTM = window.ZTM || {};
     el.innerHTML =
       '<div class="calc">' +
         '<div class="w-field"><label for="lgL">Replication lag right now</label><input type="range" id="lgL" min="0" max="1800" step="50" value="' + st.lag + '"><output for="lgL"></output></div>' +
-        '<label class="ql-check"><input type="checkbox" id="lgR"> Read your own writes: send this user’s reads to the primary just after they write</label>' +
+        '<label class="ql-check"><input type="checkbox" id="lgR"> Read your own writes: send this shopper’s reads to the primary just after they write</label>' +
       '</div>' +
-      legend([['has', 'Has your question'], ['hasnt', 'Doesn’t have it yet']]) +
+      legend([['has', 'Has your order'], ['hasnt', 'Doesn’t have it yet']]) +
       '<div class="lag-tl">' +
         '<div class="lag-row"><span class="lag-name">Primary</span><span class="lag-track" data-t="p"></span></div>' +
         '<div class="lag-row"><span class="lag-name">Replica</span><span class="lag-track" data-t="r"></span></div>' +
@@ -916,11 +916,11 @@ window.ZTM = window.ZTM || {};
       var ok = st.ryw || st.lag <= RELOAD;
       res.className = 'lag-result ' + (ok ? 'ok' : 'bad');
       res.innerHTML = ok
-        ? 'The reload reads from the ' + from + ', which already has the question: <strong>the user sees it</strong>.'
-        : 'The reload reads from the replica, which won’t have the question for another ' + (st.lag - RELOAD) + ' ms: <strong>the user’s own question is missing</strong>.';
+        ? 'The reload reads from the ' + from + ', which already has the order: <strong>the shopper sees it</strong>.'
+        : 'The reload reads from the replica, which won’t have the order for another ' + (st.lag - RELOAD) + ' ms: <strong>the shopper’s new order is missing</strong>.';
       out.innerHTML = st.ryw
-        ? 'For a short window after this user writes, their reads go to the primary, which always has the latest data. Everyone else keeps reading from the replicas.'
-        : 'The user asks a question at 0 ms, and the page reloads the conversation 150 ms later. Drag the lag past 150 ms to see the problem, then turn on read your own writes.';
+        ? 'For a short window after this shopper writes, their reads go to the primary, which always has the latest data. Everyone else keeps reading from the replicas.'
+        : 'The shopper places an order at 0 ms, and “My orders” reloads 150 ms later. Drag the lag past 150 ms to see the problem, then turn on read your own writes.';
     }
     draw();
   };

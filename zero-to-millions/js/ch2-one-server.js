@@ -7,13 +7,16 @@ ZTM.content = ZTM.content || {};
 ZTM.content[2] = {
   intro: `
     <ol class="points lede">
-      <li>You now know what one machine can do. Time to build something on it.</li>
-      <li>Most products start as a pilot: a small version for real users, to find out whether it’s worth building properly. Internal tools such as a product explorer or a chat assistant usually start exactly this way.</li>
-      <li>In this phase the goal is speed: build, ship, watch how people use it, and change it, as fast as possible. The architecture should help with that, not get in the way.</li>
+      <li>You now have the fundamentals. Time to put them into practice.</li>
+      <li>Here’s the project: build an online store like Amazon, called <strong>Tomazon</strong>. What’s the first thing you do?</li>
+      <li>Not writing code, and not choosing a database. First, find out what is really being asked for, and roughly how big it will be.</li>
+      <li>Then start small: a pilot that real shoppers can use, built as one app on one server. In this phase the goal is speed: build, ship, watch how people use it, and change it, as fast as possible.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
       <ul>
+        <li>Turn a vague request into clear functional and non-functional requirements.</li>
+        <li>Estimate users, traffic, storage, memory and bandwidth on paper, before buying anything.</li>
         <li>Explain what a pilot is for, and what to leave out of it.</li>
         <li>Explain why a monolith is usually the right first architecture.</li>
         <li>Draw the first architecture, one server on AWS, and the path one request takes through it.</li>
@@ -23,6 +26,128 @@ ZTM.content[2] = {
     </div>`,
 
   sections: [
+
+    /* ===================================================== Before you build */
+    {
+      group: 'Before you build',
+      slug: 'requirements',
+      title: 'Clarify the requirements',
+      sub: 'Before any code, find out what is really being asked for.',
+      html: `
+        <ol class="points lede">
+          <li>“Build a store like Amazon” sounds like a clear request. It isn’t. It could mean a marketplace for hundreds of millions of people, or a small shop in one city that sells a few thousand products.</li>
+          <li>Those are completely different systems. So the first thing to do is ask questions until you know which one you’re building.</li>
+          <li>There are two kinds of requirements to pin down: what the system must do (<strong>functional</strong>), and how well it must do it (<strong>non-functional</strong>).</li>
+        </ol>
+
+        <h2>Functional requirements: what it must do</h2>
+        <p>Ask these first. The answers on the right are the ones Tomazon is built on for the rest of the workshop:</p>
+        <table class="data">
+          <thead><tr><th>Ask</th><th>Why it matters</th><th>Tomazon’s answer</th></tr></thead>
+          <tbody>
+            <tr><td>Who will use it?</td><td>A public store has to handle strangers: sign-up, fraud, and traffic you don’t control.</td><td>Shoppers, starting in one city, Bangalore. Plus Tomazon’s own staff, who add products and send out orders.</td></tr>
+            <tr><td>What are the core features, and which matter most?</td><td>Build the most important ones first, and leave the rest for later.</td><td>Must have: search and browse products, a cart, checkout and payment, order history. Later: reviews, wish lists, recommendations, other sellers.</td></tr>
+            <tr><td>What exactly can a user do?</td><td>Each action becomes an API endpoint and a few database tables.</td><td>Shoppers search, view a product, add it to the cart, pay, and track their orders. Staff add products, update stock and mark orders as shipped.</td></tr>
+            <tr><td>How will they use it?</td><td>A website, mobile apps and a public API each need different work.</td><td>A website that works well on phones. Apps can come later.</td></tr>
+            <tr><td>Which languages and currencies?</td><td>Each one adds translated text, formats and prices.</td><td>English, with prices in rupees.</td></tr>
+            <tr><td>What kinds of data?</td><td>Text, images and structured data each suit a different kind of storage.</td><td>Products, prices, stock, orders and customers are structured, and orders need transactions: a relational database. Product photos are files: object storage.</td></tr>
+            <tr><td>Which outside systems does it need?</td><td>Every dependency adds waiting time and a new way to fail.</td><td>A payment gateway for cards and UPI, a delivery partner, and SMS and email for order updates.</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Non-functional requirements: how well it must do it</h2>
+        <table class="data">
+          <thead><tr><th>Ask</th><th>Why it matters</th><th>Tomazon’s answer</th></tr></thead>
+          <tbody>
+            <tr><td>How many users and requests?</td><td>It sets the size of everything else.</td><td>About 100 regular shoppers in the pilot. 1,000 if it catches on, and millions in the long run.</td></tr>
+            <tr><td>How much data, and how fast does it grow?</td><td>It decides the storage, and when one disk stops being enough.</td><td>About 2,000 products to start, each with a few photos. Orders are small; photos are not (next page).</td></tr>
+            <tr><td>What goes in, and what comes out?</td><td>Request and response sizes decide the network bandwidth.</td><td>Small JSON in and out, plus product photos: the biggest responses by far.</td></tr>
+            <tr><td>How many reads for each write?</td><td>Read-heavy systems scale with caches and copies of the database; write-heavy ones need other tools.</td><td>Very read-heavy: shoppers look at many products for every one they buy.</td></tr>
+            <tr><td>Can it ever be down?</td><td>Staying up through failures needs at least two of everything, which costs money and time.</td><td>The pilot can be down for an hour at night now and then. Later, every minute down is lost sales.</td></tr>
+            <tr><td>How fast must it be?</td><td>It sets a time budget for every part of a request.</td><td>Product pages in well under a second. Checkout can take a couple of seconds, because it waits for the payment gateway.</td></tr>
+            <tr><td>How up to date must the data be?</td><td>Always showing the latest data is simple on one server, and harder once data is copied (chapter 5).</td><td>Stock and payments must be exact: never sell the last item twice, never charge twice. Product pages and reviews can be a moment behind.</td></tr>
+            <tr><td>What matters most?</td><td>You can’t optimise for everything at once.</td><td>For the pilot: speed of change and low cost. Correct orders and payments, always.</td></tr>
+          </tbody>
+        </table>
+
+        <h2>How to ask</h2>
+        <ol class="points">
+          <li>Ask the people who asked for it, and the people who will use it: here, Tomazon’s founders and a few would-be shoppers. They often want different things.</li>
+          <li>Push for numbers. “Lots of products” and “fast” can’t be designed for; “2,000 products” and “pages in under a second” can.</li>
+          <li>Write down what’s out of scope too: no mobile app, no other sellers, one city. It stops the project from growing quietly.</li>
+          <li>Agree on the answers before you build. Getting the scope right early stops you from building the wrong system well.</li>
+        </ol>
+
+        <aside class="note design">
+          <h3>For system design</h3>
+          <ol class="points">
+            <li><strong>Non-functional requirements decide the architecture.</strong> Tomazon for 100 shoppers and Amazon for
+            hundreds of millions have the same features: search, cart, checkout. Almost everything else about them is different.</li>
+            <li><strong>Every answer is a design decision.</strong> “One city” rules out several regions and most of the scale.
+            “Never sell the last item twice” decides how stock is updated at checkout.</li>
+          </ol>
+        </aside>
+
+        <aside class="note rule">
+          <h3>Rule of thumb</h3>
+          <p>Don’t design anything until you can say who uses it, what they do with it, and how many of them there are.</p>
+        </aside>`
+    },
+
+    /* ------------------------------------------------------------------ */
+    {
+      group: 'Before you build',
+      slug: 'estimates',
+      title: 'Estimate the capacity',
+      sub: 'Users, traffic, storage, memory and network, worked out on paper before you buy anything.',
+      html: `
+        <ol class="points lede">
+          <li>With the requirements written down, put rough numbers on them. It’s the estimation from page 1.13, applied to a real product.</li>
+          <li>The numbers don’t need to be exact. They need to tell you whether this is one small server or fifty big ones.</li>
+          <li>Work each one out for the pilot, and again for the 1,000 shoppers you hope to reach, so you can see what grows fastest.</li>
+        </ol>
+
+        <h2>Tomazon, in numbers</h2>
+        <p>Assume about 1 in 10 regular shoppers is online at the busiest hour, and each makes a request every 2 seconds while
+        browsing. About 1 request in 5 opens a product page, with 5 photos of about 200 KB each. Each shopper orders about once a week.</p>
+        <table class="data">
+          <thead><tr><th>Estimate</th><th>How</th><th>The pilot: 100 shoppers</th><th>At 1,000 shoppers</th></tr></thead>
+          <tbody>
+            <tr><td>Online at the busiest hour</td><td>About 1 in 10 regular shoppers</td><td>10</td><td>100</td></tr>
+            <tr><td>Traffic</td><td>Shoppers online × 1 request every 2 seconds</td><td>10 × 0.5 = <strong>5 requests a second</strong></td><td>100 × 0.5 = <strong>50 requests a second</strong></td></tr>
+            <tr><td>CPU</td><td>Requests a second × about 10 ms of CPU each</td><td>5 × 10 ms = <strong>5% of one core</strong></td><td>50 × 10 ms = <strong>half a core</strong></td></tr>
+            <tr><td>Database</td><td>Products at about 5 KB each, orders at about 2 KB each</td><td>2,000 products = 10 MB, plus <strong>about 10 MB of orders a year</strong></td><td>10,000 products = 50 MB, plus <strong>about 100 MB of orders a year</strong></td></tr>
+            <tr><td>Photos</td><td>Products × 5 photos × 200 KB</td><td>2,000 × 1 MB = <strong>2 GB</strong></td><td>10,000 × 1 MB = <strong>10 GB</strong></td></tr>
+            <tr><td>Memory</td><td>The app’s workers, the database and its cache, and the OS (page 2.5)</td><td><strong>About 400 MB</strong>: fits in 512 MB</td><td><strong>About 670 MB</strong>: more than 512 MB</td></tr>
+            <tr><td>Network</td><td>About 4 KB per request, plus 1 MB of photos per product page (page 1.8)</td><td>5 × 4 KB + 1 page a second × 1 MB = <strong>about 1 MB/s</strong> (8 Mbps)</td><td>50 × 4 KB + 10 pages a second × 1 MB = <strong>about 10 MB/s</strong> (80 Mbps)</td></tr>
+          </tbody>
+        </table>
+
+        <h2>What the numbers say</h2>
+        <ol class="points">
+          <li><strong>The pilot is small on every count.</strong> 5 requests a second, 20 MB of data and 1 MB/s of traffic fit on one small server (page 2.5).</li>
+          <li><strong>Photos are the heaviest part by far.</strong> They’re 100 times bigger than the database, and almost all of the network traffic. For the pilot, Nginx can serve them from the server’s disk. Before the traffic grows, move them to object storage behind a CDN (page 1.8).</li>
+          <li><strong>Memory runs out first.</strong> From the pilot to 1,000 shoppers, CPU only grows to half a core, but the app and the database need more memory than a 512 MB server has. That’s where the pilot’s server cracks (page 2.7).</li>
+          <li><strong>Keep the estimates.</strong> Once the pilot runs, compare them with what you measure (page 2.6). Where they differ, you’ve learned how people really use the store.</li>
+        </ol>
+
+        <aside class="note design">
+          <h3>For system design</h3>
+          <ol class="points">
+            <li><strong>Estimate the busiest hour, not the day.</strong> 100 shoppers spread over a day is almost nothing; the
+            same shoppers all browsing at 9 p.m. are your real load.</li>
+            <li><strong>Look for what grows fastest.</strong> Whatever grows fastest with users runs out first. For Tomazon it’s
+            memory and photos, not CPU.</li>
+            <li><strong>Keep big files apart from everything else.</strong> Photos and the database grow at very different rates,
+            and want very different storage.</li>
+          </ol>
+        </aside>
+
+        <aside class="note rule">
+          <h3>Rule of thumb</h3>
+          <p>Estimate to find the order of magnitude, then measure to correct it.</p>
+        </aside>`
+    },
 
     /* =========================================================== The pilot */
     {
@@ -57,10 +182,11 @@ ZTM.content[2] = {
 
         <h2>What a pilot does need</h2>
         <ol class="points">
-          <li><strong>HTTPS</strong>, even for an internal tool.</li>
+          <li><strong>HTTPS</strong> from day one: shoppers type in passwords and addresses.</li>
+          <li><strong>Payments through a payment gateway</strong> such as Razorpay or Stripe. Card details go straight to the gateway and never touch your server, which keeps most of the card-security rules (PCI DSS) off your plate.</li>
           <li><strong>Backups</strong> of the database, and one test that you can actually restore them.</li>
           <li><strong>Basic monitoring:</strong> is it up, how fast is it, is it running out of anything. Chapter 1’s tools cover this.</li>
-          <li><strong>A way to see usage and collect feedback</strong>, covered on page 2.4.</li>
+          <li><strong>A way to see usage and collect feedback</strong>, covered on page 2.6.</li>
           <li><strong>A simple, repeatable deploy:</strong> one command or one pipeline, so shipping a change is boring.</li>
         </ol>
 
@@ -130,9 +256,9 @@ ZTM.content[2] = {
     api.py         <span class="c"># HTTP routes: /api/products/…</span>
     service.py     <span class="c"># business logic; other modules call this</span>
     models.py      <span class="c"># its database tables</span>
-  chat/
+  orders/
     api.py
-    service.py     <span class="c"># calls products.service to look things up</span>
+    service.py     <span class="c"># calls products.service for prices and stock</span>
     models.py
   users/
     api.py
@@ -140,7 +266,7 @@ ZTM.content[2] = {
     models.py</span></pre>
           <ol class="points term-note">
             <li>Each folder is one feature, with the same three files.</li>
-            <li><code>chat</code> asks <code>products.service</code> for what it needs and never reads the products tables directly. That one rule is what makes a later split possible.</li>
+            <li><code>orders</code> asks <code>products.service</code> for prices and stock, and never reads the products tables directly. That one rule is what makes a later split possible.</li>
           </ol>
         </figure>
 
@@ -171,7 +297,7 @@ ZTM.content[2] = {
       html: `
         <ol class="points lede">
           <li>For the pilot, everything runs on one virtual machine: the web server, the FastAPI app and the PostgreSQL database.</li>
-          <li>Here’s what that looks like on AWS, for users in Bangalore. Step through it to follow one request.</li>
+          <li>Here’s what that looks like on AWS, for Tomazon’s first shoppers in Bangalore. Step through it to follow one request.</li>
         </ol>
 
         <div class="widget" data-widget="pilot-arch"></div>
@@ -211,7 +337,7 @@ ZTM.content[2] = {
         <ol class="points">
           <li>Say each request needs about 10 ms of CPU. Two vCPUs at full speed could handle about 200 requests a second.</li>
           <li>But a t4g.nano’s baseline is 5% per vCPU. Sustained, that’s about 10 requests a second. CPU credits cover short bursts above that; steady load above it either runs out of credits or, in unlimited mode, costs extra.</li>
-          <li>A pilot with 50 active users, each making a request every 10 seconds, needs at most 5 requests a second. That’s plenty of room.</li>
+          <li>The estimate on page 2.2 says the pilot needs about 5 requests a second at its busiest. That’s plenty of room.</li>
           <li>When traffic becomes steady rather than spiky, move to a bigger or non-burstable instance. That’s where chapter 3 starts.</li>
         </ol>
 
@@ -247,9 +373,9 @@ ZTM.content[2] = {
 
         <h2>How the product is used</h2>
         <ol class="points">
-          <li><strong>Usage events.</strong> Record what people do: opened the product explorer, searched, asked the chat assistant a question, gave up halfway. A simple events table in PostgreSQL is enough to start.</li>
-          <li><strong>The key numbers.</strong> Daily and weekly active users, how many come back, which features get used, and where people drop off.</li>
-          <li><strong>Feedback.</strong> A feedback button in the app, plus talking to a few users every week. What they say explains what the numbers show.</li>
+          <li><strong>Usage events.</strong> Record what shoppers do: searched, viewed a product, added it to the cart, started checking out, gave up halfway, paid. A simple events table in PostgreSQL is enough to start.</li>
+          <li><strong>The key numbers.</strong> Visitors, orders, and the share of visits that end in an order. How many shoppers come back. And where they drop off between the cart and the payment.</li>
+          <li><strong>Feedback.</strong> A feedback button in the app, plus talking to a few shoppers every week. What they say explains what the numbers show.</li>
         </ol>
 
         <h2>How the server is coping</h2>
@@ -267,12 +393,12 @@ ZTM.content[2] = {
         <figure class="term">
           <figcaption>Try it on the server</figcaption>
 <pre><span class="p">$</span> sudo tail -3 /var/log/nginx/access.log     <span class="c"># a simple log format, with the request time at the end</span>
-<span class="o wrap">10.0.1.5 [16/Oct/2026:10:41:07 +0530] "GET /api/products?q=adc HTTP/1.1" 200 5123 0.042
-10.0.1.9 [16/Oct/2026:10:41:08 +0530] "POST /api/chat HTTP/1.1" 200 18234 1.873
-10.0.1.5 [16/Oct/2026:10:41:09 +0530] "GET /api/products/AD7124 HTTP/1.1" 200 2211 0.018</span></pre>
+<span class="o wrap">203.0.113.5 [16/Oct/2026:10:41:07 +0530] "GET /api/products?q=headphones HTTP/1.1" 200 5123 0.042
+198.51.100.9 [16/Oct/2026:10:41:08 +0530] "POST /api/checkout HTTP/1.1" 200 1834 1.873
+203.0.113.5 [16/Oct/2026:10:41:09 +0530] "GET /api/products/TZ-10442 HTTP/1.1" 200 2211 0.018</span></pre>
           <ol class="points term-note">
             <li>Each line is one request: who asked, when, what, the status code (200 is success), the response size in bytes, and the time in seconds.</li>
-            <li>Product pages take 18–42 ms. The chat request takes 1.9 seconds: it waits on a language model, so it’s I/O-bound (page 1.3).</li>
+            <li>Product pages take 18–42 ms. The checkout takes 1.9 seconds: it waits for the payment gateway, so it’s I/O-bound (page 1.3).</li>
             <li>Collect these times and you can work out p50 and p95 for every endpoint (page 1.11).</li>
           </ol>
         </figure>
@@ -280,8 +406,8 @@ ZTM.content[2] = {
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>Decide what success looks like before the pilot starts.</strong> For example: 30 weekly active users
-            after a month, and half of them coming back. Then the data can actually answer the question.</li>
+            <li><strong>Decide what success looks like before the pilot starts.</strong> For example: 200 orders
+            in the first month, and a third of buyers ordering again. Then the data can actually answer the question.</li>
             <li><strong>Watch p95, not just the average.</strong> The slow requests are the ones users remember (page 1.11).</li>
             <li><strong>Set a few alarms, not many.</strong> Server down, errors rising, disk over 80% full, available memory
             under 20%. Alarms that nobody acts on soon get ignored.</li>
@@ -302,7 +428,7 @@ ZTM.content[2] = {
       sub: 'More users arrive, and the single server starts to crack.',
       html: `
         <ol class="points lede">
-          <li>The pilot worked. A hundred people use it every week and ask for more, and word spreads to other teams.</li>
+          <li>The pilot worked. About a hundred shoppers order from Tomazon every week, many of them come back, and word spreads across the city.</li>
           <li>That’s the good news. The bad news: an architecture sized for 100 users won’t survive 1,000.</li>
           <li>Be ready to change it. The pilot’s architecture was right for the pilot; holding on to it now is the mistake.</li>
         </ol>
@@ -311,7 +437,7 @@ ZTM.content[2] = {
         <p>As usage grows, the problems arrive in roughly this order:</p>
         <ol class="steps">
           <li><strong>The busiest hour gets slow.</strong> p95 goes from 80 ms to 800 ms, while the average still looks fine (page 1.11).</li>
-          <li><strong>The chat assistant times out</strong> now and then, because every worker is busy.</li>
+          <li><strong>Checkout times out</strong> now and then, because every worker is busy, and some shoppers give up with a full cart.</li>
           <li><strong>Nginx starts returning 502 and 504 errors:</strong> the app is too busy to answer it in time.</li>
           <li><strong>One night the product stops answering.</strong> In the morning, <code>dmesg</code> shows the OOM killer stopped PostgreSQL (page 1.6).</li>
         </ol>
@@ -327,7 +453,7 @@ Mem:           459Mi       402Mi        11Mi       9.0Mi        46Mi        18Mi
 Swap:          1.0Gi       612Mi       412Mi</span>
 <span class="p">$</span> top -o %MEM                   <span class="c"># sorted by memory; some columns left out</span>
 <span class="o">    PID USER      %CPU %MEM COMMAND
-   1834 postgres  61.2 24.1 postgres: app explorer 127.0.0.1(48812) SELECT
+   1834 postgres  61.2 24.1 postgres: app tomazon 127.0.0.1(48812) SELECT
    1207 app       48.7 19.8 gunicorn: worker [app.main:app]
    1208 app       44.1 19.5 gunicorn: worker [app.main:app]
     911 postgres  12.0  9.6 postgres: checkpointer
@@ -401,7 +527,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <ol class="points">
             <li><strong>Measure before you change anything.</strong> Chapter 1’s tools turn “the app is slow” into “the server
             is out of memory and swapping”, and that tells you what to fix first.</li>
-            <li><strong>Scale before it explodes.</strong> The alarms from page 2.4 (available memory, load, CPU credits) warn
+            <li><strong>Scale before it explodes.</strong> The alarms from page 2.6 (available memory, load, CPU credits) warn
             you weeks ahead. Plan the next step when they trend up, not when the server falls over.</li>
             <li><strong>Expect the architecture to change.</strong> Each stage of growth needs a different design. The one that
             was right for 100 users is now the bottleneck, and that’s normal.</li>

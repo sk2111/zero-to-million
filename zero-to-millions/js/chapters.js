@@ -11,9 +11,9 @@ ZTM.chapters = [
     summary: 'CPU, processes and threads, memory, disk and network: how each one works, how it behaves under load, and what that means for system design.'
   },
   {
-    n: 2, slug: 'one-server', title: 'One server', users: 1, status: 'ready', minutes: 45,
-    question: 'How do you ship a pilot fast, on one machine?',
-    summary: 'Start with a pilot to learn whether people want the product, build it as a monolith, and run it on one small server.',
+    n: 2, slug: 'one-server', title: 'One server', users: 1, status: 'ready', minutes: 60,
+    question: 'A new project: where do you start, and how do you ship it fast?',
+    summary: 'Turn the request into requirements and estimates, start with a pilot built as one app, and run it on one small server.',
     topics: ['DNS and domain names', 'HTTP and HTTPS', 'Web server, app server, database on one box', 'The life of a request', 'Deploying and restarting safely']
   },
   {

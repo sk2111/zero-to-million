@@ -825,7 +825,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .calc-math { margin: 1.2rem 0 0; padding: 0.85rem 1.05rem; border-radius: 10px; background: var(--paper); font-size: 0.95rem; color: var(--ink-2); }
 .calc-math b { color: var(--ink); }
 
-/* disk picker: the options, simplest first, with the one to pick marked */
+/* disk and network pickers: the options, simplest first, with the one to pick marked */
 .dp-opts { display: grid; gap: 0.5rem; margin-top: 1.25rem; }
 .dp-opt {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 1.25rem; align-items: center;
@@ -837,6 +837,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .dp-opt.pick { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .dp-opt.pick em { color: var(--accent); }
 .dp-opt.no b, .dp-opt.no span, .dp-opt.no em { color: var(--muted); }
+.dp-opt.burst em { color: var(--amber); }
 
 /* shared tooltip */
 .tooltip {
@@ -1020,6 +1021,9 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .tiles { grid-template-columns: 1fr 1fr; }
   .tile:nth-child(odd) { padding-left: 0; border-left: 0; }
   .tile:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+  .tiles.tiles-3 { grid-template-columns: 1fr !important; }   /* three tiles don't fit side by side on a phone */
+  .tiles-3 .tile { padding-left: 0; border-left: 0; }
+  .tiles-3 .tile + .tile { border-top: 1px solid var(--rule); }
   .ss-cols { gap: 0.25rem; }
   .ss-val { font-size: 0.66rem; }
   .ss-bar { width: 16px; }

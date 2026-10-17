@@ -1452,6 +1452,86 @@ window.ZTM = window.ZTM || {};
     draw();
   };
 
+  /* ---------- Networks: how much bandwidth your responses need ---------- */
+
+  W['net-picker'] = function (el) {
+    /* AWS network specifications (Gbps). Sizes up to 4xlarge are sold as "up to" their burst figure,
+       but only the baseline is steady; bursts last about 5 to 60 minutes. */
+    var SERVERS = [
+      { name: 'c7g.large', vcpu: 2, base: 0.937, burst: 12.5 },
+      { name: 'c7g.xlarge', vcpu: 4, base: 1.876, burst: 12.5 },
+      { name: 'c7g.2xlarge', vcpu: 8, base: 3.75, burst: 15 },
+      { name: 'c7g.4xlarge', vcpu: 16, base: 7.5, burst: 15 },
+      { name: 'c7g.8xlarge', vcpu: 32, base: 15, burst: 15 },
+      { name: 'c7g.16xlarge', vcpu: 64, base: 30, burst: 30 }
+    ];
+    var NETWORK_OPT = [   /* the network-optimised family: far more bandwidth per vCPU */
+      { name: 'c7gn.large', vcpu: 2, base: 6.25 }, { name: 'c7gn.xlarge', vcpu: 4, base: 12.5 },
+      { name: 'c7gn.2xlarge', vcpu: 8, base: 25 }, { name: 'c7gn.4xlarge', vcpu: 16, base: 50 }
+    ];
+    var SIZES = [{ value: '2', label: '2 KB' }, { value: '20', label: '20 KB' }, { value: '100', label: '100 KB' },
+                 { value: '500', label: '500 KB' }, { value: '2000', label: '2 MB' }, { value: '10000', label: '10 MB' }];
+    var PER_GB = 0.09;    /* AWS data transfer out to the internet, first tier, per GB */
+    var st = { rps: 100, kb: '2000' };
+    el.innerHTML =
+      '<div class="calc">' +
+        '<div class="w-field"><label for="npR">Requests per second at the busiest hour</label><input type="range" id="npR" min="10" max="2000" step="10" value="' + st.rps + '"><output for="npR"></output></div>' +
+        '<div class="w-field"><span class="lbl">Average size of one response</span><span class="cores"></span></div>' +
+      '</div>' +
+      '<div class="tiles tiles-3" aria-live="polite">' +
+        '<div class="tile"><span>Bandwidth needed</span><b data-o="need"></b><small data-o="needmb"></small></div>' +
+        '<div class="tile key"><span>Recommended server</span><b data-o="pick"></b><small data-o="pickwhy"></small></div>' +
+        '<div class="tile"><span>Data out in that hour</span><b data-o="gb"></b><small data-o="cost"></small></div>' +
+      '</div>' +
+      '<div class="dp-opts" role="list" aria-label="Servers, smallest first"></div>' +
+      '<p class="calc-math" data-o="say"></p>';
+    el.querySelector('.cores').appendChild(segmented('Average size of one response', SIZES, st.kb, function (v) { st.kb = v; draw(); }));
+    el.querySelector('#npR').addEventListener('input', function (e) { st.rps = +e.target.value; draw(); });
+    function o(n) { return el.querySelector('[data-o="' + n + '"]'); }
+    function rate(gbps) { return gbps >= 1 ? fmtNum(gbps) + ' Gbps' : fmtNum(gbps * 1000) + ' Mbps'; }
+    /* AWS figures as published (0.937, 1.876), not rounded */
+    function steady(s) { return s.base + ' Gbps steady' + (s.burst > s.base ? ', bursts to ' + s.burst + ' Gbps' : ''); }
+
+    function draw() {
+      var kb = +st.kb, mbs = st.rps * kb / 1000;          /* MB per second today */
+      var gbpsNow = mbs * 8 / 1000, need = gbpsNow * 1.5;  /* with 50% headroom */
+      var pick = SERVERS.filter(function (s) { return s.base >= need; })[0];
+      var size = SIZES.filter(function (x) { return x.value === st.kb; })[0].label;
+      var gb = st.rps * kb * 3600 / 1e6;
+
+      el.querySelector('#npR + output').textContent = fmtInt(st.rps);
+      o('need').textContent = rate(need);
+      o('needmb').textContent = fmtNum(mbs * 1.5) + ' MB/s, with 50% headroom';
+      o('pick').textContent = pick ? pick.name : 'Several servers';
+      o('pickwhy').textContent = pick ? steady(pick) : 'or a CDN in front';
+      o('gb').textContent = gb >= 1 ? fmtInt(gb) + ' GB' : fmtNum(gb * 1000) + ' MB';
+      o('cost').textContent = gb * PER_GB >= 1 ? 'about $' + fmtInt(gb * PER_GB) + ' to the internet' : 'under $1 to the internet';
+
+      el.querySelector('.dp-opts').innerHTML = SERVERS.map(function (s) {
+        var state = s === pick ? 'pick' : s.base >= need ? 'fits' : s.burst >= need ? 'burst' : 'no';
+        var label = { pick: 'Pick this', fits: 'Also fits', burst: 'Only in bursts', no: 'Too small' }[state];
+        return '<div class="dp-opt ' + state + '" role="listitem"><div><b>' + s.name + '</b><span>' + steady(s) + ', ' + s.vcpu + ' vCPUs</span></div><em>' + label + '</em></div>';
+      }).join('');
+
+      var say = fmtInt(st.rps) + ' requests a second × ' + size + ' = <b>' + fmtNum(mbs) + ' MB/s</b>, or ' + rate(gbpsNow) + ', at the busiest hour. ';
+      var large = SERVERS[0];
+      if (pick === large) {
+        say += 'Even with headroom, that fits in the steady ' + large.base + ' Gbps of a c7g.large, the app server from chapter 3. The network isn’t your limit here. ';
+      } else if (pick) {
+        say += 'That needs a <b>' + pick.name + '</b> for its steady ' + pick.base + ' Gbps. ';
+        if (large.burst >= need) say += 'A c7g.large could only manage it in bursts, which last about 5 to 60 minutes. ';
+        var opt = NETWORK_OPT.filter(function (s) { return s.base >= need; })[0];
+        if (opt && opt.vcpu < pick.vcpu) say += 'If bandwidth is all you need, the network-optimised family gives far more per vCPU: a <b>' + opt.name + '</b> has ' + opt.base + ' Gbps steady with ' + opt.vcpu + ' vCPUs instead of ' + pick.vcpu + '. ';
+      } else {
+        say += 'No single c7g server has this much: spread the traffic over several servers behind a load balancer. ';
+      }
+      if (kb >= 500) say += 'Responses this big are usually files: serve them from object storage (S3) behind a CDN (CloudFront), and this traffic leaves your servers entirely. ';
+      if (need > 5) say += 'Traffic that goes straight to the internet, not through a load balancer, is capped at 5 Gbps on servers with fewer than 32 vCPUs.';
+      o('say').innerHTML = say;
+    }
+    draw();
+  };
+
   /* ---------- 1.9  Capacity calculator ---------- */
 
   W['capacity'] = function (el) {

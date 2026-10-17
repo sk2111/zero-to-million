@@ -956,6 +956,9 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           </ol>
         </figure>
 
+        <p>Bandwidth needed is the number of requests a second × the size of each response. Try your own numbers:</p>
+        <div class="widget" data-widget="net-picker"></div>
+
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">

@@ -611,12 +611,6 @@ CPU(s):                  8
           <li>That gap shapes how fast code really runs.</li>
         </ol>
 
-        <div class="figures">
-          <div class="fig"><small>Reading from RAM</small><b>~100 ns</b><span>300 ticks of a 3 GHz core.</span></div>
-          <div class="fig"><small>Cache line</small><b>64 bytes</b><span>Memory moves in chunks this size, never a byte at a time.</span></div>
-          <div class="fig"><small>RAM per server</small><b>8–512 GB</b><span>Typical sizes. The largest cloud machines have over 20 TB.</span></div>
-        </div>
-
         <h2>The memory hierarchy</h2>
         <table class="data">
           <thead><tr><th>Where</th><th>Size</th><th class="num">Time to read</th></tr></thead>
@@ -755,7 +749,7 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
         <h3 class="read-head">Two problems that build up slowly</h3>
         <ol class="points">
           <li><strong>Leaks.</strong> Memory grows a little every hour until the stages above begin. A restart “fixes” it, which is why leaks survive for so long. Watch for memory that only ever goes up.</li>
-          <li><strong>Garbage-collection pressure.</strong> Java, Go, .NET and Node free memory in the background, but a heap that’s nearly full collects constantly. p99 latency suffers long before anything crashes.</li>
+          <li><strong>Garbage-collection pressure.</strong> In Java, Go, .NET and Node you never free memory yourself. A garbage collector (GC) runs from time to time, finds the objects your code no longer uses, and frees them. Each run takes CPU time, and some runs pause your code for a moment. When the heap (the memory your program keeps its objects in) is nearly full, the GC has to run again and again to make room. Requests get stuck behind those pauses, so your slowest requests (the p99, page 1.11) get much slower long before the program runs out of memory and crashes.</li>
         </ol>
 
         <aside class="note design">
@@ -772,8 +766,10 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
             <li><strong>Protect the process that matters most.</strong> You can tell the OOM killer to spare a process:
             <code>OOMScoreAdjust=-1000</code> in its systemd unit, for example for the database, so a runaway worker is
             killed instead.</li>
-            <li><strong>Caching is trading memory for everything else.</strong> Every cache spends RAM to save CPU, disk
-            or network. Chapter 5 builds on this.</li>
+            <li><strong>A cache trades memory for speed.</strong> It keeps a copy of something that was slow to get, such as
+            a database result, a rendered page or a file, in RAM. The next request reads that copy in microseconds instead of
+            going back to the database, the disk or another server. You pay in RAM, and you save CPU, disk reads or network
+            round trips. The page cache above is exactly this: Linux spends spare RAM so it doesn’t have to read the disk again.</li>
           </ol>
         </aside>
 

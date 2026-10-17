@@ -12,6 +12,14 @@ ZTM.content[2] = {
       <li>Not writing code, and not choosing a database. First, find out what is really being asked for, and roughly how big it will be.</li>
       <li>Then start small: a pilot that real shoppers can use, built as one app on one server. In this phase the goal is speed: build, ship, watch how people use it, and change it, as fast as possible.</li>
     </ol>
+    <aside class="note important">
+      <h3>Important: we build it from the parts</h3>
+      <ol class="points">
+        <li>AWS can hide most of this behind serverless and managed services: Lambda or Fargate instead of a server you run, DynamoDB or Aurora Serverless instead of your own PostgreSQL.</li>
+        <li>We mention them where they fit, but we don’t build Tomazon with them. Doing that would skip exactly what this workshop is here to teach.</li>
+        <li>Building from the parts gives you the mental model underneath: CPU, memory, disk, network, processes and connections. With it, you can reason about what a managed or serverless service does for you, where its limits come from, what it costs, and when it’s the right choice.</li>
+      </ol>
+    </aside>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
       <ul>

@@ -330,9 +330,9 @@ dl.terms dd { margin: 0; color: var(--ink-2); }
 .note.tip .table-wrap { margin: 1rem 0; }
 .note.tip table.data td, .note.tip table.data th { background: transparent; }
 .note.tip ol.points + .compile, .note.tip .table-wrap + ol.points { margin-top: 1rem; }
-.note.runs-out { border-color: var(--amber); background: var(--amber-soft); }
-.note.runs-out h3 { color: var(--amber); }
-.note.runs-out li::marker { color: var(--amber); }
+.note.runs-out, .note.important { border-color: var(--amber); background: var(--amber-soft); }
+.note.runs-out h3, .note.important h3 { color: var(--amber); }
+.note.runs-out li::marker, .note.important li::marker { color: var(--amber); }
 
 /* ---------- tables ---------- */
 

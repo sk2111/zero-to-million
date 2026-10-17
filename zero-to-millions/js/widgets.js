@@ -1365,7 +1365,16 @@ window.ZTM = window.ZTM || {};
   /* ---------- How disks work: is the default cloud SSD enough? ---------- */
 
   W['disk-picker'] = function (el) {
-    var BASE_IOPS = 3000, BASE_MBS = 125;          /* AWS gp3 without extras */
+    /* AWS EBS limits per volume (gp3 limits as raised in September 2025). Cloud SSDs count an
+       operation bigger than 256 KB as several, and gp3 needs 1 IOPS for every 0.25 MB/s it moves. */
+    var GP3 = { iops: 3000, mbs: 125, maxIops: 80000, maxMbs: 2000 };
+    var IO2 = { maxIops: 256000, maxMbs: 4000 };
+    var OPTIONS = [
+      { id: 'gp3', name: 'Default gp3', short: 'Default gp3', what: '3,000 IOPS and 125 MB/s, included in the price' },
+      { id: 'gp3x', name: 'gp3 with extra IOPS and throughput', short: 'gp3 + extras', what: 'Up to 80,000 IOPS and 2,000 MB/s. You pay only for what you add, and can change it while the volume is in use.' },
+      { id: 'io2', name: 'io2 Block Express', short: 'io2', what: 'Up to 256,000 IOPS and 4,000 MB/s, with steadier sub-millisecond latency. Costs more per IOPS.' },
+      { id: 'nvme', name: 'Local NVMe (instance store)', short: 'Local NVMe', what: 'The fastest there is. Its data is lost if the server stops, so only for data copied to other servers.' }
+    ];
     var SIZES = [{ value: '4', label: '4 KB' }, { value: '8', label: '8 KB' }, { value: '16', label: '16 KB' },
                  { value: '64', label: '64 KB' }, { value: '256', label: '256 KB' }, { value: '1024', label: '1 MB' }];
     var st = { r: 2400, w: 600, kb: '8' };
@@ -1378,10 +1387,10 @@ window.ZTM = window.ZTM || {};
       '<div class="tiles tiles-3" aria-live="polite">' +
         '<div class="tile"><span>IOPS needed</span><b data-o="iops"></b><small>with 50% headroom</small></div>' +
         '<div class="tile"><span>Throughput needed</span><b data-o="mbs"></b><small>with 50% headroom</small></div>' +
-        '<div class="tile key"><span>Default cloud SSD</span><b data-o="ok"></b><small>3,000 IOPS and 125 MB/s</small></div>' +
+        '<div class="tile key"><span>Recommended disk</span><b data-o="pick"></b><small data-o="set"></small></div>' +
       '</div>' +
-      '<p class="calc-math" data-o="say"></p>' +
-      '<p class="w-note">Based on AWS gp3, where IOPS and throughput can be bought separately. Cloud SSDs count an operation bigger than 256 KB as several.</p>';
+      '<div class="dp-opts" role="list" aria-label="Disk options, simplest first"></div>' +
+      '<p class="calc-math" data-o="say"></p>';
     el.querySelector('.cores').appendChild(segmented('Average size of one read or write', SIZES, st.kb, function (v) { st.kb = v; draw(); }));
     el.querySelector('#dpR').addEventListener('input', function (e) { st.r = +e.target.value; draw(); });
     el.querySelector('#dpW').addEventListener('input', function (e) { st.w = +e.target.value; draw(); });
@@ -1392,25 +1401,52 @@ window.ZTM = window.ZTM || {};
       var kb = +st.kb, ops = st.r + st.w;
       var iops = round100(ops * Math.ceil(kb / 256) * 1.5);
       var mbs = Math.ceil(ops * kb / 1000 * 1.5);
-      var iopsOk = iops <= BASE_IOPS, mbsOk = mbs <= BASE_MBS;
+      /* gp3 needs 1 IOPS for every 0.25 MB/s, so a lot of throughput can mean buying IOPS too. */
+      var gp3Iops = Math.max(GP3.iops, iops, round100(mbs * 4));
+      var io2Iops = Math.max(100, iops, round100(mbs / 0.256));   /* io2 gives 0.256 MB/s per IOPS */
+      var fits = {
+        gp3: iops <= GP3.iops && mbs <= GP3.mbs,
+        gp3x: gp3Iops <= GP3.maxIops && mbs <= GP3.maxMbs,
+        io2: io2Iops <= IO2.maxIops && mbs <= IO2.maxMbs,
+        nvme: true
+      };
+      var pick = OPTIONS.filter(function (x) { return fits[x.id]; })[0];
+
       el.querySelector('#dpR + output').textContent = fmtInt(st.r);
       el.querySelector('#dpW + output').textContent = fmtInt(st.w);
       o('iops').textContent = fmtInt(iops);
       o('mbs').textContent = fmtInt(mbs) + ' MB/s';
-      o('ok').textContent = iopsOk && mbsOk ? 'Enough' : 'Not enough';
-      var lim = Math.floor(BASE_MBS * 1000 / kb);   /* ops per second before 125 MB/s runs out */
-      var say = fmtInt(ops) + ' operations a second × ' + SIZES.filter(function (x) { return x.value === st.kb; })[0].label +
-        ' = <b>' + fmtNum(ops * kb / 1000) + ' MB/s</b> today. ';
-      if (iopsOk && mbsOk) {
-        say += 'Both fit inside the default 3,000 IOPS and 125 MB/s, with room to grow.';
+      o('pick').textContent = pick.short;
+
+      var extras = [];
+      if (gp3Iops > GP3.iops) extras.push(fmtInt(gp3Iops) + ' IOPS');
+      if (mbs > GP3.mbs) extras.push(fmtInt(mbs) + ' MB/s');
+      o('set').textContent = pick.id === 'gp3' ? 'Nothing to buy' :
+        pick.id === 'gp3x' ? 'Set ' + extras.join(' and ') :
+        pick.id === 'io2' ? 'Set ' + fmtInt(io2Iops) + ' IOPS' : 'Only for data copied elsewhere';
+
+      el.querySelector('.dp-opts').innerHTML = OPTIONS.map(function (x) {
+        var state = x === pick ? 'pick' : fits[x.id] ? 'fits' : 'no';
+        var label = state === 'pick' ? 'Pick this' : state === 'fits' ? 'Also fits' : 'Too small';
+        return '<div class="dp-opt ' + state + '" role="listitem"><div><b>' + x.name + '</b><span>' + x.what + '</span></div><em>' + label + '</em></div>';
+      }).join('');
+
+      var size = SIZES.filter(function (x) { return x.value === st.kb; })[0].label;
+      var say = fmtInt(ops) + ' operations a second × ' + size + ' = <b>' + fmtNum(ops * kb / 1000) + ' MB/s</b> today. ';
+      if (pick.id === 'gp3') {
+        say += 'Both fit inside the default gp3 volume, with room to grow. There is nothing to buy.';
+      } else if (pick.id === 'gp3x') {
+        say += 'Keep the gp3 volume and set it to <b>' + extras.join('</b> and <b>') + '</b>. You pay only for the part above the included 3,000 IOPS and 125 MB/s. ';
+        var lim = Math.floor(GP3.mbs * 1000 / kb);   /* operations a second before 125 MB/s runs out */
+        if (mbs > GP3.mbs && lim < GP3.iops) say += 'At ' + size + ' each, 125 MB/s runs out at about ' + fmtInt(lim) + ' operations a second, before the IOPS limit does. ';
+        if (gp3Iops > iops && gp3Iops > GP3.iops) say += 'The extra IOPS are there because gp3 needs 1 IOPS for every 0.25 MB/s it moves. ';
+      } else if (pick.id === 'io2') {
+        say += 'That is more than one gp3 volume can give (80,000 IOPS and 2,000 MB/s). io2 goes up to 256,000 IOPS and 4,000 MB/s, at a higher price per IOPS. ';
       } else {
-        var fix = [];
-        if (!iopsOk) fix.push('about <b>' + fmtInt(iops) + ' IOPS</b>');
-        if (!mbsOk) fix.push('about <b>' + fmtInt(mbs) + ' MB/s</b>');
-        say += 'Buy ' + fix.join(' and ') + ' on the same volume. ';
-        if (!mbsOk && lim < BASE_IOPS) say += 'At ' + st.kb + ' KB each, 125 MB/s runs out at about ' + fmtInt(lim) + ' operations a second, before the IOPS limit does. ';
-        if (iops > 16000) say += 'That is a lot for one general-purpose volume: look at a high-IOPS volume (AWS io2), or local NVMe if the data is replicated.';
+        say += 'No single cloud volume reaches this. Use local NVMe on a storage-optimised server if the data is copied to other servers, or spread the data across several volumes or servers. ';
       }
+      if (pick.id !== 'gp3' && st.r >= ops * 0.7) say += 'Most of this is reads: more RAM for the page cache (page 1.6) can answer many of them from memory, so measure again before you buy. ';
+      if (mbs > 1000 || iops > 40000) say += 'Check the server too: each EC2 size caps how fast it can talk to its disks, and smaller sizes can’t use a fast volume’s full speed.';
       o('say').innerHTML = say;
     }
     draw();

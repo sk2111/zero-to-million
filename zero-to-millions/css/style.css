@@ -825,6 +825,19 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .calc-math { margin: 1.2rem 0 0; padding: 0.85rem 1.05rem; border-radius: 10px; background: var(--paper); font-size: 0.95rem; color: var(--ink-2); }
 .calc-math b { color: var(--ink); }
 
+/* disk picker: the options, simplest first, with the one to pick marked */
+.dp-opts { display: grid; gap: 0.5rem; margin-top: 1.25rem; }
+.dp-opt {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 1.25rem; align-items: center;
+  padding: 0.7rem 1rem; border: 1px solid var(--rule); border-radius: 10px;
+}
+.dp-opt b { display: block; font-size: 0.9375rem; }
+.dp-opt span { display: block; font-size: var(--fs-sm); line-height: 1.45; color: var(--ink-2); }
+.dp-opt em { font-style: normal; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); white-space: nowrap; }
+.dp-opt.pick { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.dp-opt.pick em { color: var(--accent); }
+.dp-opt.no b, .dp-opt.no span, .dp-opt.no em { color: var(--muted); }
+
 /* shared tooltip */
 .tooltip {
   position: fixed; z-index: 60; max-width: 18rem; padding: 0.55rem 0.75rem;

@@ -789,8 +789,15 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
         <ol class="points lede">
           <li>Disk is where data lives when the power goes off.</li>
           <li>It’s also by far the slowest thing inside the server.</li>
-          <li>The particular way each kind of disk is slow decides how databases are built.</li>
+          <li>Servers use four kinds of disk, and they differ in speed by a factor of a thousand or more:</li>
         </ol>
+
+        <dl class="terms">
+          <div><dt>Hard disk (HDD)</dt><dd>Spinning metal platters, read by a head on a moving arm. Cheap and large, but slow for anything except reading data in order.</dd></div>
+          <div><dt>SATA SSD</dt><dd>Flash memory chips with no moving parts. It plugs into SATA, the same connection hard disks use, and that connection caps it at about 550 MB/s.</dd></div>
+          <div><dt>NVMe SSD</dt><dd>The same kind of flash chips, connected over PCIe, the CPU’s fastest connection, instead of SATA. Several times faster than a SATA SSD; what modern laptops and servers use.</dd></div>
+          <div><dt>Cloud disk</dt><dd>Not inside your server at all: storage on other machines, reached over the network, such as AWS EBS. Easy to resize, snapshot and move to another server, but every read and write crosses the network.</dd></div>
+        </dl>
 
         <h2>Spinning disks: limited by physics</h2>
         <ol class="points">
@@ -809,6 +816,14 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
         </ol>
 
         <h2>Three numbers describe a disk</h2>
+        <ol class="points">
+          <li><strong>Latency: how long one read or write takes</strong>, from asking for it until it’s done. It decides how long a single request waits. A database commit waits for its write to reach the disk, so a commit can never be faster than the disk’s write latency.</li>
+          <li><strong>IOPS: how many separate reads and writes the disk can do in a second</strong> (input/output operations per second). Each one counts once, however small: reading 4 KB from 3,000 different places is 3,000 operations. It decides how many small, scattered requests the disk can keep up with, such as a database fetching rows for many users at once.</li>
+          <li><strong>Throughput: how many bytes the disk can move in a second</strong>, in MB/s. It matters when the data is big and read in order, such as a backup, a log file or a scan of a whole table.</li>
+          <li>The three are linked. Throughput = IOPS × the size of each operation. 3,000 reads of 4 KB each move only 12 MB/s, so small operations hit the IOPS limit first. Reads of 1 MB each reach a 125 MB/s limit at about 125 a second, so big operations hit the throughput limit first.</li>
+          <li>And latency grows when the disk is busy. Once requests arrive faster than the disk’s IOPS limit, they wait in line, and each one waits for every request ahead of it. You’ll see this in the <code>iostat</code> output below.</li>
+        </ol>
+        <p>The three numbers for common disks:</p>
         <table class="data">
           <thead><tr><th>Kind of disk</th><th class="num">Random IOPS</th><th class="num">Throughput</th><th class="num">Latency per read</th></tr></thead>
           <tbody>
@@ -818,11 +833,8 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
             <tr class="hl"><td>Cloud disk, AWS gp3 default</td><td class="num">3,000</td><td class="num">125 MB/s</td><td class="num">~1 ms</td></tr>
           </tbody>
         </table>
-        <ol class="points">
-          <li><strong>IOPS</strong> is how many separate reads and writes per second, <strong>throughput</strong> is bytes per second, and <strong>latency</strong> is the time for one operation.</li>
-          <li>The highlighted row is what many production databases run on: network-attached storage.</li>
-          <li>Its default limits are more than 100 times below the NVMe drive in your laptop.</li>
-        </ol>
+        <ol class="points" start="6">
+          <li>The highlighted row is what many production databases run on: network-attached storage.</li>        </ol>
 
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>

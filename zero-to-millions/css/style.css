@@ -239,7 +239,7 @@ kbd {
   font-size: var(--fs-body); line-height: 1.65; outline: none;
 }
 .page-inner { max-width: var(--column); margin-inline: auto; }
-.page .page-inner > * { max-width: none; }   /* every block takes the full column, so the edges line up */
+.page .page-inner > * { max-width: none; margin-inline: 0; }   /* every block takes the full column, so the edges line up */
 
 .page-inner > p { margin-block: 1rem; }
 .page h2 { margin-block: 3.5rem 0.875rem; font-size: var(--fs-h2); font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; }

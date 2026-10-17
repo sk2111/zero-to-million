@@ -27,8 +27,8 @@ without internet the fonts fall back to Segoe UI.
 | 1 | Fundamentals | 0 users | Written |
 | 2 | One server | 1 | Written |
 | 3 | Scale up, split out | 1K | Started |
-| 4 | Scale out | 10K | Planned |
-| 5 | Make it fast | 100K | Planned |
+| 4 | Scale out | 10K | Written |
+| 5 | Make it fast | 100K | Started |
 | 6 | Do it later | 1M | Planned |
 | 7 | Beyond a million | 10M | Planned |
 | 8 | When things break | every stage | Planned |
@@ -54,6 +54,16 @@ changes, how to move the data) · The new cost: network round trips (N+1 queries
 pooling with PgBouncer) · The right instance for each job (instance families, the app tuned
 for CPU, the database on r + EBS, storage-optimised NVMe or RDS, and sizing for 1,000 users).
 
+Chapter 4 has 4 pages: 10,000 users, and the app slows down (finding the full tier) · Scale up or
+scale out? (trade-offs, cost, sizing with N+1) · Load balancing (algorithms, a round robin vs least
+connections simulator, the Nginx config) · The architecture for 10,000 users (live diagram, what
+scaling out needs, the new weak spots).
+
+Chapter 5 has 4 pages: 100,000 users, and the database runs hot (pg_stat_statements, a chatbot is
+about 70% reads) · Read replicas (streaming replication, routing reads and writes) · Replication lag
+and the CAP theorem (a lag timeline, CAP and PACELC, shades of consistency) · Living with stale reads
+(read your own writes and five other strategies).
+
 ## Files
 
 ```
@@ -63,6 +73,8 @@ js/chapters.js           the roadmap: every chapter's title, users, status, plan
 js/ch1-fundamentals.js   Chapter 1's pages (HTML in template strings)
 js/ch2-one-server.js     Chapter 2's pages
 js/ch3-scale-up.js       Chapter 3's pages
+js/ch4-scale-out.js      Chapter 4's pages
+js/ch5-make-it-fast.js   Chapter 5's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

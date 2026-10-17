@@ -297,14 +297,14 @@ window.ZTM = window.ZTM || {};
     var WIRES = spec.wires, REQUEST = spec.request, STEPS = spec.steps, head = 'arHead' + (++archSeq);
     el.innerHTML =
       '<div class="ar2">' +
-        '<svg class="ar2-wires" aria-hidden="true"><defs><marker id="' + head + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs><g class="wires"></g><g class="labels"></g><circle class="pkt" r="5" cx="-20" cy="-20"/></svg>' +
+        '<svg class="ar2-wires" aria-hidden="true"><defs><marker id="' + head + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs><g class="wires"></g><g class="joints"></g><g class="labels"></g><circle class="pkt" r="5" cx="-20" cy="-20"/></svg>' +
         spec.html +
       '</div>' +
       '<div class="pt-controls"><button type="button" class="btn-sm" data-next>Follow a request</button><span class="pt-count"></span></div>' +
       '<p class="readout" aria-live="polite"></p>';
 
     var box = el.querySelector('.ar2'), svg = el.querySelector('.ar2-wires'), wiresG = svg.querySelector('.wires'),
-        labelsG = svg.querySelector('.labels'), pkt = svg.querySelector('.pkt');
+        jointsG = svg.querySelector('.joints'), labelsG = svg.querySelector('.labels'), pkt = svg.querySelector('.pkt');
     var out = el.querySelector('.readout'), count = el.querySelector('.pt-count'), btn = el.querySelector('[data-next]');
     var paths = {}, k = -1, run = 0;
 
@@ -317,27 +317,60 @@ window.ZTM = window.ZTM || {};
         var q = box.querySelector('[data-p="' + id + '"]').getBoundingClientRect();
         return { l: q.left - b.left, r: q.right - b.left, t: q.top - b.top, b: q.bottom - b.top, cx: (q.left + q.right) / 2 - b.left, cy: (q.top + q.bottom) / 2 - b.top };
       }
-      var w = '', lab = '';
+      var w = '', lab = '', segs = [], bends = [];
       WIRES.forEach(function (x) {
-        var A = r(x[1]), B = r(x[2]), d, lx, ly;
+        var A = r(x[1]), B = r(x[2]), pts, lx, ly;
         if (x[3] === 'h') {
           var x1 = A.r + 3, x2 = B.l - 3, mx = (x1 + x2) / 2;
-          d = Math.abs(A.cy - B.cy) < 2 ? 'M' + x1 + ' ' + A.cy + 'H' + x2 : 'M' + x1 + ' ' + A.cy + 'H' + mx + 'V' + B.cy + 'H' + x2;
+          pts = Math.abs(A.cy - B.cy) < 2 ? [[x1, A.cy], [x2, A.cy]] : [[x1, A.cy], [mx, A.cy], [mx, B.cy], [x2, B.cy]];
           lx = x1 + 6; ly = A.cy - 8;
-        } else {
-          var y1 = A.b + 3, y2 = B.t - 3, my = (y1 + y2) / 2;
-          d = Math.abs(A.cx - B.cx) < 2 ? 'M' + A.cx + ' ' + y1 + 'V' + y2 : 'M' + A.cx + ' ' + y1 + 'V' + my + 'H' + B.cx + 'V' + y2;
+        } else if (x[3] === 'u') {   /* under a row: down, across, back up */
+          var yb = Math.max(A.b, B.b) + 18;
+          pts = [[A.cx, A.b + 3], [A.cx, yb], [B.cx, yb], [B.cx, B.b + 3]];
+          lx = (A.cx + B.cx) / 2 - 24; ly = yb + 14;
+        } else {   /* 'v' turns halfway down; 'vt' turns just above the target, below a label at the top of its box */
+          var y1 = A.b + 3, y2 = B.t - 3, my = x[3] === 'vt' ? y2 - 14 : (y1 + y2) / 2;
+          pts = Math.abs(A.cx - B.cx) < 2 ? [[A.cx, y1], [A.cx, y2]] : [[A.cx, y1], [A.cx, my], [B.cx, my], [B.cx, y2]];
           lx = Math.max(A.cx, B.cx) + 8; ly = my + 4;
         }
+        for (var i = 1; i < pts.length; i++) segs.push([pts[i - 1], pts[i]]);
+        bends = bends.concat(pts.slice(1, -1));
+        var d = 'M' + pts.map(function (p) { return p[0] + ' ' + p[1]; }).join('L');
         /* requests go both ways; a backup (one-way) is marked with a fifth flag */
         var oneWay = !!x[5];
         w += '<path data-w="' + x[0] + '" class="wire' + (oneWay ? ' slow' : '') + '" d="' + d + '"' + (oneWay ? '' : ' marker-start="url(#' + head + ')"') + ' marker-end="url(#' + head + ')"/>';
         if (x[4]) lab += '<text x="' + lx + '" y="' + ly + '">' + x[4] + '</text>';
       });
       wiresG.innerHTML = w; labelsG.innerHTML = lab;
+      jointsG.innerHTML = spec.joints ? joints(segs, bends) : '';
       paths = {};
       wiresG.querySelectorAll('path').forEach(function (p) { paths[p.getAttribute('data-w')] = p; });
       highlight();
+    }
+
+    /* Where three or more lines meet at a turn, a dot shows that they join rather than cross. */
+    function joints(segs, bends) {
+      var out = '', seen = {};
+      bends.forEach(function (p) {
+        var key = Math.round(p[0]) + ',' + Math.round(p[1]);
+        if (seen[key]) return;
+        seen[key] = 1;
+        var dirs = {};
+        segs.forEach(function (s) {
+          var a = s[0], c = s[1], lo, hi;
+          if (Math.abs(a[0] - c[0]) < 1 && Math.abs(a[0] - p[0]) < 1) {
+            lo = Math.min(a[1], c[1]); hi = Math.max(a[1], c[1]);
+            if (lo < p[1] - 1 && hi > p[1] - 1) dirs.up = 1;
+            if (hi > p[1] + 1 && lo < p[1] + 1) dirs.down = 1;
+          } else if (Math.abs(a[1] - c[1]) < 1 && Math.abs(a[1] - p[1]) < 1) {
+            lo = Math.min(a[0], c[0]); hi = Math.max(a[0], c[0]);
+            if (lo < p[0] - 1 && hi > p[0] - 1) dirs.left = 1;
+            if (hi > p[0] + 1 && lo < p[0] + 1) dirs.right = 1;
+          }
+        });
+        if (Object.keys(dirs).length >= 3) out += '<circle class="joint" r="3" cx="' + p[0] + '" cy="' + p[1] + '"/>';
+      });
+      return out;
     }
 
     /* Move the request dot along a list of wires, forwards (0) or backwards (1). */
@@ -369,6 +402,7 @@ window.ZTM = window.ZTM || {};
       box.classList.toggle('stepping', !!s);
       box.querySelectorAll('[data-p]').forEach(function (n) { n.classList.toggle('on', !!s && s.on.indexOf(n.getAttribute('data-p')) >= 0); });
       wiresG.querySelectorAll('path').forEach(function (p) { p.classList.toggle('on', wires.indexOf(p.getAttribute('data-w')) >= 0); });
+      wiresG.querySelectorAll('path.on').forEach(function (p) { wiresG.appendChild(p); });
     }
     function draw() {
       var s = STEPS[k];
@@ -599,6 +633,296 @@ window.ZTM = window.ZTM || {};
     bindTips(el);
     draw();
     if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(rowsEl); }).observe(rowsEl);
+  };
+
+  /* ---------- Chapter 4: round robin vs least connections, simulated ---------- */
+
+  W['lb-sim'] = function (el) {
+    /* The model: 2 app servers with 4 workers each, 16 requests a second,
+       90% fast (a product page, 100 ms) and 10% slow (a chat answer, 2 s). */
+    var P = { rate: 16, workers: 4, pSlow: 0.1, fast: 0.1, slow: 2, dt: 0.005 };
+    function rng(seed) { var s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+    function fresh() { return [{ busy: [], q: [] }, { busy: [], q: [] }]; }
+    function load(s) { return s.busy.length + s.q.length; }
+    function choose(alg, srv, st, r) {
+      if (alg === 'rr') { st.turn = 1 - st.turn; return st.turn; }
+      var a = load(srv[0]), b = load(srv[1]);
+      return a < b ? 0 : b < a ? 1 : (r() < 0.5 ? 0 : 1);
+    }
+    function step(srv, t, done) {
+      srv.forEach(function (s) {
+        s.busy = s.busy.filter(function (x) { if (x.end <= t) { done(x); return false; } return true; });
+        while (s.busy.length < P.workers && s.q.length) { var q = s.q.shift(); q.end = t + q.d; s.busy.push(q); }
+      });
+    }
+    function pct(arr, f) { if (!arr.length) return 0; var a = arr.slice().sort(function (x, y) { return x - y; }); return a[Math.floor(f * (a.length - 1))]; }
+    /* Ten simulated minutes of identical traffic under each algorithm. */
+    function simulate(alg) {
+      var r = rng(7), srv = fresh(), st = { turn: 0 }, lat = [];
+      var next = -Math.log(1 - r()) / P.rate;
+      for (var t = 0; t < 600; t += P.dt) {
+        while (next <= t) {
+          var slow = r() < P.pSlow;
+          srv[choose(alg, srv, st, r)].q.push({ a: next, d: slow ? P.slow : P.fast, slow: slow });
+          next += -Math.log(1 - r()) / P.rate;
+        }
+        step(srv, t, function (x) { if (!x.slow) lat.push(x.end - x.a); });
+      }
+      return { p50: Math.round(pct(lat, 0.5) * 1000), p95: Math.round(pct(lat, 0.95) * 1000) };
+    }
+    var stats = { rr: simulate('rr'), lc: simulate('lc') };
+
+    var alg = 'lc';
+    el.innerHTML =
+      '<div class="w-controls"></div>' +
+      legend([['lbfast', 'Product page: 100 ms of work'], ['lbslow', 'Chat answer: 2 s of work']]) +
+      '<p class="lb-from">Nginx sends each new request to…</p>' +
+      '<div class="lb-servers">' + [1, 2].map(function (i) {
+        return '<div class="lb-card"><p class="lb-name"><b>App server ' + i + '</b><span>4 workers</span></p>' +
+          '<div class="lb-slots"></div><p class="lb-qk">Waiting for a worker</p><div class="lb-q"></div></div>';
+      }).join('') + '</div>' +
+      '<div class="tiles tiles-3 lb-tiles" aria-live="polite">' +
+        '<div class="tile"><span>Typical product page (p50)</span><b data-o="p50"></b><small>over 10 simulated minutes</small></div>' +
+        '<div class="tile"><span>Slowest 5% of product pages (p95)</span><b data-o="p95"></b><small>over 10 simulated minutes</small></div>' +
+        '<div class="tile key"><span>With the other algorithm</span><b data-o="other"></b><small data-o="otherk"></small></div>' +
+      '</div>' +
+      '<p class="readout" aria-live="polite"></p>' +
+      '<p class="w-note">The live view runs at half speed. The numbers in the tiles come from ten simulated minutes of exactly the same traffic under each algorithm.</p>';
+    el.querySelector('.w-controls').appendChild(segmented('Load balancing algorithm', [
+      { value: 'rr', label: 'Round robin' }, { value: 'lc', label: 'Least connections' }
+    ], alg, function (v) { alg = v; reset(); show(); }));
+    var cards = el.querySelectorAll('.lb-card'), out = el.querySelector('.readout');
+    function o(n) { return el.querySelector('[data-o="' + n + '"]'); }
+
+    function show() {
+      var me = stats[alg], other = stats[alg === 'rr' ? 'lc' : 'rr'];
+      o('p50').textContent = me.p50 + ' ms';
+      o('p95').textContent = me.p95 + ' ms';
+      o('other').textContent = other.p95 + ' ms';
+      o('otherk').textContent = 'p95 with ' + (alg === 'rr' ? 'least connections' : 'round robin');
+      out.innerHTML = alg === 'rr'
+        ? '<strong>Round robin</strong> alternates between the servers without looking at them. When one server’s workers are all busy with chats, product pages still get sent there, and wait in its queue while the other server has free workers.'
+        : '<strong>Least connections</strong> sends each request to the server with fewer requests in progress, so a product page goes wherever a worker is free. The typical page is just as fast, but the slow tail is about ' +
+          Math.max(2, Math.round(stats.rr.p95 / stats.lc.p95)) + ' times shorter.';
+    }
+
+    /* The live view. */
+    var live, st, clock, nextA, last = null, drawn = 0;
+    function reset() { live = fresh(); st = { turn: 0 }; clock = 0; nextA = -Math.log(1 - Math.random()) / P.rate; }
+    function advance(to) {
+      while (clock < to) {
+        clock += P.dt;
+        while (nextA <= clock) {
+          var slow = Math.random() < P.pSlow;
+          live[choose(alg, live, st, Math.random)].q.push({ a: nextA, d: slow ? P.slow : P.fast, slow: slow });
+          nextA += -Math.log(1 - Math.random()) / P.rate;
+        }
+        step(live, clock, function () {});
+      }
+    }
+    function cell(x) { return '<i class="' + (x ? (x.slow ? 'lbslow' : 'lbfast') : '') + '"></i>'; }
+    function render() {
+      live.forEach(function (s, i) {
+        var slots = '';
+        for (var k = 0; k < P.workers; k++) slots += cell(s.busy[k]);
+        cards[i].querySelector('.lb-slots').innerHTML = slots;
+        var q = s.q.slice(0, 14).map(cell).join('') + (s.q.length > 14 ? '<em>+' + (s.q.length - 14) + '</em>' : '');
+        cards[i].querySelector('.lb-q').innerHTML = q || '<em>none</em>';
+      });
+    }
+    function frame(ts) {
+      if (!el.isConnected) return;
+      if (last === null) last = ts;
+      var dt = Math.min(0.1, (ts - last) / 1000); last = ts;
+      advance(clock + dt * 0.5);
+      if (ts - drawn > 90) { render(); drawn = ts; }
+      requestAnimationFrame(frame);
+    }
+    reset(); show();
+    if (reduceMotion) { advance(30); render(); }
+    else requestAnimationFrame(frame);
+  };
+
+  /* Chapter 4: an Nginx load balancer in front of two app servers. */
+  W['scaleout-live'] = function (el) {
+    var node = archNode;
+    liveArch(el, {
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'eip', 'h', 'HTTPS'],
+        ['fw', 'eip', 'sg', 'v', ''],
+        ['lb', 'sg', 'lb', 'h', ''],
+        ['a1', 'lb', 'app1', 'v', ''],
+        ['a2', 'lb', 'app2', 'v', 'least connections'],
+        ['d1', 'app1box', 'db', 'v', ''],
+        ['d2', 'app2box', 'db', 'v', ''],
+        ['io', 'db', 'disk', 'h', ''],
+        ['bak', 'disk', 'snap', 'v', 'daily', true]
+      ],
+      request: [['in', 0], ['fw', 0], ['lb', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['lb', 1], ['fw', 1], ['in', 1],
+                ['in', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['d2', 0], ['d2', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]],
+      steps: [
+        { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
+          say: '<strong>Find the service.</strong> DNS now points <code>app.example.com</code> at the load balancer’s Elastic IP. Users never see the app servers directly.' },
+        { on: ['users', 'eip', 'sg', 'lb'], run: [['in', 0], ['fw', 0], ['lb', 0]], t: '~40 ms: 2 round trips to Mumbai',
+          say: '<strong>Connect to the load balancer.</strong> The browser’s HTTPS connection ends at Nginx, which holds the TLS certificate. Behind it, everything stays on the private network.' },
+        { on: ['lb', 'app1', 'app2'], run: [['a2', 0]], t: 'a fraction of a millisecond',
+          say: '<strong>Choose a server.</strong> Nginx uses least connections: app server 1 has 7 requests in progress, app server 2 has 3, so this one goes to server 2.' },
+        { on: ['app2', 'db', 'disk'], run: [['d2', 0], ['d2', 1]], t: '~0.2–0.5 ms per query',
+          say: '<strong>Do the work.</strong> FastAPI on server 2 queries PostgreSQL over the private network, through its connection pool. Both app servers share the same database.' },
+        { on: ['app2', 'lb', 'users'], run: [['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
+          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. The user can’t tell, and doesn’t need to know, which server answered.' },
+        { on: ['lb', 'app2'], run: [['a2', 0]], t: 'after 3 failed attempts',
+          say: '<strong>If a server fails.</strong> When requests to app server 1 keep failing, Nginx stops sending it traffic for a while and server 2 takes everything. That’s why each server needs room to spare.' }
+      ],
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Users', '10,000 of them') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1, one zone</p>' +
+          '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
+            '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
+              '<div class="ar2-row">' +
+                '<div class="ar2-edge ar3-edge">' +
+                  node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address') +
+                  node('sg', 'shield', 'c-sec', 'Security group', '443 open') +
+                '</div>' +
+                '<div class="ar2-ec2 ar4-lb"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'Load balancer: EC2 c7g.medium</p>' +
+                  node('lb', 'proxy', 'c-net', 'Nginx', 'least_conn, health checks') +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private ar4-c"><p class="ar2-k">Private subnet: app servers</p>' +
+              '<div class="ar4-apps">' +
+                '<div class="ar2-ec2" data-p="app1box">' + node('app1', 'bolt', 'c-sw', 'FastAPI', '8 workers') + '<p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + 'App server 1: c7g.2xlarge, 8 vCPUs</p></div>' +
+                '<div class="ar2-ec2" data-p="app2box">' + node('app2', 'bolt', 'c-sw', 'FastAPI', '8 workers') + '<p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + 'App server 2: c7g.2xlarge, 8 vCPUs</p></div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private ar4-c"><p class="ar2-k">Private subnet: database</p>' +
+              '<div class="ar2-ec2 ar3-db">' +
+                '<div class="ar3-two">' +
+                  node('db', 'db', 'c-sw', 'PostgreSQL', 'shared by both app servers') +
+                  node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB') +
+                '</div>' +
+                '<p class="ar2-k ar4-cap">' + icon('db', 'c-db') + 'Database server: EC2 r7g.large, 2 vCPUs, 16 GB</p>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ar2-bak">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
+        '</div>'
+    });
+  };
+
+  /* ---------- Chapter 5: a primary for writes, replicas for reads ---------- */
+
+  W['replica-live'] = function (el) {
+    var node = archNode;
+    liveArch(el, {
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'lb', 'h', 'HTTPS'],
+        ['lb1', 'lb', 'app1', 'vt', ''],
+        ['lb2', 'lb', 'app2', 'vt', ''],
+        ['lb3', 'lb', 'app3', 'vt', ''],
+        ['q1', 'app1', 'rep1', 'v', ''],
+        ['q2', 'app3', 'primary', 'v', 'SQL'],
+        ['q3', 'app2', 'rep2', 'v', ''],
+        ['wal1', 'primary', 'rep1', 'h', 'WAL', true],
+        ['wal2', 'primary', 'rep2', 'u', 'WAL stream', true]
+      ],
+      joints: true,
+      request: [['in', 0], ['lb1', 0], ['q1', 0], ['q1', 1], ['lb1', 1], ['in', 1],
+                ['in', 0], ['lb3', 0], ['q2', 0], ['wal1', 0], ['wal2', 0], ['q2', 1], ['lb3', 1], ['in', 1],
+                ['in', 0], ['lb2', 0], ['q3', 0], ['q3', 1], ['lb2', 1], ['in', 1]],
+      steps: [
+        { on: ['users', 'lb', 'app1', 'rep1'], run: [['in', 0], ['lb1', 0], ['q1', 0], ['q1', 1], ['lb1', 1], ['in', 1]], t: 'a read',
+          say: '<strong>Open a conversation.</strong> The load balancer sends the request to app server 1. Loading the conversation only reads data, so the app sends the query to a replica, and replica 1 answers from its own copy.' },
+        { on: ['users', 'lb', 'app3', 'primary'], run: [['in', 0], ['lb3', 0], ['q2', 0], ['q2', 1], ['lb3', 1], ['in', 1]], t: 'a write',
+          say: '<strong>Ask a question.</strong> This request lands on app server 3. Saving the question changes data, so it goes to the primary, whichever app server sends it. Every <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> does.' },
+        { on: ['primary', 'rep1', 'rep2'], run: [['wal1', 0], ['wal2', 0]], t: 'usually a few milliseconds',
+          say: '<strong>Stream the change.</strong> The primary appends the new message to its write-ahead log, and streams that record to both replicas over the private network.' },
+        { on: ['rep1', 'rep2'], run: [], t: 'applied in the same order',
+          say: '<strong>Replay it.</strong> Each replica applies the record exactly as the primary did, in the same order. A few milliseconds after the write, both replicas have the question too.' },
+        { on: ['users', 'lb', 'app2', 'rep2'], run: [['in', 0], ['lb2', 0], ['q3', 0], ['q3', 1], ['lb2', 1], ['in', 1]], t: 'reads spread across replicas',
+          say: '<strong>Spread the reads.</strong> Every app server can reach every database. The next read lands on app server 2 and goes to replica 2. The primary is left with the writes, and each new replica adds more read capacity.' }
+      ],
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Users', '100,000 of them') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+          '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
+            '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
+              '<div class="ar5-mid">' + node('lb', 'proxy', 'c-net', 'Load balancer', 'least connections') + '</div>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private"><p class="ar2-k">Private subnet: app servers</p>' +
+              '<div class="ar5-apps">' +
+                node('app1', 'bolt', 'c-cpu', 'App server 1', 'FastAPI, 8 workers') +
+                node('app2', 'bolt', 'c-cpu', 'App server 2', 'FastAPI, 8 workers') +
+                node('app3', 'bolt', 'c-cpu', 'App server 3', 'FastAPI, 8 workers') +
+              '</div>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private ar5-sub">' +
+              '<div class="ar5-db">' +
+                node('primary', 'db', 'c-db', 'Primary', 'every write, and reads that must be fresh') +
+                node('rep1', 'db', 'c-db', 'Replica 1', 'read-only copy') +
+                node('rep2', 'db', 'c-db', 'Replica 2', 'read-only copy') +
+              '</div>' +
+              '<p class="ar2-k ar5-foot">Private subnet: database</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+    });
+  };
+
+  /* ---------- Chapter 5: replication lag on a timeline ---------- */
+
+  W['lag-sim'] = function (el) {
+    var RELOAD = 150, SPAN = 2000;   /* the page reloads 150 ms after the write; the timeline shows 2 seconds */
+    var st = { lag: 400, ryw: false };
+    el.innerHTML =
+      '<div class="calc">' +
+        '<div class="w-field"><label for="lgL">Replication lag right now</label><input type="range" id="lgL" min="0" max="1800" step="50" value="' + st.lag + '"><output for="lgL"></output></div>' +
+        '<label class="ql-check"><input type="checkbox" id="lgR"> Read your own writes: send this user’s reads to the primary just after they write</label>' +
+      '</div>' +
+      legend([['has', 'Has your question'], ['hasnt', 'Doesn’t have it yet']]) +
+      '<div class="lag-tl">' +
+        '<div class="lag-row"><span class="lag-name">Primary</span><span class="lag-track" data-t="p"></span></div>' +
+        '<div class="lag-row"><span class="lag-name">Replica</span><span class="lag-track" data-t="r"></span></div>' +
+        '<div class="lag-axis"><span style="left:0%">0</span><span style="left:25%">0.5 s</span><span style="left:50%">1 s</span><span style="left:75%">1.5 s</span><span style="left:100%">2 s</span></div>' +
+        '<span class="lag-mark" style="left:calc(var(--lag-name) + (100% - var(--lag-name)) * ' + (RELOAD / SPAN) + ')"><b>Page reloads</b></span>' +
+      '</div>' +
+      '<p class="lag-result" aria-live="polite"></p>' +
+      '<p class="readout"></p>';
+    el.querySelector('#lgL').addEventListener('input', function (e) { st.lag = +e.target.value; draw(); });
+    el.querySelector('#lgR').addEventListener('change', function (e) { st.ryw = e.target.checked; draw(); });
+    var res = el.querySelector('.lag-result'), out = el.querySelector('.readout');
+
+    function bar(from) {
+      var f = Math.min(1, from / SPAN) * 100;
+      return '<i class="hasnt" style="left:0;width:' + f + '%"></i><i class="has" style="left:' + f + '%;width:' + (100 - f) + '%"></i>';
+    }
+    function draw() {
+      el.querySelector('#lgL + output').textContent = st.lag + ' ms';
+      el.querySelector('[data-t="p"]').innerHTML = bar(0);
+      el.querySelector('[data-t="r"]').innerHTML = bar(st.lag);
+      var from = st.ryw ? 'primary' : 'replica';
+      el.querySelector('[data-t="p"]').parentNode.classList.toggle('reads', st.ryw);
+      el.querySelector('[data-t="r"]').parentNode.classList.toggle('reads', !st.ryw);
+      var ok = st.ryw || st.lag <= RELOAD;
+      res.className = 'lag-result ' + (ok ? 'ok' : 'bad');
+      res.innerHTML = ok
+        ? 'The reload reads from the ' + from + ', which already has the question: <strong>the user sees it</strong>.'
+        : 'The reload reads from the replica, which won’t have the question for another ' + (st.lag - RELOAD) + ' ms: <strong>the user’s own question is missing</strong>.';
+      out.innerHTML = st.ryw
+        ? 'For a short window after this user writes, their reads go to the primary, which always has the latest data. Everyone else keeps reading from the replicas.'
+        : 'The user asks a question at 0 ms, and the page reloads the conversation 150 ms later. Drag the lag past 150 ms to see the problem, then turn on read your own writes.';
+    }
+    draw();
   };
 
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */

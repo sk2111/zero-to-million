@@ -100,7 +100,7 @@ ZTM.content[3] = {
         <ol class="points lede">
           <li>On one server, the app talked to PostgreSQL over <code>localhost</code>. A round trip took a few hundredths of a millisecond, so 10 or 20 queries per API call were practically free.</li>
           <li>Now every query crosses the network. Inside one zone that’s about 0.2–0.5 ms per round trip, on top of the query’s own work.</li>
-          <li>Twenty small queries per request now add 15–20 ms that every user waits for, and more if the database sits in another zone. Try it:</li>
+          <li>Twenty small queries per request now add about 10–20 ms that every user waits for, and more if the database sits in another zone. Try it:</li>
         </ol>
         <div class="widget" data-widget="query-latency"></div>
 

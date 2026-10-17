@@ -487,6 +487,7 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .ar2-wires .wire.on { stroke: var(--accent); stroke-width: 2.5; opacity: 1; }
 .ar2-wires marker path { fill: var(--ink-2); }
 .ar2-wires text { font-size: 11px; font-weight: 600; fill: var(--muted); paint-order: stroke; stroke: var(--sheet); stroke-width: 4px; }
+.ar2-wires .joint { fill: var(--ink-2); opacity: 0.7; }
 .ar2-wires .pkt { fill: var(--c-cpu); stroke: var(--sheet); stroke-width: 2; }
 .ar2-wires .pkt.back { fill: var(--accent); }
 .nd { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; padding: 0.55rem 0.5rem 0.6rem; border: 1px solid var(--rule-2); border-radius: 10px; background: var(--sheet); text-align: center; font-size: 0.78rem; line-height: 1.25; transition: opacity 0.2s, box-shadow 0.2s; }
@@ -560,6 +561,66 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .sa-to svg { width: 2rem; height: 2rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .c-db { background: #c925d1; }
 
+/* ---------- Chapter 4: load balancer simulation and architecture ---------- */
+
+.lb-from { margin: 0.4rem 0 0.5rem; font-size: 0.86rem; color: var(--muted); }
+.lb-servers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.lb-card { padding: 0.7rem 0.9rem 0.8rem; border: 2px solid #ed7100; border-radius: 10px; }
+.lb-name { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 0.5rem; font-size: 0.9rem; }
+.lb-name span { font-size: 0.78rem; color: var(--muted); }
+.lb-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; }
+.lb-slots i { display: block; height: 2.2rem; border-radius: 6px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.lb-qk { margin: 0.6rem 0 0.3rem; font-size: 0.76rem; color: var(--muted); }
+.lb-q { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; min-height: 1rem; }
+.lb-q i { display: block; width: 0.85rem; height: 0.85rem; border-radius: 3px; }
+.lb-q em { font-size: 0.76rem; font-style: normal; color: var(--muted); }
+.lb-slots i.lbfast, .lb-q i.lbfast, .sw.lbfast { background: var(--c-disk); box-shadow: none; }
+.lb-slots i.lbslow, .lb-q i.lbslow, .sw.lbslow { background: var(--c-cpu); box-shadow: none; }
+.lb-tiles { margin-top: 1rem; }
+.ar4-lb { flex: none; width: 15rem; }
+.ar4-lb .nd { width: 100%; }
+.ar4-apps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.6rem; }
+.ar4-apps .ar2-ec2 .nd { max-width: 13rem; margin: 0 auto; }
+.ar2 .ar4-cap { margin: 0.7rem 0 0; }
+.ar2 .ar4-c > .ar2-k { justify-content: center; }
+
+/* ---------- Chapter 5: read/write ratio bars ---------- */
+
+.ratio { max-width: 50rem; margin: 1rem 0 1.4rem; }
+.ratio-k { margin: 0.8rem 0 0.3rem; font-size: 0.84rem; font-weight: 600; color: var(--ink-2); }
+.ratio .budget { margin: 0; }
+.b-read { background: var(--c-disk); }
+.budget .b-read { color: var(--b-db-ink); }
+.b-write { background: var(--c-cpu); }
+
+/* ---------- Chapter 5: replicas diagram and the lag timeline ---------- */
+
+.ar5-mid { display: flex; justify-content: center; }
+.ar5-mid .nd { width: 15rem; }
+.ar5-apps, .ar5-db { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3rem; }
+.ar5-apps { margin-top: 1.6rem; }
+.ar5-db { padding-bottom: 2.4rem; }
+.ar5-sub { padding-top: 0.9rem; }
+.ar2 .ar5-foot { margin: 0; }
+.lag-tl { --lag-name: 6rem; position: relative; margin-top: 0.4rem; padding-top: 1.7rem; }
+.lag-row { display: grid; grid-template-columns: var(--lag-name) 1fr; align-items: center; margin: 0.4rem 0; }
+.lag-name { font-size: 0.88rem; font-weight: 600; }
+.lag-track { position: relative; height: 1.6rem; border-radius: 4px; }
+.lag-row.reads .lag-track { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); }
+.lag-track i { position: absolute; top: 0; bottom: 0; }
+.lag-track i:last-child { border-radius: 0 4px 4px 0; }
+.lag-track i.has, .sw.has { background: var(--accent); }
+.lag-track i.hasnt, .sw.hasnt { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.lag-axis { position: relative; height: 1.2rem; margin-left: var(--lag-name); font-size: 0.74rem; color: var(--muted); }
+.lag-axis span { position: absolute; top: 0.2rem; transform: translateX(-50%); white-space: nowrap; }
+.lag-axis span:first-child { transform: none; }
+.lag-axis span:last-child { transform: translateX(-100%); }
+.lag-mark { position: absolute; top: 0; bottom: 1.3rem; border-left: 2px dashed var(--ink); }
+.lag-mark b { position: absolute; top: 0; left: 0.35rem; font-size: 0.76rem; white-space: nowrap; }
+.lag-result { margin: 0.9rem 0 0; padding: 0.6rem 0.9rem; border-radius: 8px; }
+.lag-result.ok { background: var(--accent-soft); }
+.lag-result.bad { background: var(--amber-soft); }
+
 /* ---------- 1.1: the server stack ---------- */
 
 .stack { margin: 2.4rem 0 1rem; border: 1px solid var(--rule-2); border-radius: 14px; overflow: hidden; }
@@ -608,7 +669,7 @@ ol.term-note > li::marker { color: var(--term-prompt); }
   align-items: baseline; gap: 0.3rem 1rem;
 }
 .w-field label, .w-field .lbl { grid-area: label; font-size: 0.9rem; color: var(--ink-2); }
-.w-field input, .w-field .cores { grid-area: input; }
+.w-field input, .w-field .cores, .w-field .ql-where { grid-area: input; }
 .w-field output { grid-area: out; font-weight: 700; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent); }
 
@@ -868,6 +929,10 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .ar2 { grid-template-columns: 1fr; gap: 2rem; }
   .sa { grid-template-columns: 1fr; }
   .ar3-two { gap: 1rem; }
+  .lb-servers, .ar4-apps { grid-template-columns: 1fr; gap: 1rem; }
+  .ar5-apps, .ar5-db { gap: 0.8rem; }
+  .lag-tl { --lag-name: 4.6rem; }
+  .ar4-lb { width: auto; }
   .sa-to { transform: rotate(90deg); }
   .ar2-left { flex-direction: row; gap: 2rem; padding-top: 0; }
   .ar2-left .nd { flex: 1; }

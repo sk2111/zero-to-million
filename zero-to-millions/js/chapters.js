@@ -23,15 +23,15 @@ ZTM.chapters = [
     topics: ['Scaling up, and its ceiling', 'Splitting the app and the database onto their own servers', 'Choosing instance types for CPU-bound and I/O-bound work', 'Your own PostgreSQL, or Amazon RDS', 'Connection pooling', 'Removing the single point of failure']
   },
   {
-    n: 4, slug: 'scale-out', title: 'Scale out', users: 10000, status: 'planned',
-    question: 'How do several servers act like one?',
-    summary: 'Load balancers, stateless app servers, and where sessions go when any server can answer.',
+    n: 4, slug: 'scale-out', title: 'Scale out', users: 10000, status: 'ready', minutes: 40,
+    question: 'The app server is full. A bigger server, or more of them?',
+    summary: 'Find the bottleneck, scale the app tier out to several servers behind an Nginx load balancer, and choose how to spread the requests.',
     topics: ['Load balancers', 'Stateless application servers', 'Sessions and sticky routing', 'Health checks', 'Rolling deploys']
   },
   {
-    n: 5, slug: 'make-it-fast', title: 'Make it fast', users: 100000, status: 'planned',
+    n: 5, slug: 'make-it-fast', title: 'Make it fast', users: 100000, status: 'ready', minutes: 45,
     question: 'The database is the bottleneck. Now what?',
-    summary: 'Indexes, caching, read replicas and CDNs: doing less work, and doing it closer to the user.',
+    summary: 'Find what the database is busy with, scale its reads with replicas, and handle the consistency trade-offs that copies bring.',
     topics: ['Indexes and query plans', 'Caching with Redis', 'Cache invalidation', 'Read replicas and replication lag', 'CDNs for static content']
   },
   {

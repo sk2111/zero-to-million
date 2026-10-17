@@ -1231,34 +1231,27 @@ window.ZTM = window.ZTM || {};
     /* Gunther's Universal Scalability Law, with threads as the load:
        throughput(n) = SOLO·n / (1 + σ(n−1) + κ·n(n−1)).
        σ is the share of each request spent under a lock every thread needs: threads queue for it,
-       so the curve flattens. κ is the cost of every pair of threads keeping shared data in sync:
-       it grows with n², so the curve falls. The peak is at n = √((1−σ)/κ).
+       so the curve flattens. κ is the cost of keeping shared data in sync: when one thread changes
+       it, every other core's cached copy goes stale and must be fetched again. That happens between
+       every pair of threads, so it grows with n² and the curve falls. The peak is at n = √((1−σ)/κ).
        Every thread is kept busy, so response time = n ÷ throughput (Little's Law). */
     var SOLO = 20;                           /* requests a second one thread manages alone: 50 ms each */
-    var SYNC = [
-      { value: 'low', label: 'Low', k: 0.0001 },
-      { value: 'med', label: 'Medium', k: 0.0005 },
-      { value: 'high', label: 'High', k: 0.002 }
-    ];
-    var lock = 5, sync = 'med', pos = 40;    /* pos is the threads slider: 2^(pos/10) threads, 1 to 256 */
+    var SYNC = 0.0005;                       /* κ: puts the sweet spot at about 44 threads with a 5% lock */
+    var lock = 5, pos = 40;                  /* pos is the threads slider: 2^(pos/10) threads, 1 to 256 */
     function threadsAt(v) { return Math.max(1, Math.round(Math.pow(2, v / 10))); }
 
     el.innerHTML =
       '<div class="ts-fields">' +
         '<div class="w-field"><label for="tsN">Threads</label><input type="range" id="tsN" min="0" max="80" value="' + pos + '"><output for="tsN"></output></div>' +
-        '<div class="w-field"><label for="tsL">Share of each request spent under a shared lock</label><input type="range" id="tsL" min="0" max="20" value="' + lock + '"><output for="tsL"></output></div>' +
-        '<div class="w-field"><span class="lbl">Cost of keeping shared data in sync</span><span class="cores"></span></div>' +
-      '</div>' +
+        '<div class="w-field"><label for="tsL">Share of each request spent under a shared lock</label><input type="range" id="tsL" min="0" max="20" value="' + lock + '"><output for="tsL"></output></div>' +      '</div>' +
       '<div class="ut-read" aria-live="polite"><b class="ut-big"></b><span class="ut-say"></span></div>' +
       legend([['ideal', 'Perfect scaling'], ['real', 'Your service'], ['hurt', 'Too many threads']]) +
       '<div class="chart"></div>' +
       '<p class="w-note">A busy service: one request takes 50 ms on its own, and there is enough traffic to keep every thread busy. Response time is threads ÷ throughput (Little’s Law).</p>';
     var box = el.querySelector('.chart'), inN = el.querySelector('#tsN'), inL = el.querySelector('#tsL'),
         big = el.querySelector('.ut-big'), say = el.querySelector('.ut-say');
-    el.querySelector('.cores').appendChild(segmented('Cost of keeping shared data in sync', SYNC, sync, function (v) { sync = v; draw(); }));
-
     function draw() {
-      var s = lock / 100, k = SYNC.filter(function (o) { return o.value === sync; })[0].k, n = threadsAt(pos);
+      var s = lock / 100, k = SYNC, n = threadsAt(pos);
       function X(t) { return SOLO * t / (1 + s * (t - 1) + k * t * (t - 1)); }
       var bestN = Math.round(Math.sqrt((1 - s) / k)), top = X(bestN), now = X(n);
       var wait = n / now * 1e9, bestWait = bestN / top * 1e9;           /* response times in ns, for fmtNs */

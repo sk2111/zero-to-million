@@ -256,11 +256,12 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <ol class="points">
           <li>Threads that share data need locks so they don’t trip over each other.</li>
           <li>While one thread holds a lock, the others wait, however many cores you have.</li>
-          <li>Every thread you add is also one more for the others to keep in sync with: more context switches, more cache misses, more fights over the same memory. That cost comes from every pair of threads, so it grows faster than the number of threads.</li>
+          <li>Shared data costs something even when no thread is waiting for a lock. Each core keeps its own copy of the data it’s working on in its cache. When one thread changes shared data, such as a request counter or an in-memory cache, every other core’s copy goes out of date and has to be fetched again.</li>
+          <li>Every thread keeps catching up with changes made by every other thread, so this cost grows with the number of pairs: 4 threads make 6 pairs, 64 threads make 2,016. That is why throughput doesn’t just level off as you add threads. It falls.</li>
         </ol>
         <p>A busy service, with enough traffic to keep every thread busy. Add threads and watch what happens:</p>
         <div class="widget" data-widget="thread-sweet-spot"></div>
-        <ol class="points" start="4">
+        <ol class="points" start="5">
           <li><strong>So there is always a sweet spot.</strong> Throughput rises as you add threads, levels off, then falls. Past the peak, every extra thread makes the whole system slower, not faster. Where the sweet spot sits depends on the kind of work, which the next page covers.</li>
           <li><strong>Too many threads hurt latency most.</strong> With the starting settings, 256 threads serve about as many requests a second as 8 do, but each request takes over 30 times as long.</li>
           <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or p99 latency starts to climb.</li>

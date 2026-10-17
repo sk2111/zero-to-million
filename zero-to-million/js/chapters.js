@@ -59,10 +59,10 @@ ZTM.chapters = [
     topics: ['Round trips and the speed of light', 'How a CDN works', 'CloudFront in front of S3', 'Versioned names and cache lifetimes', 'Smaller images', 'What a CDN really saves']
   },
   {
-    n: 10, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'planned',
+    n: 10, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'ready', minutes: 50,
     question: 'Dozens of programs on dozens of servers: who starts, restarts and moves them?',
-    summary: 'Package each service as a container, and let Kubernetes run them, restart them, roll out new versions and let services find each other.',
-    topics: ['Containers and images', 'Why you need an orchestrator', 'Kubernetes: pods, deployments and services', 'Rolling updates and health probes', 'Service discovery']
+    summary: 'Package each service as a container, and let Kubernetes run them, heal them, place them, roll out new versions and let services find each other.',
+    topics: ['Containers and images', 'Desired state', 'Pods, Deployments and Services', 'Probes, requests and rolling updates', 'Amazon EKS and the Gateway API']
   },
   {
     n: 11, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',

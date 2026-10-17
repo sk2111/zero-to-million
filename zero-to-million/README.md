@@ -34,7 +34,7 @@ without internet the fonts fall back to Segoe UI.
 | 7 | Split the monolith | 1M | Written |
 | 8 | Publish events | 2M | Written |
 | 9 | Serve it nearby | 3M | Written |
-| 10 | Run many services | 5M | Planned |
+| 10 | Run many services | 5M | Written |
 | 11 | Beyond a million | 10M | Planned |
 | 12 | When things break | every stage | Planned |
 
@@ -99,6 +99,13 @@ CloudFront (a private bucket with origin access control, the distribution, conte
 for a year, resizing to WebP on upload) · What the CDN changed (speed, why the bill fell mostly for
 other reasons, flat-rate pricing, the traps).
 
+Chapter 10 has 4 pages: The night a server died (programs placed by hand, a 2 a.m. rebuild, the jobs
+left to people) · Containers: one package that runs anywhere (what a container is and isn't, a
+Dockerfile, images tagged by commit, the rules) · Kubernetes: say what, not how (desired state, the
+parts, a Deployment and Service with probes and requests, a cluster you can break and watch heal) ·
+Tomazon on EKS (what moves and what stays, the Gateway API instead of the retired ingress-nginx, an
+HTTPRoute, settings, traps, whether it's worth it).
+
 ## Files
 
 ```
@@ -114,6 +121,7 @@ js/ch6-cache-it.js       Chapter 6's pages
 js/ch7-split-the-monolith.js  Chapter 7's pages
 js/ch8-publish-events.js      Chapter 8's pages
 js/ch9-serve-it-nearby.js     Chapter 9's pages
+js/ch10-run-many-services.js  Chapter 10's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

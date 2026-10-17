@@ -1658,6 +1658,218 @@ window.ZTM = window.ZTM || {};
     });
   };
 
+  /* ---------- Chapter 10: a small cluster that keeps putting itself back as declared ---------- */
+
+  W['k8s-cluster'] = function (el) {
+    var SLOTS = 4, STEP = reduceMotion ? 0 : 750, MAX_NODES = 6;
+    var APPS = { cat: 'catalogue', core: 'core API', resize: 'resizer', email: 'email sender' };
+    var st, busy = false, seq = 0;
+
+    el.innerHTML = '<div class="kc"></div>' +
+      '<div class="pt-controls">' +
+        '<button type="button" class="btn-sm" data-act="crash">Crash a pod</button>' +
+        '<button type="button" class="btn-sm" data-act="node">Lose a node</button>' +
+        '<button type="button" class="btn-sm" data-act="deploy">Deploy a new catalogue</button>' +
+        '<button type="button" class="btn-sm" data-act="scale">A sale: 8 catalogue pods</button>' +
+        '<button type="button" class="btn-sm quiet" data-act="reset">Start again</button>' +
+      '</div>' +
+      '<p class="readout" aria-live="polite"></p>';
+
+    function pod(app, ver, s) { return { id: ++st.n, app: app, ver: ver, s: s || 'run' }; }
+    function fresh() {
+      seq++; busy = false;
+      st = { nodes: [], pending: [], ver: 41, n: 0 };
+      ['a', 'b', 'c'].forEach(function (z, i) { st.nodes.push({ name: 'Node ' + (i + 1), zone: 'ap-south-1' + z, up: true, pods: [] }); });
+      [['cat', 0], ['core', 0], ['resize', 0], ['cat', 1], ['core', 1], ['cat', 2], ['core', 2], ['email', 2]].forEach(function (x) {
+        st.nodes[x[1]].pods.push(pod(x[0], st.ver));
+      });
+      st.say = 'Three nodes, one in each zone, each with room for 4 pods. The Deployments ask for 3 catalogue pods, 3 core API pods, a resizer and an email sender. Try each button, and watch Kubernetes put things back the way they were declared.';
+      render();
+    }
+    function all() { var out = []; st.nodes.forEach(function (n) { n.pods.forEach(function (p) { out.push(p); }); }); return out; }
+    function nodeOf(p) { for (var i = 0; i < st.nodes.length; i++) if (st.nodes[i].pods.indexOf(p) >= 0) return i; return -1; }
+    function sweep() { st.nodes.forEach(function (n) { n.pods = n.pods.filter(function (p) { return p.s !== 'stop'; }); }); }
+    /* The scheduler: the working node with the most room. */
+    function room() {
+      var best = -1;
+      st.nodes.forEach(function (n, i) { if (n.up && n.pods.length < SLOTS && (best < 0 || n.pods.length < st.nodes[best].pods.length)) best = i; });
+      return best;
+    }
+    function schedule(p) { var j = room(); if (j < 0) { p.s = 'pend'; st.pending.push(p); } else { p.s = 'start'; st.nodes[j].pods.push(p); } }
+    function ready() { all().forEach(function (p) { if (p.s === 'start') p.s = 'run'; }); }
+    /* When pods can't fit, the node autoscaler adds nodes for them. */
+    function autoscale() {
+      return [
+        function () {
+          if (!st.pending.length) return false;
+          st.say = '<strong>No room.</strong> ' + st.pending.length + ' pod' + (st.pending.length > 1 ? 's wait' : ' waits') + ' as <code>Pending</code>. The node autoscaler (Karpenter, on EKS) sees them and starts a new node, which takes about a minute.';
+        },
+        function () {
+          if (!st.pending.length) return false;
+          var need = Math.min(Math.ceil(st.pending.length / SLOTS), MAX_NODES - st.nodes.length);
+          for (var i = 0; i < need; i++) {
+            var k = st.nodes.length;
+            st.nodes.push({ name: 'Node ' + (k + 1), zone: 'ap-south-1' + 'abc'[k % 3], up: true, pods: [] });
+          }
+          var waiting = st.pending; st.pending = [];
+          waiting.forEach(schedule);
+          st.say = '<strong>The new node joins,</strong> and the scheduler places the waiting pods on it.';
+        }
+      ];
+    }
+    function run(steps) {
+      busy = true; var my = seq;
+      (function next(i) {
+        if (my !== seq || !el.isConnected) return;
+        if (i >= steps.length) { busy = false; render(); return; }
+        if (steps[i]() === false) { next(i + 1); return; }   /* a step with nothing to do is skipped */
+        render();
+        setTimeout(function () { next(i + 1); }, STEP);
+      })(0);
+    }
+
+    var ACT = {
+      crash: function () {
+        var p = all().filter(function (x) { return x.app === 'cat' && x.s === 'run'; })[0];
+        if (!p) return;
+        var where = st.nodes[nodeOf(p)].name;
+        run([
+          function () { p.s = 'crash'; st.say = '<strong>A catalogue container exits</strong> on ' + where + '. Its readiness probe fails at once, so the Service stops sending it requests.'; },
+          function () { p.s = 'start'; p.restarts = (p.restarts || 0) + 1; st.say = '<strong>The kubelet restarts it,</strong> in the same pod, on the same node, within seconds. Nobody was woken up.'; },
+          function () { p.s = 'run'; st.say = '<strong>Ready again.</strong> If it kept crashing, Kubernetes would wait longer before each try, from 10 seconds up to 5 minutes. That’s the <code>CrashLoopBackOff</code> you’ll see in <code>kubectl get pods</code>.'; }
+        ]);
+      },
+      node: function () {
+        var ups = st.nodes.filter(function (n) { return n.up; });
+        if (ups.length < 2) return;
+        var n = ups.reduce(function (a, b) { return b.pods.length > a.pods.length ? b : a; });
+        var lost;
+        run([
+          function () { n.up = false; n.pods.forEach(function (p) { p.s = 'lost'; }); st.say = '<strong>' + n.name + ' stops responding:</strong> its hardware has failed. Its pods are gone with it.'; },
+          function () { st.say = '<strong>Within about a minute,</strong> Kubernetes marks the node <code>NotReady</code> and takes its pods out of every Service, so no traffic reaches them. By default it then waits 5 minutes, in case the node comes back.'; },
+          function () {
+            lost = n.pods; n.pods = [];
+            lost.forEach(function (p) { schedule(pod(p.app, p.ver)); });
+            st.say = '<strong>Five minutes later,</strong> the Deployments see they’re ' + lost.length + ' pod' + (lost.length > 1 ? 's' : '') + ' short, create replacements, and the scheduler places them on the nodes with room.';
+          }
+        ].concat(autoscale(), [function () { ready(); st.say = '<strong>Back to what was declared,</strong> with no one awake. Copies of every service on other nodes kept serving the whole time, which is why every service runs at least 2.'; }]));
+      },
+      deploy: function () {
+        var nv = st.ver + 1, olds = all().filter(function (p) { return p.app === 'cat' && p.s === 'run' && p.ver === st.ver; });
+        var steps = [function () { st.say = '<strong>Deploy v' + nv + '.</strong> The image tag in the catalogue Deployment changes. Kubernetes replaces the ' + olds.length + ' pods a few at a time: start a new one, wait until it’s ready, then stop an old one.'; }];
+        olds.forEach(function (old, k) {
+          var nw;
+          steps.push(function () {
+            sweep();
+            nw = pod('cat', nv, 'start');
+            var j = room();
+            if (j < 0) {   /* no spare room: stop an old pod first */
+              j = nodeOf(old); st.nodes[j].pods.splice(st.nodes[j].pods.indexOf(old), 1); old = null;
+              st.say = 'No room for an extra pod, so an old one stops first, and v' + nv + ' starts in its place (' + (k + 1) + ' of ' + olds.length + ').';
+            } else {
+              st.say = 'Starting v' + nv + ' (' + (k + 1) + ' of ' + olds.length + '). It gets no traffic until its readiness probe passes.';
+            }
+            st.nodes[j].pods.push(nw);
+          });
+          steps.push(function () {
+            nw.s = 'run';
+            if (old) old.s = 'stop';
+            st.say = 'The new pod is ready and joins the Service. ' + (old ? 'An old one is told to stop: it finishes the requests it has, then exits.' : '');
+          });
+        });
+        steps.push(function () { sweep(); st.ver = nv; st.say = '<strong>Done:</strong> every catalogue pod runs v' + nv + ', and requests never stopped. If v' + nv + ' were bad, <code>kubectl rollout undo deployment/catalogue</code> would roll back the same way.'; });
+        run(steps);
+      },
+      scale: function () {
+        var have = all().filter(function (p) { return p.app === 'cat' && p.s !== 'stop' && p.s !== 'lost'; }).length + st.pending.filter(function (p) { return p.app === 'cat'; }).length;
+        if (have >= 8) return;
+        run([
+          function () {
+            for (var i = have; i < 8; i++) schedule(pod('cat', st.ver));
+            st.say = '<strong>The 8 p.m. sale starts.</strong> Catalogue CPU passes 60%, so the Horizontal Pod Autoscaler raises the Deployment to 8 pods, and the scheduler places them where there’s room.';
+          }
+        ].concat(autoscale(), [function () { ready(); st.say = '<strong>8 catalogue pods are serving.</strong> After the sale, the autoscaler lowers the count again, and the node autoscaler removes nodes that are left empty.'; }]));
+      },
+      reset: fresh
+    };
+
+    function chip(p) {
+      var state = { run: '', start: 'starting', crash: 'crashed', lost: 'lost', stop: 'stopping', pend: 'pending' }[p.s];
+      return '<span class="kc-pod k-' + p.app + ' s-' + p.s + '"><b>' + APPS[p.app] + (p.app === 'cat' ? ' v' + p.ver : '') + '</b>' +
+        (state ? '<em>' + state + '</em>' : p.restarts ? '<em>restarted ' + p.restarts + '×</em>' : '') + '</span>';
+    }
+    function render() {
+      var nodes = st.nodes.map(function (n) {
+        var free = '';
+        for (var i = n.pods.length; i < SLOTS; i++) free += '<i class="kc-free"></i>';
+        return '<div class="kc-node' + (n.up ? '' : ' down') + '"><p class="kc-head"><b>' + n.name + '</b><span>' + (n.up ? n.zone : 'unreachable') + '</span></p>' +
+          n.pods.map(chip).join('') + (n.up ? free : '') + '</div>';
+      }).join('');
+      var pend = st.pending.length ? '<div class="kc-pending"><p class="kc-head"><b>Pending</b><span>waiting for a node with room</span></p>' + st.pending.map(chip).join('') + '</div>' : '';
+      el.querySelector('.kc').innerHTML = '<div class="kc-nodes">' + nodes + '</div>' + pend;
+      el.querySelector('.readout').innerHTML = st.say;
+      var ups = st.nodes.filter(function (n) { return n.up; }).length;
+      var cats = all().filter(function (p) { return p.app === 'cat' && p.s !== 'stop' && p.s !== 'lost'; }).length;
+      el.querySelectorAll('[data-act]').forEach(function (b) {
+        var a = b.getAttribute('data-act');
+        b.disabled = a !== 'reset' && (busy || (a === 'node' && ups < 2) || (a === 'scale' && cats >= 8));
+      });
+    }
+    el.querySelector('.pt-controls').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-act]');
+      if (!b || b.disabled) return;
+      ACT[b.getAttribute('data-act')]();
+    });
+    fresh();
+  };
+
+  /* ---------- Chapter 10: Tomazon on EKS: a load balancer, pods in the cluster, data outside it ---------- */
+
+  W['eks-arch'] = function (el) {
+    var node = archNode;
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      wires: [
+        ['in', 'shop', 'alb', 'h', ''],
+        ['a1', 'alb', 'core', 'h', ''],
+        ['a2', 'alb', 'cat', 'h', ''],
+        ['d1', 'core', 'pg', 'h', ''],
+        ['d2', 'cat', 'redis', 'h', ''],
+        ['d3', 'work', 'msk', 'h', '']
+      ],
+      request: [['in', 0], ['a2', 0], ['d2', 0], ['d2', 1], ['a2', 1], ['in', 1], ['in', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['in', 1], ['d3', 1]],
+      start: 'Follow the requests',
+      idle: 'Tomazon’s programs, now pods in one cluster. Press <strong>Follow the requests</strong> to go through it step by step.',
+      steps: [
+        { on: ['shop', 'alb'], run: [['in', 0]], t: 'made from a Gateway',
+          say: '<strong>The load balancer.</strong> An Application Load Balancer takes every request, and ends TLS. Nobody built it by hand: the AWS Load Balancer Controller read Tomazon’s Gateway and HTTPRoute, and set it up to match.' },
+        { on: ['alb', 'cat'], run: [['a2', 0]], t: 'straight to a ready pod',
+          say: '<strong>Straight to a pod.</strong> On EKS every pod has an address in the VPC, so the ALB sends a product page request straight to a catalogue pod that’s ready, on whichever node it runs. Kubernetes keeps that list of pods up to date as they come and go.' },
+        { on: ['cat', 'redis'], run: [['d2', 0], ['d2', 1], ['a2', 1], ['in', 1]], t: 'outside the cluster',
+          say: '<strong>The data stays outside.</strong> The catalogue pod reads Redis, then the replicas, which still run on their own EC2 servers. Pods are disposable; the data isn’t.' },
+        { on: ['shop', 'alb', 'core', 'pg'], run: [['in', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['in', 1]], t: 'the HTTPRoute decides',
+          say: '<strong>Checkout goes to the core API.</strong> The HTTPRoute sends <code>/api/orders</code> and everything that isn’t browsing to the core API pods, which write to the primary.' },
+        { on: ['work', 'msk'], run: [['d3', 1]], t: 'no load balancer needed',
+          say: '<strong>Workers fetch their own work.</strong> The cache invalidators and the search indexer read Kafka; the resizer and the email sender read SQS. Nothing sends them requests, so they need no Service at all.' }
+      ],
+      html:
+        '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shoppers', '5 million of them') + '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), 3 zones</p>' +
+          '<div class="c10-grid">' +
+            '<div class="c10-k8s"><p class="ar2-k">EKS cluster: nodes in 3 zones</p></div>' +
+            '<div class="c10-alb">' + node('alb', 'proxy', 'c-net', 'Load balancer', 'an ALB, made from the Gateway') + '</div>' +
+            '<div class="c10-core">' + node('core', 'bolt', 'c-cpu', 'Core API', '6 pods') + '</div>' +
+            '<div class="c10-cat">' + node('cat', 'bolt', 'c-cpu', 'Catalogue', '6 to 30 pods, by CPU') + '</div>' +
+            '<div class="c10-work">' + node('work', 'bolt', 'c-sw', 'Workers', 'invalidators, indexer, email, resizer') + '</div>' +
+            '<div class="c10-pg">' + node('pg', 'db', 'c-db', 'PostgreSQL', 'primary and replicas, on EC2') + '</div>' +
+            '<div class="c10-redis">' + node('redis', 'cache', 'c-db', 'Redis', 'on EC2') + '</div>' +
+            '<div class="c10-msk">' + node('msk', 'log', 'c-sto', 'Kafka and SQS', 'MSK, and the job queues') + '</div>' +
+          '</div>' +
+        '</div>'
+    });
+  };
+
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */
 
   W['percentile-strip'] = function (el) {

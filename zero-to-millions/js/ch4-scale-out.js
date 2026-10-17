@@ -137,7 +137,7 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
 
         <h2>What we chose, and why</h2>
         <ol class="steps">
-          <li><strong>The need.</strong> About 500 requests a second at the busiest hour × 20 ms of CPU each = 10 cores busy. To peak at around 70% (page 1.12), that’s about 14 vCPUs.</li>
+          <li><strong>The need.</strong> About 500 requests a second at the busiest hour × 20 ms of CPU each = 10 cores busy. To peak at around 70% (page 1.11), that’s about 14 vCPUs.</li>
           <li><strong>Scaling up</strong> would mean one c7g.4xlarge, with 16 vCPUs. Simple, but every deploy and every failure still takes the whole product down.</li>
           <li><strong>Scaling out</strong> means two c7g.2xlarge, with 8 vCPUs each, behind a load balancer. The same total capacity at about the same price, and no single app server whose failure stops everything.</li>
           <li><strong>One catch.</strong> If one of the two fails, the other has 8 vCPUs for 10 cores of work, and slows down. Either size each server to carry the busiest hour alone, or run three. Plan for one server to be missing: this is called <strong>N+1</strong>.</li>
@@ -191,7 +191,7 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
         </ol>
         <div class="widget" data-widget="lb-sim"></div>
         <ol class="points" start="4">
-          <li>The typical product page is about as fast either way. The difference is in the tail: the slowest 5% of product pages wait several times less with least connections, and the tail is what users remember (page 1.12).</li>
+          <li>The typical product page is about as fast either way. The difference is in the tail: the slowest 5% of product pages wait several times less with least connections, and the tail is what users remember (page 1.11).</li>
         </ol>
 
         <h2>The Nginx configuration</h2>

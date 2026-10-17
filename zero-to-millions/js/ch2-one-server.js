@@ -183,7 +183,7 @@ ZTM.content[2] = {
           <tbody>
             <tr><td>EC2 instance, t4g.nano</td><td>The virtual machine: 2 vCPUs (ARM, AWS Graviton), 512 MB of RAM, a 20 GB gp3 disk, Ubuntu</td><td>Burstable: it runs at full speed on CPU credits, with a baseline of 5% per vCPU. Fine for a pilot’s light, spiky traffic (page 1.4).</td></tr>
             <tr><td>Nginx</td><td>Accepts HTTPS on port 443, holds the TLS certificate (free from Let’s Encrypt), and forwards each request to the app</td><td>It also serves static files and shields the app from slow clients.</td></tr>
-            <tr><td>FastAPI under Gunicorn</td><td>Your application, as 2 worker processes, one per vCPU</td><td>With <code>async</code> endpoints, each worker can hold many waiting requests at once (page 1.5).</td></tr>
+            <tr><td>FastAPI under Gunicorn</td><td>Your application, as 2 worker processes, one per vCPU</td><td>With <code>async</code> endpoints, each worker can hold many waiting requests at once (page 1.12).</td></tr>
             <tr><td>PostgreSQL</td><td>The database, reached over <code>localhost</code></td><td>A query has no network round trip. Its data lives on the gp3 disk.</td></tr>
             <tr><td>Elastic IP and Route 53</td><td>A fixed public IP address, and DNS that points your domain at it</td><td>Without an Elastic IP, the address changes when the server is stopped and started.</td></tr>
             <tr><td>Security group</td><td>The firewall: port 443 open to everyone, port 22 (SSH) only from your office</td><td>PostgreSQL’s port stays closed to the internet.</td></tr>
@@ -202,7 +202,7 @@ ZTM.content[2] = {
         </div>
         <div class="legend budget-legend"><span><i class="sw b-os"></i>Ubuntu and system services</span><span><i class="sw b-db"></i>PostgreSQL</span><span><i class="sw b-app"></i>FastAPI, 2 workers</span><span><i class="sw b-ng"></i>Nginx, 10 MB</span><span><i class="sw b-free"></i>Left for the page cache</span></div>
         <ol class="points">
-          <li>It fits, but only just. PostgreSQL has about 100 MB of page cache for its data, so once the data grows past that, queries start reading from disk (page 1.7).</li>
+          <li>It fits, but only just. PostgreSQL has about 100 MB of page cache for its data, so once the data grows past that, queries start reading from disk (page 1.6).</li>
           <li>Add a 1 GB swap file as a safety net, so a sudden spike slows the server down instead of the OOM killer stopping PostgreSQL.</li>
           <li>The next size up, t4g.small with 2 GB, costs only a little more each month and removes the worry. Memory is likely to be the first thing this server runs out of.</li>
         </ol>
@@ -273,7 +273,7 @@ ZTM.content[2] = {
           <ol class="points term-note">
             <li>Each line is one request: who asked, when, what, the status code (200 is success), the response size in bytes, and the time in seconds.</li>
             <li>Product pages take 18–42 ms. The chat request takes 1.9 seconds: it waits on a language model, so it’s I/O-bound (page 1.3).</li>
-            <li>Collect these times and you can work out p50 and p95 for every endpoint (page 1.12).</li>
+            <li>Collect these times and you can work out p50 and p95 for every endpoint (page 1.11).</li>
           </ol>
         </figure>
 
@@ -282,7 +282,7 @@ ZTM.content[2] = {
           <ol class="points">
             <li><strong>Decide what success looks like before the pilot starts.</strong> For example: 30 weekly active users
             after a month, and half of them coming back. Then the data can actually answer the question.</li>
-            <li><strong>Watch p95, not just the average.</strong> The slow requests are the ones users remember (page 1.12).</li>
+            <li><strong>Watch p95, not just the average.</strong> The slow requests are the ones users remember (page 1.11).</li>
             <li><strong>Set a few alarms, not many.</strong> Server down, errors rising, disk over 80% full, available memory
             under 20%. Alarms that nobody acts on soon get ignored.</li>
           </ol>
@@ -310,10 +310,10 @@ ZTM.content[2] = {
         <h2>What starts to go wrong</h2>
         <p>As usage grows, the problems arrive in roughly this order:</p>
         <ol class="steps">
-          <li><strong>The busiest hour gets slow.</strong> p95 goes from 80 ms to 800 ms, while the average still looks fine (page 1.12).</li>
+          <li><strong>The busiest hour gets slow.</strong> p95 goes from 80 ms to 800 ms, while the average still looks fine (page 1.11).</li>
           <li><strong>The chat assistant times out</strong> now and then, because every worker is busy.</li>
           <li><strong>Nginx starts returning 502 and 504 errors:</strong> the app is too busy to answer it in time.</li>
-          <li><strong>One night the product stops answering.</strong> In the morning, <code>dmesg</code> shows the OOM killer stopped PostgreSQL (page 1.7).</li>
+          <li><strong>One night the product stops answering.</strong> In the morning, <code>dmesg</code> shows the OOM killer stopped PostgreSQL (page 1.6).</li>
         </ol>
 
         <h2>Diagnose it with chapter 1’s tools</h2>
@@ -334,7 +334,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
     642 www-data   6.3  2.1 nginx: worker process</span></pre>
           <ol class="points term-note">
             <li>Load 5.81 on 2 vCPUs: almost 3 threads ready for every core, and rising (page 1.3).</li>
-            <li>Only 18 MB <code>available</code>, and 612 MB already swapped out to disk: the server has run out of memory (page 1.7).</li>
+            <li>Only 18 MB <code>available</code>, and 612 MB already swapped out to disk: the server has run out of memory (page 1.6).</li>
             <li><code>top</code> shows who is competing: PostgreSQL and both FastAPI workers want the same 2 vCPUs and the same 459 MB, and Nginx needs a share too.</li>
             <li>CloudWatch adds one more: <code>CPUCreditBalance</code> is at 0, so the burstable CPU has nothing left to burst with.</li>
           </ol>
@@ -385,9 +385,9 @@ Swap:          1.0Gi       612Mi       412Mi</span>
         <div class="widget" data-widget="split-arch"></div>
         <ol class="points" start="3">
           <li><strong>The app server</strong> is tuned for CPU-bound work: a compute-optimised instance (AWS c family), sized by how many requests it has to serve.</li>
-          <li><strong>The database server</strong> is tuned for I/O-bound work: a memory-optimised instance (AWS r family), so the working set fits in RAM, with a disk whose IOPS match the load (page 1.8). It can be your own EC2 instance, or Amazon RDS, a managed PostgreSQL that handles backups, updates and failover for you.</li>
+          <li><strong>The database server</strong> is tuned for I/O-bound work: a memory-optimised instance (AWS r family), so the working set fits in RAM, with a disk whose IOPS match the load (page 1.7). It can be your own EC2 instance, or Amazon RDS, a managed PostgreSQL that handles backups, updates and failover for you.</li>
           <li>Keep both in the same zone and the same private network, so a query crosses the network in well under a millisecond. Put the database in a private subnet that the internet can’t reach at all.</li>
-          <li>The new cost is that network hop. A page that runs 30 queries now pays 30 round trips, so it pays to make fewer, better queries (page 1.9).</li>
+          <li>The new cost is that network hop. A page that runs 30 queries now pays 30 round trips, so it pays to make fewer, better queries (page 1.8).</li>
         </ol>
 
         <h2>Where this leads</h2>

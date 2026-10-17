@@ -39,11 +39,11 @@ in practice, to what it means for system design.
 
 | Part | Pages |
 |---|---|
-| CPU | How a CPU works · Processes and threads · CPU-bound and I/O-bound work · What to look for in a CPU · Serving many requests at once |
+| CPU | How a CPU works · Processes and threads · CPU-bound and I/O-bound work · What to look for in a CPU |
 | Memory | How memory works · Memory in practice |
 | Disk | How disks work (including picking a disk for your workload) |
 | Network | How networks work |
-| Putting it together | What's inside a server · Latency numbers · Measuring performance · How much can one server handle? · Recap |
+| Putting it together | What's inside a server · Latency numbers · Measuring performance · Serving many requests at once · How much can one server handle? · Recap |
 
 Chapter 2 has 5 pages: Start with a pilot · Start with a monolith · The first architecture
 (one t4g.nano server in AWS Mumbai running Nginx, FastAPI and PostgreSQL, with a step-through of

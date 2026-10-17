@@ -214,12 +214,12 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
 
         <h2>The database server: tuned for memory and disk</h2>
         <ol class="points">
-          <li>The database is I/O-bound. It wants its working set in RAM (page 1.7) and a fast disk for everything else (page 1.8), so it wants a lot of RAM per vCPU.</li>
+          <li>The database is I/O-bound. It wants its working set in RAM (page 1.6) and a fast disk for everything else (page 1.7), so it wants a lot of RAM per vCPU.</li>
         </ol>
         <table class="data">
           <thead><tr><th>Option</th><th>Disk</th><th>Good at</th><th>Watch out for</th></tr></thead>
           <tbody>
-            <tr><td>Memory-optimised with EBS: r7g with gp3 or io2</td><td>A network-attached EBS volume</td><td>8 GB of RAM per vCPU. The disk survives the server, and snapshots give you backups.</td><td>EBS limits on IOPS and throughput, and about 1 ms per read (page 1.8)</td></tr>
+            <tr><td>Memory-optimised with EBS: r7g with gp3 or io2</td><td>A network-attached EBS volume</td><td>8 GB of RAM per vCPU. The disk survives the server, and snapshots give you backups.</td><td>EBS limits on IOPS and throughput, and about 1 ms per read (page 1.7)</td></tr>
             <tr><td>Storage-optimised: i4g or i4i</td><td>Local NVMe SSDs inside the server</td><td>8 GB of RAM per vCPU, tens of thousands of IOPS even on the smallest size, and about 0.1 ms per read</td><td><strong>The disk is lost if the instance stops or fails.</strong> Use it only with a replica on another server and continuous backups to S3.</td></tr>
             <tr><td>Amazon RDS, such as db.r7g</td><td>EBS, managed by AWS</td><td>Backups, updates and failover done for you</td><td>Costs more than running it yourself, with less control</td></tr>
           </tbody>
@@ -234,7 +234,7 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
           <li><strong>Measure the pilot.</strong> At the busiest hour it serves about 50 requests a second, each using about 20 ms of CPU.</li>
           <li><strong>App server.</strong> 50 × 20 ms = 1 core busy. A c7g.large, with 2 vCPUs, runs at about 50%, leaving headroom for spikes (page 1.13).</li>
           <li><strong>Database memory.</strong> The hot tables and indexes come to about 6 GB. An r7g.large, with 16 GB, holds all of it in RAM, with room to grow.</li>
-          <li><strong>Database disk.</strong> <code>iostat</code> shows about 1,500 IOPS at the busiest hour. The default gp3 volume, with 3,000 IOPS, is enough; buy more when it isn’t (page 1.8).</li>
+          <li><strong>Database disk.</strong> <code>iostat</code> shows about 1,500 IOPS at the busiest hour. The default gp3 volume, with 3,000 IOPS, is enough; buy more when it isn’t (page 1.7).</li>
           <li><strong>Result:</strong> a c7g.large for the app, and an r7g.large with gp3 for the database. Measure again after the move, because the bottleneck will be somewhere new.</li>
         </ol>
 

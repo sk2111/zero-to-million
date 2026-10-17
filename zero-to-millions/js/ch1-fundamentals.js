@@ -260,7 +260,8 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <p>A busy service, with enough traffic to keep every thread busy. Add threads and watch what happens:</p>
         <div class="widget" data-widget="thread-sweet-spot"></div>
         <ol class="points" start="3">
-          <li><strong>So there is always a sweet spot.</strong> Throughput rises as you add threads, levels off, then falls. Past the peak, every extra thread makes the whole system slower, not faster. Where the sweet spot sits depends on the kind of work, which the next page covers.</li>          <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or p99 latency starts to climb.</li>
+          <li><strong>So there is always a sweet spot.</strong> Throughput rises as you add threads, levels off, then falls. Past the peak, every extra thread makes the whole system slower, not faster. Where the sweet spot sits depends on the kind of work, which the next page covers.</li>
+          <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or p99 latency starts to climb.</li>
         </ol>
 
         <figure class="term">
@@ -535,14 +536,14 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
         <table class="data">
           <thead><tr><th>Parameter</th><th>Typical server value</th><th>What it tells you</th><th>Matters most for</th></tr></thead>
           <tbody>
-            <tr><td>Clock speed</td><td>2–3.5 GHz base, up to about 4 GHz boost</td><td>Ticks per second for each core. Boost is the top speed when the chip is cool and not fully loaded.</td><td>How long one CPU-heavy request takes</td></tr>
-            <tr><td>Physical cores</td><td>8 to over 100 per chip</td><td>How many things truly run at the same instant</td><td>Throughput: requests served in parallel</td></tr>
-            <tr><td>Threads per core</td><td>1 or 2</td><td>Hyper-threading: one core presenting itself as two, so it can work on a second thread while the first waits for memory</td><td>About 10–30% more throughput, not twice as much</td></tr>
-            <tr><td>vCPUs</td><td>2 to 192+ per cloud instance</td><td>What the cloud bills you for: one hyper-thread on Intel and AMD, a whole core on AWS Graviton</td><td>Comparing instance sizes and prices</td></tr>
-            <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How much work each tick does. A newer core at the same GHz can be 1.5 times faster than one from ten years earlier.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
-            <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much hot data stays right next to the cores</td><td>Databases, caches, anything with a big working set</td></tr>
-            <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which machine instructions the chip understands</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
-            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>A socket is the slot on the motherboard that holds one CPU chip, so it’s the number of separate chips. Each chip has its own RAM attached, and a core reading the other chip’s RAM waits about 1.5–2 times longer. This is called NUMA.</td><td>Only very large machines. A big database on a two-chip server runs fastest when its threads stay near their own memory. Most cloud servers sit on one chip; only the largest sizes span two.</td></tr>
+            <tr><td>Clock speed</td><td>2–3.5 GHz base, up to about 4 GHz boost</td><td>How fast one core runs. 3 GHz means 3 billion ticks a second, and each tick moves the work one step forward. Boost is a faster speed the chip can keep up for a while when only some cores are busy and it isn’t too hot.</td><td>How long one CPU-heavy request takes</td></tr>
+            <tr><td>Physical cores</td><td>8 to over 100 per chip</td><td>How many threads the chip can really run at the same moment. With 8 cores, 8 threads run at once and the rest wait their turn.</td><td>Throughput: requests served in parallel</td></tr>
+            <tr><td>Threads per core</td><td>1 or 2</td><td>Whether one core can hold two threads at once (hyper-threading). When one thread stops to wait for memory, the core works on the other. The OS sees two CPUs, but they share one core.</td><td>About 10–30% more throughput, not twice as much</td></tr>
+            <tr><td>vCPUs</td><td>2 to 192+ per cloud instance</td><td>How many CPUs the cloud gives you, and charges you for. On Intel and AMD, one vCPU is one of a core’s two threads, so 8 vCPUs are 4 real cores. On AWS Graviton, one vCPU is a whole core.</td><td>Comparing instance sizes and prices</td></tr>
+            <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How new the chip’s design is. Newer cores get more done in each tick, so a new 3 GHz core can be about 1.5 times faster than a 3 GHz core from ten years ago.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
+            <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much small, fast memory sits on the chip itself. Data found there arrives many times sooner than from RAM, so a bigger cache means fewer slow trips to RAM.</td><td>Databases, caches, anything with a big working set</td></tr>
+            <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which kind of machine code the chip runs. A program built for x86-64 won’t run on ARM64, or the other way round, until it’s rebuilt.</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
+            <tr><td>Sockets</td><td>1 or 2 CPU chips per server</td><td>How many separate CPU chips the server has (a socket is the slot one chip sits in). Each chip has its own RAM, and reading the other chip’s RAM takes about 1.5–2 times longer. This is called NUMA.</td><td>Only very large machines. A big database on a two-chip server runs fastest when its threads stay near their own memory. Most cloud servers sit on one chip; only the largest sizes span two.</td></tr>
           </tbody>
         </table>
         <h2>Reading a cloud instance type</h2>
@@ -597,76 +598,6 @@ CPU(s):                  8
           <p>Spec sheets tell you where to start. Benchmarking your own workload tells you what to buy.</p>
         </aside>`
     },
-    /* ------------------------------------------------------------------ */
-    {
-      group: 'CPU',
-      slug: 'concurrency',
-      title: 'Serving many requests at once',
-      sub: 'Worker processes, thread pools and event loops: the three ways servers juggle users.',
-      html: `
-        <ol class="points lede">
-          <li>A server spends most of its time waiting on I/O.</li>
-          <li>So the real question is how many requests it can keep in flight while it waits.</li>
-          <li>There are three classic answers, and every web framework you use is built on one of them.</li>
-        </ol>
-
-        <table class="data">
-          <thead><tr><th>Model</th><th>How it works</th><th>You’ll see it in</th><th>Good at</th><th>Watch out for</th></tr></thead>
-          <tbody>
-            <tr><td>Worker processes</td><td>Each process handles one request at a time</td><td>gunicorn (sync), PHP-FPM, PostgreSQL</td><td>Isolation, simple code</td><td>Memory: 100 workers × 100 MB = 10 GB, for only 100 requests in flight</td></tr>
-            <tr><td>Thread pool</td><td>Many threads in one process, one request per thread</td><td>Tomcat and Spring MVC, Puma, MySQL</td><td>Simple blocking code, shared caches</td><td>A fixed number of threads. With a pool of 200, request 201 waits for a free thread, even if the CPU is idle. And every thread, even one that’s just waiting, holds its own memory (about 1 MB each in Java).</td></tr>
-            <tr><td>Event loop</td><td>One thread juggles thousands of requests, switching whenever one would wait</td><td>Node.js, Python asyncio and FastAPI, Nginx, Redis</td><td>Lots of requests that mostly wait. 10,000 users connected at once, such as a chat app or requests waiting on a slow API, need one thread instead of 10,000, because a waiting request costs almost nothing.</td><td>One CPU-heavy task or one blocking call freezes everyone</td></tr>
-          </tbody>
-        </table>
-
-        <h2>The C10K problem</h2>
-        <ol class="points">
-          <li>In 1999, Dan Kegel asked how one server could handle 10,000 connections at once.</li>
-          <li>With a thread per connection, 10,000 threads meant gigabytes of stacks and a scheduler drowning in context switches.</li>
-          <li>The answer was the <strong>event loop</strong>: one thread that never sits and waits.</li>
-        </ol>
-
-        <h3 class="read-head">How an event loop works</h3>
-        <ol class="points">
-          <li>Every network connection is a <strong>socket</strong>. Think of it as an open phone line between two programs: when a user’s browser connects to your server, the OS sets up a socket for that connection. Your code reads the request from it and writes the response into it.</li>
-          <li>A server talking to 1,000 users and a database has over 1,000 sockets open at once: one per user, plus one for each connection to the database.</li>
-          <li>A normal thread reads from one socket and waits until data arrives. An event-loop thread never does that. Instead it hands the kernel its whole list of sockets and says: “wake me when any of these has data”.</li>
-          <li>On Linux that request is a system call named <code>epoll_wait</code> (<code>kqueue</code> on macOS and BSD). The kernel already handles every packet that arrives, so it knows which sockets have data and simply hands back that short list.</li>
-          <li>The thread then works through the list: read a request here, send a response there, start a database query and move on without waiting for the answer. Then it asks the kernel again. That cycle is the event loop.</li>
-          <li>A waiting connection costs only a small entry in the kernel’s list and a few KB of memory, not a whole thread. That’s how one thread can hold 10,000 connections.</li>
-        </ol>
-        <p>Step through one turn of the loop, with one thread and 8 connections:</p>
-        <div class="widget" data-widget="event-loop"></div>
-        <ol class="points" start="7">
-          <li>Think of a waiter with 20 tables. They don’t stand at one table while the kitchen cooks; they take an order, pass it to the kitchen, and go to whichever table is waving. A thread per connection is one waiter per table, mostly standing still.</li>
-          <li>Nginx, Node.js, Redis and Python’s asyncio (which FastAPI uses) all work this way.</li>
-        </ol>
-
-        <aside class="note runs-out">
-          <h3>When it runs out</h3>
-          <ol class="points">
-            <li><strong>All workers busy, CPU idle.</strong> Every worker is waiting on something slow, and new requests
-            queue behind them. This is the classic “the server is slow but nothing is busy”.</li>
-            <li><strong>Event-loop lag.</strong> On Node.js or asyncio, timers start firing late because something is
-            hogging the one thread. Node measures it with <code>monitorEventLoopDelay</code>.</li>
-          </ol>
-        </aside>
-
-        <aside class="note design">
-          <h3>For system design</h3>
-          <ol class="points">
-            <li><strong>Event loops hate surprises.</strong> In an <code>async def</code> FastAPI endpoint, one blocking call
-            stalls every request on that event loop: <code>requests.get()</code> instead of <code>httpx.AsyncClient</code>,
-            a sync database driver such as <code>psycopg2</code> instead of <code>asyncpg</code>, <code>time.sleep()</code>
-            instead of <code>await asyncio.sleep()</code>, or a CPU-heavy job like parsing a huge JSON file. If the code has
-            to block, declare the endpoint with plain <code>def</code>: FastAPI then runs it in a thread pool (40 threads
-            by default) instead of on the loop. Send CPU-heavy work to a separate process.</li>
-            <li><strong>Pools multiply.</strong> 20 app servers × 8 processes × a 10-connection database pool = 1,600
-            database connections. Do this sum before the database does it for you.</li>
-          </ol>
-        </aside>`
-    },
-
     /* =============================================================== Memory */
     {
       group: 'Memory',
@@ -1153,6 +1084,81 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <ol class="points">
             <li>Plan capacity so your busiest hour runs at about 60–70% utilisation.</li>
             <li>The rest is not waste: it keeps response times flat when traffic spikes or a server fails.</li>
+          </ol>
+        </aside>`
+    },
+
+    /* ------------------------------------------------------------------ */
+    {
+      group: 'Putting it together',
+      slug: 'concurrency',
+      title: 'Serving many requests at once',
+      sub: 'Worker processes, thread pools and event loops: the three ways servers juggle users.',
+      html: `
+        <ol class="points lede">
+          <li>A web server’s job sounds simple: a request arrives, the server works out the answer, and sends it back.</li>
+          <li>But most of that time is spent waiting: for the database, for another service, for the disk. While one request waits, hundreds more arrive.</li>
+          <li>So the real question is how a server keeps many requests in flight at once. Every web server answers it with one of three patterns.</li>
+        </ol>
+
+        <h2>Three ways to serve many requests</h2>
+        <ol class="points">
+          <li><strong>A process per request.</strong> The server starts a fixed number of worker processes, and each one handles one request from start to finish. While its request waits for the database, the whole process waits too. Python’s gunicorn (with sync workers) and PHP-FPM work this way, and so does PostgreSQL, with one process per connection.</li>
+          <li><strong>A thread per request.</strong> One process keeps a pool of threads, and each request gets a thread until it’s done. Threads are lighter than processes and share the same memory, but a waiting request still holds its thread. Java’s Tomcat (under Spring MVC) and Ruby’s Puma work this way.</li>
+          <li><strong>An event loop.</strong> One thread handles thousands of requests. Whenever a request would wait, the thread sets it aside, works on another, and comes back when the answer arrives. Node.js, Nginx, Redis and Python’s asyncio (which FastAPI uses) work this way.</li>
+        </ol>
+        <p>Side by side:</p>
+        <table class="data">
+          <thead><tr><th>Model</th><th>How it works</th><th>You’ll see it in</th><th>Good at</th><th>Watch out for</th></tr></thead>
+          <tbody>
+            <tr><td>Worker processes</td><td>Each process handles one request at a time</td><td>gunicorn (sync), PHP-FPM, PostgreSQL</td><td>Isolation, simple code</td><td>Memory: 100 workers × 100 MB = 10 GB, for only 100 requests in flight</td></tr>
+            <tr><td>Thread pool</td><td>Many threads in one process, one request per thread</td><td>Tomcat and Spring MVC, Puma, MySQL</td><td>Simple blocking code, shared caches</td><td>A fixed number of threads. With a pool of 200, request 201 waits for a free thread, even if the CPU is idle. And every thread, even one that’s just waiting, holds its own memory (about 1 MB each in Java).</td></tr>
+            <tr><td>Event loop</td><td>One thread juggles thousands of requests, switching whenever one would wait</td><td>Node.js, Python asyncio and FastAPI, Nginx, Redis</td><td>Lots of requests that mostly wait. 10,000 users connected at once, such as a chat app or requests waiting on a slow API, need one thread instead of 10,000, because a waiting request costs almost nothing.</td><td>One CPU-heavy task or one blocking call freezes everyone</td></tr>
+          </tbody>
+        </table>
+
+        <h2>The problem with processes and threads</h2>
+        <ol class="points">
+          <li>In both models, a request that is only waiting still holds a whole process or thread.</li>
+          <li><strong>That costs memory.</strong> A Python worker process takes about 100 MB, so 100 workers need 10 GB to keep just 100 requests in flight. A thread is lighter, but a Java thread still reserves about 1 MB for its stack.</li>
+          <li><strong>It costs CPU.</strong> Every time the OS moves a core to another thread, it pays for a context switch (page 1.2). With thousands of threads, the switching itself starts to use up the cores.</li>
+          <li><strong>The pool sets a hard limit.</strong> With a pool of 200 threads, request 201 waits for a free thread, even while the CPU sits idle.</li>
+        </ol>
+
+        <h2>Why the event loop was invented</h2>
+        <ol class="points">
+          <li>In 1999, Dan Kegel put a number on the problem: how can one server handle 10,000 connections at once? It became known as the <strong>C10K problem</strong>.</li>
+          <li>With a thread per connection, 10,000 connections meant 10,000 threads: gigabytes of stacks, and a scheduler drowning in context switches.</li>
+          <li>The answer was the <strong>event loop</strong>: one thread that never sits and waits.</li>
+        </ol>
+
+        <h3 class="read-head">How an event loop works</h3>
+        <ol class="points">
+          <li>Every network connection is a <strong>socket</strong>. Think of it as an open phone line between two programs: when a user’s browser connects to your server, the OS sets up a socket for that connection. Your code reads the request from it and writes the response into it.</li>
+          <li>A server talking to 1,000 users and a database has over 1,000 sockets open at once: one per user, plus one for each connection to the database.</li>
+          <li>A normal thread reads from one socket and waits until data arrives. An event-loop thread never does that. Instead it hands the kernel its whole list of sockets and says: “wake me when any of these has data”.</li>
+          <li>On Linux that request is a system call named <code>epoll_wait</code> (<code>kqueue</code> on macOS and BSD). The kernel already handles every packet that arrives, so it knows which sockets have data and simply hands back that short list.</li>
+          <li>The thread then works through the list: read a request here, send a response there, start a database query and move on without waiting for the answer. Then it asks the kernel again. That cycle is the event loop.</li>
+          <li>A waiting connection costs only a small entry in the kernel’s list and a few KB of memory, not a whole thread. That’s how one thread can hold 10,000 connections.</li>
+        </ol>
+        <p>Step through one turn of the loop, with one thread and 8 connections:</p>
+        <div class="widget" data-widget="event-loop"></div>
+        <ol class="points" start="7">
+          <li>Think of a waiter with 20 tables. They don’t stand at one table while the kitchen cooks; they take an order, pass it to the kitchen, and go to whichever table is waving. A thread per connection is one waiter per table, mostly standing still.</li>
+          <li>Nginx, Node.js, Redis and Python’s asyncio (which FastAPI uses) all work this way.</li>
+        </ol>
+
+        <aside class="note design">
+          <h3>For system design</h3>
+          <ol class="points">
+            <li><strong>Event loops hate surprises.</strong> In an <code>async def</code> FastAPI endpoint, one blocking call
+            stalls every request on that event loop: <code>requests.get()</code> instead of <code>httpx.AsyncClient</code>,
+            a sync database driver such as <code>psycopg2</code> instead of <code>asyncpg</code>, <code>time.sleep()</code>
+            instead of <code>await asyncio.sleep()</code>, or a CPU-heavy job like parsing a huge JSON file. If the code has
+            to block, declare the endpoint with plain <code>def</code>: FastAPI then runs it in a thread pool (40 threads
+            by default) instead of on the loop. Send CPU-heavy work to a separate process.</li>
+            <li><strong>Pools multiply.</strong> 20 app servers × 8 processes × a 10-connection database pool = 1,600
+            database connections.</li>
           </ol>
         </aside>`
     },

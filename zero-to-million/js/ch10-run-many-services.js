@@ -376,9 +376,9 @@ spec:
 
         <h2>Where this leads</h2>
         <ol class="points">
-          <li>The app tier can now grow as far as the load needs: more pods, more nodes, no one awake.</li>
-          <li>The data can’t. Every order, payment and stock change still goes to one PostgreSQL primary. Replicas spread the reads (page 5.2), but every write still lands on that one server, and its disk keeps growing.</li>
-          <li>A bigger server buys time, not a solution. Chapter 11 splits the data itself across several databases.</li>
+          <li>The app tier can now grow as far as the load needs: more pods, more nodes, no one awake. A new cluster anywhere is the same manifests, applied again.</li>
+          <li>That matters sooner than expected. Tomazon opens in Europe, and European shoppers find it slow: the photos come from CloudFront, but every page and API call still crosses to Mumbai.</li>
+          <li>Chapter 11 finds where that time goes, and moves the work closer to the shopper.</li>
         </ol>
 
         <aside class="note design">

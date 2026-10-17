@@ -1870,6 +1870,112 @@ window.ZTM = window.ZTM || {};
     });
   };
 
+  /* ---------- Chapter 11: the time to the first byte of a page, by city, protocol and setup ---------- */
+
+  W['ttfb-budget'] = function (el) {
+    var CITIES = [
+      { value: 'blr', label: 'Bangalore', home: 20, near: 20, region: 'Mumbai' },
+      { value: 'fra', label: 'Frankfurt', home: 125, near: 2, region: 'Frankfurt' },
+      { value: 'lon', label: 'London', home: 120, near: 15, region: 'Frankfurt' },
+      { value: 'nyc', label: 'New York', home: 200, near: 85, region: 'Frankfurt' }
+    ];
+    var PROTOS = [{ value: '2', label: 'TLS 1.2' }, { value: '1', label: 'TLS 1.3' }, { value: '0', label: 'HTTP/3' }];
+    var EDGE = 10, DNS = 10, APP = 50;   /* ms: to an edge in the shopper's city; to a nearby resolver; the app's own work */
+    var st = { city: 'fra', proto: '1' };
+
+    el.innerHTML = '<div class="w-controls el-controls"><span class="tb-city"></span><span class="tb-proto"></span></div>' +
+      legend([['conn', 'DNS, from a resolver nearby'], ['net', 'The shopper to whoever answers'], ['dbw', 'The edge to the app’s region'], ['cpu', 'The app building the page']]) +
+      '<div class="wf el-rows tb-rows"></div><p class="readout" aria-live="polite"></p>' +
+      '<p class="w-note">A first visit on a fast connection, counting round trips only. A returning shopper whose connection is still open skips the handshakes.</p>';
+    var wf = el.querySelector('.wf'), out = el.querySelector('.readout');
+    el.querySelector('.tb-city').appendChild(segmented('Where the shopper is', CITIES, st.city, function (v) { st.city = v; draw(); }));
+    el.querySelector('.tb-proto').appendChild(segmented('Protocol', PROTOS, st.proto, function (v) { st.proto = v; draw(); }));
+    function t(ms) { return ms >= 1000 ? (ms / 1000).toFixed(2) + ' s' : Math.round(ms) + ' ms'; }
+
+    function draw() {
+      var c = CITIES.filter(function (x) { return x.value === st.city; })[0];
+      var hs = +st.proto + 1;   /* handshake round trips: TCP + TLS 1.2 = 3, TCP + TLS 1.3 = 2, QUIC = 1 */
+      var rows = [
+        { name: 'Straight to Mumbai', segs: [['conn', 'DNS', DNS], ['net', 'handshakes', hs * c.home], ['net', 'request', c.home], ['cpu', 'app', APP]] },
+        { name: 'Through the edge', segs: [['conn', 'DNS', DNS], ['net', 'handshakes', hs * EDGE], ['net', 'request', EDGE], ['dbw', 'edge to Mumbai', c.home], ['cpu', 'app', APP]] },
+        { name: 'Cached at the edge', segs: [['conn', 'DNS', DNS], ['net', 'handshakes', hs * EDGE], ['net', 'request', EDGE]] },
+        { name: 'Edge, then ' + c.region, segs: [['conn', 'DNS', DNS], ['net', 'handshakes', hs * EDGE], ['net', 'request', EDGE], ['dbw', 'edge to ' + c.region, c.near], ['cpu', 'app', APP]] }
+      ];
+      var totals = rows.map(function (row) { return row.segs.reduce(function (a, s) { return a + s[2]; }, 0); });
+      var max = Math.max.apply(null, totals), html = '';
+      rows.forEach(function (row, i) {
+        var at = 0, cells = '';
+        row.segs.forEach(function (s) {
+          cells += '<span class="wf-seg ' + s[0] + '" style="left:' + (at / max * 100) + '%;width:' + (s[2] / max * 100) + '%" tabindex="0" data-tip="<b>' +
+            esc(s[1]) + '</b><br>' + t(s[2]) + '" aria-label="' + esc(s[1]) + ', ' + t(s[2]) + '"><span class="seg-label">' + esc(s[1]) + '</span></span>';
+          at += s[2];
+        });
+        html += '<div class="wf-row"><span class="wf-name">' + row.name + '</span><span class="wf-track">' + cells + '</span><span class="wf-total">' + t(totals[i]) + '</span></div>';
+      });
+      wf.innerHTML = html;
+      fitLabels(wf);
+      var say = 'From ' + c.label + ', the first byte takes <strong>' + t(totals[0]) + '</strong> straight from Mumbai: ' + (hs + 1) + ' round trips of ' + c.home +
+        ' ms, plus the app’s 50 ms. Through the edge, the handshakes happen ' + EDGE + ' ms away and only the request crosses: <strong>' + t(totals[1]) +
+        '</strong>. A cached page: <strong>' + t(totals[2]) + '</strong>. ';
+      say += c.value === 'blr'
+        ? 'In India, Mumbai is only 20 ms away, so the edge helps mostly by caching.'
+        : 'With the app’s reads in ' + c.region + ': <strong>' + t(totals[3]) + '</strong>.';
+      if (st.proto === '2') say += ' TLS 1.2 needs two round trips for its handshake; TLS 1.3 needs one.';
+      if (st.proto === '0') say += ' HTTP/3 runs over QUIC, which sets up the connection and its encryption in a single round trip.';
+      out.innerHTML = say;
+    }
+    bindTips(el);
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(wf); }).observe(wf);
+  };
+
+  /* ---------- Chapter 11: an edge in Frankfurt, reads in Frankfurt, writes in Mumbai ---------- */
+
+  W['edge-regions'] = function (el) {
+    var node = archNode;
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      wires: [
+        ['in', 'shop', 'edge', 'h', ''],
+        ['w', 'edge', 'core', 'h', ''],
+        ['r', 'edge', 'cat', 'h', ''],
+        ['wp', 'core', 'primary', 'h', ''],
+        ['rr', 'cat', 'replica', 'h', ''],
+        ['repl', 'primary', 'replica', 'v', 'WAL', true]
+      ],
+      request: [['in', 0], ['in', 1], ['in', 0], ['r', 0], ['rr', 0], ['rr', 1], ['r', 1], ['in', 1], ['in', 0], ['w', 0], ['wp', 0], ['wp', 1], ['w', 1], ['in', 1], ['repl', 0]],
+      start: 'Follow a product page',
+      idle: 'A shopper in Frankfurt opens a product page, then adds it to the cart. Press <strong>Follow a product page</strong> to go through it step by step.',
+      steps: [
+        { on: ['shop', 'edge'], run: [], t: 'about 10 ms away',
+          say: '<strong>Connect nearby.</strong> <code>tomazon.com</code> now points at CloudFront, so the TCP and TLS handshakes happen with the edge in Frankfurt, not with Mumbai.' },
+        { on: ['shop', 'edge'], run: [['in', 0], ['in', 1]], t: 'a hit: about 40 ms to the first byte',
+          say: '<strong>The page is cached.</strong> The product page’s HTML is now the same for every shopper, so the edge keeps it for 60 seconds and answers at once.' },
+        { on: ['edge', 'cat', 'replica'], run: [['r', 0], ['rr', 0], ['rr', 1], ['r', 1], ['in', 1]], t: 'Frankfurt: a few milliseconds',
+          say: '<strong>Prices and stock come from Frankfurt.</strong> Reads go to the region with the lowest latency from this edge. There, the catalogue reads Redis and a replica of the Mumbai database.' },
+        { on: ['shop', 'edge', 'core', 'primary'], run: [['in', 0], ['w', 0], ['wp', 0], ['wp', 1], ['w', 1], ['in', 1]], t: 'one trip to Mumbai, about 125 ms',
+          say: '<strong>Writes go home.</strong> Adding to the cart, ordering and paying change data, so the edge sends them to the core API in Mumbai, which writes to the primary. One long round trip, on a connection the edge keeps open.' },
+        { on: ['primary', 'replica'], run: [['repl', 0]], t: 'usually under a second behind',
+          say: '<strong>The copy catches up.</strong> The primary streams its WAL to the Frankfurt replica, as to any replica (page 5.2), just farther away. It’s asynchronous: waiting for Frankfurt would add 125 ms to every commit in Mumbai.' }
+      ],
+      html:
+        '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shopper', 'in Frankfurt') + '</div>' +
+        '<div class="c11-grid">' +
+          '<div class="c11-edge"><p class="ar2-k">Edge location: Frankfurt</p>' +
+            node('edge', 'edge', 'c-net', 'CloudFront edge', 'handshakes, cached pages') +
+          '</div>' +
+          '<div class="ar2-region c11-mum"><p class="ar2-k">AWS region: Mumbai</p><div class="c11-pair">' +
+            node('core', 'bolt', 'c-cpu', 'Core API', 'carts, orders, payments') +
+            node('primary', 'db', 'c-db', 'Primary', 'every write') +
+          '</div></div>' +
+          '<div class="ar2-region c11-fra"><p class="ar2-k">AWS region: Frankfurt</p><div class="c11-pair">' +
+            node('cat', 'bolt', 'c-cpu', 'Catalogue', 'prices, stock, search') +
+            node('replica', 'db', 'c-db', 'Replica and Redis', 'a copy, a little behind') +
+          '</div></div>' +
+        '</div>'
+    });
+  };
+
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */
 
   W['percentile-strip'] = function (el) {

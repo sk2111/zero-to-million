@@ -35,8 +35,9 @@ without internet the fonts fall back to Segoe UI.
 | 8 | Publish events | 2M | Written |
 | 9 | Serve it nearby | 3M | Written |
 | 10 | Run many services | 5M | Written |
-| 11 | Beyond a million | 10M | Planned |
-| 12 | When things break | every stage | Planned |
+| 11 | Go to the edge | 7M | Written |
+| 12 | Beyond a million | 10M | Planned |
+| 13 | When things break | every stage | Planned |
 
 Chapter 1 has 14 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
@@ -106,6 +107,12 @@ parts, a Deployment and Service with probes and requests, a cluster you can brea
 Tomazon on EKS (what moves and what stays, the Gateway API instead of the retired ingress-nginx, an
 HTTPRoute, settings, traps, whether it's worth it).
 
+Chapter 11 has 3 pages: Slow in Europe, fast at home (testing from two cities, processing vs network
+time, the round trips before the first byte, TTFB) · Do more at the edge (ending connections at the
+edge, cacheable pages with stale-while-revalidate, a TTFB calculator by city and protocol,
+CloudFront Functions vs Lambda@Edge) · A second region for Europe (reads in Frankfurt from a
+replica, writes to Mumbai, keeping the copy honest, data across borders, a live diagram, traps).
+
 ## Files
 
 ```
@@ -122,6 +129,7 @@ js/ch7-split-the-monolith.js  Chapter 7's pages
 js/ch8-publish-events.js      Chapter 8's pages
 js/ch9-serve-it-nearby.js     Chapter 9's pages
 js/ch10-run-many-services.js  Chapter 10's pages
+js/ch11-go-to-the-edge.js     Chapter 11's pages
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

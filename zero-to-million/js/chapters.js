@@ -65,13 +65,19 @@ ZTM.chapters = [
     topics: ['Containers and images', 'Desired state', 'Pods, Deployments and Services', 'Probes, requests and rolling updates', 'Amazon EKS and the Gateway API']
   },
   {
-    n: 11, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
-    question: 'What do we do when one database can’t hold it all?',
-    summary: 'Sharding, partitioning and multiple regions, and the consistency trade-offs that come with them.',
-    topics: ['Partitioning and sharding', 'Choosing a shard key', 'Multiple regions', 'Consistency vs availability (CAP in practice)', 'Picking the right database']
+    n: 11, slug: 'go-to-the-edge', title: 'Go to the edge', users: 7000000, status: 'ready', minutes: 45,
+    question: 'Pages are slow in Europe, yet every server is fast. Where does the time go?',
+    summary: 'Split load time into processing and network time, count the round trips before the first byte, and move work closer: connections and cached pages at the edge, reads in a second region, writes at home.',
+    topics: ['Processing time and network time', 'Time to first byte', 'Ending connections and caching pages at the edge', 'CloudFront Functions and Lambda@Edge', 'A second region for reads']
   },
   {
-    n: 12, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
+    n: 12, slug: 'beyond-a-million', title: 'Beyond a million', users: 10000000, status: 'planned',
+    question: 'What do we do when one database can’t take all the writes?',
+    summary: 'Sharding and partitioning: splitting the data across several primaries, and the trade-offs that come with it.',
+    topics: ['Partitioning and sharding', 'Choosing a shard key', 'Queries across shards', 'Moving data between shards', 'Picking the right database']
+  },
+  {
+    n: 13, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
     question: 'How do we keep working while parts of the system fail?',
     summary: 'Timeouts, retries, circuit breakers, rate limits and monitoring. These apply at every stage, not just at the end.',
     topics: ['Timeouts and retries with backoff', 'Circuit breakers', 'Rate limiting and load shedding', 'Logs, metrics and traces', 'Alerts that mean something']

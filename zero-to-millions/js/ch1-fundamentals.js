@@ -1113,6 +1113,7 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
       sub: 'Worker processes, thread pools and event loops: the three ways servers juggle users.',
       html: `
         <ol class="points lede">
+          <li>You now know the parts of a server (CPU, memory, disk and network), how fast each one is, and how to measure them. Now we can look underneath your web server, at how it actually uses those parts when many requests arrive at once.</li>
           <li>A web server’s job sounds simple: a request arrives, the server works out the answer, and sends it back.</li>
           <li>But most of that time is spent waiting: for the database, for another service, for the disk. While one request waits, hundreds more arrive.</li>
           <li>So the real question is how a server keeps many requests in flight at once. Every web server answers it with one of three patterns.</li>
@@ -1187,11 +1188,7 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
       title: 'How much can one server handle?',
       sub: 'Back-of-the-envelope maths you can do in a meeting.',
       html: `
-        <ol class="points lede">
-          <li>Before buying servers, estimate.</li>
-          <li>The answer only needs to be right to within two or three times.</li>
-          <li>It often says something surprising: one good machine goes a very long way.</li>
-        </ol>
+        <p class="lede">Before buying servers, estimate.</p>
 
         <h2>A worked example</h2>
         <ol class="steps">
@@ -1244,9 +1241,7 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
             <tr><td>CPU</td><td><code>top</code> or <code>htop</code>: us + sy, per core</td><td>Load above core count; <code>r</code> in <code>vmstat 1</code></td><td>High <code>st</code> (steal) on cloud VMs</td></tr>
             <tr><td>Memory</td><td><code>free -h</code>: used vs available</td><td>Swapping: <code>si</code>/<code>so</code> in <code>vmstat 1</code>; GC time</td><td>OOM kills in <code>dmesg</code>, exit code 137</td></tr>
             <tr><td>Disk</td><td><code>iostat -xz 1</code>: %util</td><td><code>aqu-sz</code> and <code>await</code> rising</td><td>Disk full (<code>df -h</code>)</td></tr>
-            <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Packets being resent (<code>nstat</code>)</td><td>Connection errors and timeouts</td></tr>
-            <tr><td>Workers and pools</td><td>Busy workers vs total</td><td>Requests waiting for a free worker or a database connection</td><td>Timeouts</td></tr>
-          </tbody>
+            <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Packets being resent (<code>nstat</code>)</td><td>Connection errors and timeouts</td></tr>          </tbody>
         </table>
 
         <h2>Take these into chapter 2</h2>

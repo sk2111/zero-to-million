@@ -194,9 +194,10 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
       sub: 'How one machine runs hundreds of programs on a handful of cores.',
       html: `
         <ol class="points lede">
-          <li>A server with 8 cores is usually running hundreds of programs.</li>
-          <li>The OS makes that work by slicing time: each thread gets a core for a few milliseconds, then steps aside for the next one.</li>
-          <li>To reason about any server, you need to know what it’s slicing: processes and threads.</li>
+          <li>So far we have followed one stream of instructions through one core. But a server with 8 cores is usually running hundreds of programs at once: the web server, the database, a log shipper, the OS’s own services.</li>
+          <li>Each running program is a <strong>process</strong>. The work inside it is done by one or more <strong>threads</strong>, and each thread is one stream of instructions, like the one we just followed.</li>
+          <li>There are far more threads than cores, so they take turns. The OS gives each thread a core for a few milliseconds, then hands the core to the next one.</li>
+          <li>To reason about any server, you need to know what processes and threads are, how they take turns, and why more threads don’t always mean more speed.</li>
         </ol>
 
         <dl class="terms">
@@ -221,7 +222,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         </table>
 
         <h2>Taking turns on a core</h2>
-        <p>Every thread is in one of three states, and only the first one uses the CPU:</p>
+        <p>When you run an application, each of its threads is always in one of three states, and only the first one uses the CPU:</p>
         <table class="data">
           <thead><tr><th>State</th><th>What it means</th><th>Uses CPU?</th></tr></thead>
           <tbody>
@@ -246,9 +247,6 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             <tr><td class="num">300,000</td><td class="num">0.9 s, almost a whole core</td><td>A core lost to switching instead of working</td></tr>
           </tbody>
         </table>
-        <ol class="points" start="6">
-          <li>The usual causes are far more busy threads than cores, or threads that keep waking up for tiny bits of work or fighting over the same lock.</li>
-        </ol>
 
         <h2>How they fit together</h2>
         <p>One server with two processes and two cores. Step through a few time slices:</p>
@@ -258,13 +256,13 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <ol class="points">
           <li>Threads that share data need locks so they don’t trip over each other.</li>
           <li>While one thread holds a lock, the others wait, however many cores you have.</li>
-          <li>Amdahl’s Law puts a number on it: the part of the work that can’t run in parallel caps the speed-up.</li>
+          <li>Every thread you add is also one more for the others to keep in sync with: more context switches, more cache misses, more fights over the same memory. That cost comes from every pair of threads, so it grows faster than the number of threads.</li>
         </ol>
-        <div class="widget" data-widget="amdahl"></div>
+        <p>A busy service, with enough traffic to keep every thread busy. Add threads and watch what happens:</p>
+        <div class="widget" data-widget="thread-sweet-spot"></div>
         <ol class="points" start="4">
-          <li>It can get worse than flat. When threads keep fighting over the same locks and the same memory, adding cores can make the system slower.</li>
-          <li>Neil Gunther’s Universal Scalability Law describes this, and it’s the third curve in the chart. You’ll see the same shape again with servers and databases in later chapters.</li>
           <li><strong>So there is always a sweet spot.</strong> Throughput rises as you add threads, levels off, then falls. Past the peak, every extra thread makes the whole system slower, not faster. Where the sweet spot sits depends on the kind of work, which the next page covers.</li>
+          <li><strong>Too many threads hurt latency most.</strong> With the starting settings, 256 threads serve about as many requests a second as 8 do, but each request takes over 30 times as long.</li>
           <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or p99 latency starts to climb.</li>
         </ol>
 
@@ -328,7 +326,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             runs a process per connection, which is why production Postgres sits behind a pooler such as PgBouncer that
             keeps the count near what the database can handle.</li>
             <li><strong>A busy lock is a serial part.</strong> If every request takes the same lock (a global cache, a
-            shared counter, a single log writer), that lock lets one thread through at a time and Amdahl’s limit applies.
+            shared counter, a single log writer), that lock lets one thread through at a time, and more threads only lengthen the queue in front of it.
             Split the lock, give each thread its own copy, or move the shared state to something built for it.</li>
             <li><strong>Involuntary context switches mean CPU shortage.</strong> In <code>pidstat</code>, a high
             <code>cswch/s</code> means threads are waiting on I/O; a high <code>nvcswch/s</code> means they were pushed

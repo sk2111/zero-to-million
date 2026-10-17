@@ -1225,86 +1225,104 @@ window.ZTM = window.ZTM || {};
     draw();
   };
 
-  /* ---------- Processes and threads: Amdahl's Law ---------- */
+  /* ---------- Processes and threads: the thread sweet spot ---------- */
 
-  W['amdahl'] = function (el) {
-    var CORES = [1, 2, 4, 8, 16, 32, 64, 128];
-    var p = 95, ci = 3;
+  W['thread-sweet-spot'] = function (el) {
+    /* Gunther's Universal Scalability Law, with threads as the load:
+       throughput(n) = SOLO·n / (1 + σ(n−1) + κ·n(n−1)).
+       σ is the share of each request spent under a lock every thread needs: threads queue for it,
+       so the curve flattens. κ is the cost of every pair of threads keeping shared data in sync:
+       it grows with n², so the curve falls. The peak is at n = √((1−σ)/κ).
+       Every thread is kept busy, so response time = n ÷ throughput (Little's Law). */
+    var SOLO = 20;                           /* requests a second one thread manages alone: 50 ms each */
+    var SYNC = [
+      { value: 'low', label: 'Low', k: 0.0001 },
+      { value: 'med', label: 'Medium', k: 0.0005 },
+      { value: 'high', label: 'High', k: 0.002 }
+    ];
+    var lock = 5, sync = 'med', pos = 40;    /* pos is the threads slider: 2^(pos/10) threads, 1 to 256 */
+    function threadsAt(v) { return Math.max(1, Math.round(Math.pow(2, v / 10))); }
+
     el.innerHTML =
-      '<div class="am-fields">' +
-        '<div class="w-field"><label for="amP">Share of the work that can run in parallel</label><input type="range" id="amP" min="50" max="100" value="' + p + '"><output for="amP"></output></div>' +
-        '<div class="w-field"><label for="amC">Cores</label><input type="range" id="amC" min="0" max="7" value="' + ci + '"><output for="amC"></output></div>' +
+      '<div class="ts-fields">' +
+        '<div class="w-field"><label for="tsN">Threads</label><input type="range" id="tsN" min="0" max="80" value="' + pos + '"><output for="tsN"></output></div>' +
+        '<div class="w-field"><label for="tsL">Share of each request spent under a shared lock</label><input type="range" id="tsL" min="0" max="20" value="' + lock + '"><output for="tsL"></output></div>' +
+        '<div class="w-field"><span class="lbl">Cost of keeping shared data in sync</span><span class="cores"></span></div>' +
       '</div>' +
       '<div class="ut-read" aria-live="polite"><b class="ut-big"></b><span class="ut-say"></span></div>' +
-      legend([['ideal', 'Perfect scaling'], ['real', 'Your program'], ['usl', 'Your program, with coordination costs']]) +
-      '<div class="chart"></div>';
-    var box = el.querySelector('.chart'), inP = el.querySelector('#amP'), inC = el.querySelector('#amC'),
+      legend([['ideal', 'Perfect scaling'], ['real', 'Your service'], ['hurt', 'Too many threads']]) +
+      '<div class="chart"></div>' +
+      '<p class="w-note">A busy service: one request takes 50 ms on its own, and there is enough traffic to keep every thread busy. Response time is threads ÷ throughput (Little’s Law).</p>';
+    var box = el.querySelector('.chart'), inN = el.querySelector('#tsN'), inL = el.querySelector('#tsL'),
         big = el.querySelector('.ut-big'), say = el.querySelector('.ut-say');
-    function S(f, n) { return 1 / ((1 - f) + f / n); }
-    /* Gunther's Universal Scalability Law: the serial share (as in Amdahl) plus a small cost
-       for every pair of threads that must coordinate (locks, shared memory). */
-    var BETA = 0.0005;
-    function U(f, n) { return n / (1 + (1 - f) * (n - 1) + BETA * n * (n - 1)); }
+    el.querySelector('.cores').appendChild(segmented('Cost of keeping shared data in sync', SYNC, sync, function (v) { sync = v; draw(); }));
 
     function draw() {
-      var f = p / 100, n = CORES[ci], sp = S(f, n), limit = f < 1 ? 1 / (1 - f) : Infinity;
-      var ax = niceAxis(Math.max(8, S(f, 128) * 1.15));
+      var s = lock / 100, k = SYNC.filter(function (o) { return o.value === sync; })[0].k, n = threadsAt(pos);
+      function X(t) { return SOLO * t / (1 + s * (t - 1) + k * t * (t - 1)); }
+      var bestN = Math.round(Math.sqrt((1 - s) / k)), top = X(bestN), now = X(n);
+      var wait = n / now * 1e9, bestWait = bestN / top * 1e9;           /* response times in ns, for fmtNs */
+
+      var ax = niceAxis(top * 1.25);
       var Wd = Math.max(280, box.clientWidth), H = Wd < 520 ? 240 : 290;
-      var m = { l: 44, r: 16, t: 30, b: 42 }, iw = Wd - m.l - m.r, ih = H - m.t - m.b;
-      function x(c) { return m.l + Math.log2(c) / 7 * iw; }
+      var m = { l: 48, r: 16, t: 30, b: 42 }, iw = Wd - m.l - m.r, ih = H - m.t - m.b;
+      function x(t) { return m.l + Math.log2(t) / 8 * iw; }
       function y(v) { return m.t + ih - Math.min(v, ax.max) / ax.max * ih; }
-      var real = [], ideal = [], usl = [];
-      var peakN = Math.min(128, Math.max(1, Math.sqrt(f / BETA))), peak = U(f, peakN);
-      for (var i = 0; i <= 140; i++) {
-        var c = Math.pow(2, 7 * i / 140);
-        real.push(x(c).toFixed(1) + ',' + y(S(f, c)).toFixed(1));
-        usl.push(x(c).toFixed(1) + ',' + y(U(f, c)).toFixed(1));
-        if (c <= ax.max) ideal.push(x(c).toFixed(1) + ',' + y(c).toFixed(1));
+      var real = [], ideal = [];
+      for (var i = 0; i <= 160; i++) {
+        var t = Math.pow(2, 8 * i / 160);
+        real.push(x(t).toFixed(1) + ',' + y(X(t)).toFixed(1));
+        if (SOLO * t <= ax.max) ideal.push(x(t).toFixed(1) + ',' + y(SOLO * t).toFixed(1));
       }
-      if (ax.max < 128) ideal.push(x(ax.max).toFixed(1) + ',' + y(ax.max).toFixed(1));
+      if (ax.max / SOLO < 256) ideal.push(x(ax.max / SOLO).toFixed(1) + ',' + y(ax.max).toFixed(1));
+
       var g = '';
-      for (var t = 0; t <= ax.max; t += ax.step) {
-        g += '<line class="grid" x1="' + m.l + '" x2="' + (m.l + iw) + '" y1="' + y(t) + '" y2="' + y(t) + '"/>' +
-             '<text class="axis" x="' + (m.l - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + '×</text>';
+      for (var v = 0; v <= ax.max; v += ax.step) {
+        g += '<line class="grid" x1="' + m.l + '" x2="' + (m.l + iw) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>' +
+             '<text class="axis" x="' + (m.l - 8) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + fmtInt(v) + '</text>';
       }
-      CORES.forEach(function (c) {
+      (iw < 360 ? [1, 4, 16, 64, 256] : [1, 2, 4, 8, 16, 32, 64, 128, 256]).forEach(function (c) {
         g += '<text class="axis" x="' + x(c) + '" y="' + (m.t + ih + 20) + '" text-anchor="middle">' + c + '</text>';
       });
-      var lim = '';
-      if (limit <= ax.max) {
-        lim = '<line class="limit" x1="' + m.l + '" x2="' + (m.l + iw) + '" y1="' + y(limit) + '" y2="' + y(limit) + '"/>' +
-              '<text class="band-label" x="' + (m.l + 6) + '" y="' + (y(limit) - 6) + '">limit ' + fmtNum(limit) + '×</text>';
-      }
-      box.innerHTML = '<svg width="' + Wd + '" height="' + H + '" viewBox="0 0 ' + Wd + ' ' + H + '" role="img" aria-label="Speed-up against number of cores. With ' +
-          p + '% parallel work, ' + n + ' cores give ' + fmtNum(sp) + ' times.">' +
-        g + lim +
+
+      /* Past the peak: shade it. Label the peak beside the dashed line, on the left if it fits. */
+      var bx = x(bestN), label = 'sweet spot: ' + bestN + ' threads', lw = label.length * 6.2;
+      var onLeft = bx - 8 - lw >= m.l, lx = onLeft ? bx - 8 : Math.min(bx + 8, m.l + iw - lw);
+      var band = '<rect class="hurt" x="' + bx + '" y="' + m.t + '" width="' + (m.l + iw - bx) + '" height="' + ih + '"/>' +
+                 '<line class="hurt-edge" x1="' + bx + '" x2="' + bx + '" y1="' + m.t + '" y2="' + (m.t + ih) + '"/>';
+
+      box.innerHTML = '<svg width="' + Wd + '" height="' + H + '" viewBox="0 0 ' + Wd + ' ' + H + '" role="img" aria-label="Requests a second against number of threads. Throughput peaks at about ' +
+          bestN + ' threads, ' + fmtInt(top) + ' a second. With ' + n + ' threads: ' + fmtInt(now) + ' a second.">' +
+        band + g +
         '<line class="base" x1="' + m.l + '" x2="' + (m.l + iw) + '" y1="' + (m.t + ih) + '" y2="' + (m.t + ih) + '"/>' +
-        '<text class="axis" x="' + (m.l + iw / 2) + '" y="' + (H - 4) + '" text-anchor="middle">Cores</text>' +
-        '<text class="axis" x="' + m.l + '" y="14">Speed-up</text>' +
+        '<text class="axis" x="' + (m.l + iw / 2) + '" y="' + (H - 4) + '" text-anchor="middle">Threads</text>' +
+        '<text class="axis" x="' + m.l + '" y="14">Requests a second</text>' +
         '<polyline class="curve ideal" points="' + ideal.join(' ') + '"/>' +
         '<polyline class="curve" points="' + real.join(' ') + '"/>' +
-        '<polyline class="curve usl" points="' + usl.join(' ') + '"/>' +
-        '<circle class="dot usl" cx="' + x(peakN) + '" cy="' + y(peak) + '" r="5"/>' +
-        '<text class="usl-label" x="' + x(peakN) + '" y="' + (y(peak) + 20) + '" text-anchor="middle">sweet spot, about ' + Math.round(peakN) + ' cores</text>' +
-        '<line class="cross" x1="' + x(n) + '" x2="' + x(n) + '" y1="' + y(sp) + '" y2="' + (m.t + ih) + '"/>' +
-        '<circle class="dot" cx="' + x(n) + '" cy="' + y(sp) + '" r="6"/>' +
+        '<line class="cross" x1="' + x(n) + '" x2="' + x(n) + '" y1="' + y(now) + '" y2="' + (m.t + ih) + '"/>' +
+        '<circle class="dot peak" cx="' + bx + '" cy="' + y(top) + '" r="5"/>' +
+        '<text class="peak-label" x="' + lx + '" y="' + (y(top) - 12) + '" text-anchor="' + (onLeft ? 'end' : 'start') + '">' + label + '</text>' +
+        '<circle class="dot" cx="' + x(n) + '" cy="' + y(now) + '" r="6"/>' +
         '<rect class="hit" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '"/>' +
         '</svg>';
       box.querySelector('.hit').addEventListener('pointermove', function (e) {
         var rect = box.querySelector('svg').getBoundingClientRect();
-        var k = Math.round(Math.max(0, Math.min(7, (e.clientX - rect.left - m.l) / iw * 7)));
-        if (k !== ci) { ci = k; inC.value = k; draw(); }
+        var p = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left - m.l) / iw)) * 80);
+        if (p !== pos) { pos = p; inN.value = p; draw(); }
       });
-      el.querySelector('#amP + output').textContent = p + '%';
-      el.querySelector('#amC + output').textContent = n;
-      big.textContent = fmtNum(sp) + '×';
-      say.innerHTML = 'faster on ' + n + ' core' + (n === 1 ? '' : 's') + (f < 1
-        ? ', with ' + (100 - p) + '% of the work serial. <strong>No number of cores can beat ' + fmtNum(limit) + '×.</strong>'
-        : '. With nothing serial, speed-up equals the core count. Real programs never quite get there.') +
-        ' Add coordination costs and the speed-up peaks at about <strong>' + Math.round(peakN) + ' cores</strong>, then falls.';
+
+      el.querySelector('#tsN + output').textContent = n;
+      el.querySelector('#tsL + output').textContent = lock + '%';
+      big.textContent = fmtInt(now);
+      var verdict;
+      if (now >= top * 0.95) verdict = '<strong>Around the sweet spot:</strong> close to the most this service can do.';
+      else if (n < bestN) verdict = '<strong>Below the sweet spot.</strong> More threads still help, up to about ' + fmtInt(top) + ' a second at ' + bestN + ' threads.';
+      else verdict = '<strong>Too many threads.</strong> ' + bestN + ' threads would serve ' + Math.round((top / now - 1) * 100) +
+        '% more requests, each in ' + fmtNs(bestWait) + ' instead of ' + fmtNs(wait) + '.';
+      say.innerHTML = 'requests a second with ' + n + ' thread' + (n === 1 ? '' : 's') + ', each taking about ' + fmtNs(wait) + '. ' + verdict;
     }
-    inP.addEventListener('input', function () { p = +inP.value; draw(); });
-    inC.addEventListener('input', function () { ci = +inC.value; draw(); });
+    inN.addEventListener('input', function () { pos = +inN.value; draw(); });
+    inL.addEventListener('input', function () { lock = +inL.value; draw(); });
     draw();
     if (window.ResizeObserver) {
       var lastW = 0;

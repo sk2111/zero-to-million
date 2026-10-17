@@ -27,7 +27,7 @@ without internet the fonts fall back to Segoe UI.
 |---|---|---|---|
 | 1 | Fundamentals | 0 users | Written |
 | 2 | One server | 100 | Written |
-| 3 | Scale up, split out | 1K | Started |
+| 3 | Scale up, split out | 1K | Written |
 | 4 | Scale out | 10K | Written |
 | 5 | Make it fast | 100K | Written |
 | 6 | Cache it | 500K | Written |
@@ -38,7 +38,7 @@ without internet the fonts fall back to Segoe UI.
 | 11 | Go to the edge | 7M | Written |
 | 12 | Split the data | 10M | Written |
 | 13 | Go global | 20M | Written |
-| 14 | When things break | every stage | Planned |
+| 14 | Count the cost | 25M | Written |
 
 Chapter 1 has 14 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
@@ -61,7 +61,7 @@ pilot and for 1,000 shoppers) · Start with a pilot · Start with a monolith · 
 one request and a 512 MB memory budget) · Watching the pilot · When the pilot succeeds (growth to
 1,000 users, diagnosing the overloaded server, why everything on one machine is a time bomb).
 
-Chapter 3 so far has 3 pages: Give the database its own server (a live two-server diagram, what
+Chapter 3 has 3 pages: Give the database its own server (a live two-server diagram, what
 changes, how to move the data) · The new cost: network round trips (N+1 queries, query structure,
 pooling with PgBouncer) · The right instance for each job (instance families, the app tuned
 for CPU, the database on r + EBS, storage-optimised NVMe or RDS, and sizing for 1,000 users).
@@ -126,6 +126,12 @@ each region its data (CDC through Kafka and MSK Replicator into regional read da
 idempotent upsert, reconciliation, a live diagram) · Writes near home, and losing a region (home
 regions through the shard map, what keeps working when a region is lost, traps).
 
+Chapter 14, the last, has 4 pages: The bill that outgrew the business (where $180,000 a month goes,
+cost per 1,000 orders, making cost visible) · Tune first, then decide where to run (five levers that
+cut a third, cloud vs your own servers, a stay-or-move calculator, Tomazon's hybrid decision) ·
+Moving without stopping (the playbook: stateless first by weight, data last shard by shard) · What it
+all comes down to (the journey in one table, the takeaways, and what to observe from day one).
+
 ## Files
 
 ```
@@ -145,6 +151,7 @@ js/ch10-run-many-services.js  Chapter 10's pages
 js/ch11-go-to-the-edge.js     Chapter 11's pages
 js/ch12-split-the-data.js     Chapter 12's pages
 js/ch13-go-global.js          Chapter 13's pages
+js/ch14-count-the-cost.js     Chapter 14's pages, and the takeaways
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

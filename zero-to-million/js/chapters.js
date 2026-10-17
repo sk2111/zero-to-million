@@ -83,10 +83,10 @@ ZTM.chapters = [
     topics: ['Regional cells', 'DNS routing and anycast', 'Feeding regions with change data capture', 'Home regions for writes', 'Losing a region']
   },
   {
-    n: 14, slug: 'when-things-break', title: 'When things break', users: null, status: 'planned',
-    question: 'How do we keep working while parts of the system fail?',
-    summary: 'Timeouts, retries, circuit breakers, rate limits and monitoring. These apply at every stage, not just at the end.',
-    topics: ['Timeouts and retries with backoff', 'Circuit breakers', 'Rate limiting and load shedding', 'Logs, metrics and traces', 'Alerts that mean something']
+    n: 14, slug: 'count-the-cost', title: 'Count the cost', users: 25000000, status: 'ready', minutes: 50,
+    question: 'The bill grows faster than the business. Is the cloud still the right home?',
+    summary: 'Find where the money goes, cut the waste without moving, weigh the cloud against your own servers, move only the steady part, and finish with what the whole journey comes down to.',
+    topics: ['Unit cost and cost visibility', 'Tuning a cloud bill', 'Cloud or your own servers', 'Moving between providers without stopping', 'The takeaways, and observability']
   }
 ];
 

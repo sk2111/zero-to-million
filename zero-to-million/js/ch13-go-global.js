@@ -211,8 +211,9 @@ ON CONFLICT (id) DO UPDATE
 
         <h2>Where this leads</h2>
         <ol class="points">
-          <li>Tomazon now runs in four regions, with dozens of services and hundreds of pods. Something is always failing somewhere: a slow dependency, a retry storm, a full disk, a bad deploy.</li>
-          <li>Chapter 14 is about staying up while parts fail: timeouts, retries, circuit breakers, shedding load, and alerts that mean something.</li>
+          <li>Tomazon now runs in four regions, with dozens of services, hundreds of pods and a standby for every shard. The design works.</li>
+          <li>But every chapter added something that runs, and is billed, all the time. The AWS bill has grown 70% in six months, while orders grew 30%.</li>
+          <li>Chapter 14, the last, finds where the money goes, and asks whether every part still belongs in the cloud.</li>
         </ol>
 
         <aside class="note design">

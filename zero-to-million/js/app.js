@@ -86,7 +86,7 @@
         '<li>Each chapter starts where the last one stopped.</li>' +
         '<li>We add a new piece to the system only when the current design runs out of room.</li>' +
         '<li>Each time, we look at the numbers that tell us it has.</li>' +
-        '<li>' + ready + ' of ' + chapters.length + ' chapters are written so far.</li></ol></div>' +
+        '<li>' + (ready === chapters.length ? 'All ' + ready + ' chapters, about ' + Math.round(chapters.reduce(function (a, c) { return a + (c.minutes || 0); }, 0) / 60) + ' hours in all.' : ready + ' of ' + chapters.length + ' chapters are written so far.') + '</li></ol></div>' +
         '<ol class="rm-list">' + chapters.map(function (ch) {
           return '<li class="' + (ch.status === 'ready' ? 'ready' : 'planned') + '"><a href="#/' + ch.n + '">' +
             '<span class="rm-users"><b>' + ZTM.usersLabel(ch.users) + '</b><small>' + (ch.users === null ? 'at every stage' : 'users') + '</small></span>' +

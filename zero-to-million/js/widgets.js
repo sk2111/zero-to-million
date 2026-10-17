@@ -2128,6 +2128,55 @@ window.ZTM = window.ZTM || {};
     });
   };
 
+  /* ---------- Chapter 14: stay on AWS, or move the steady part to your own servers? ---------- */
+
+  W['cloud-or-own'] = function (el) {
+    var BILL = 115, ENGINEER = 6, MOVE = 300;   /* $K a month after tuning; $K a month per engineer, fully loaded; $K one-off to move */
+    var STEADY = [{ value: '40', label: '40% steady' }, { value: '60', label: '60%' }, { value: '80', label: '80%' }];
+    var PRICE = [{ value: '20', label: 'Own servers at 20% of the cloud price' }, { value: '35', label: '35%' }, { value: '50', label: '50%' }];
+    var PEOPLE = [{ value: '2', label: '2 more engineers' }, { value: '4', label: '4' }, { value: '6', label: '6' }];
+    var st = { steady: '60', price: '35', people: '4' };
+
+    el.innerHTML = '<div class="w-controls el-controls"><span class="co-steady"></span><span class="co-price"></span><span class="co-people"></span></div>' +
+      legend([['net', 'AWS: what stays'], ['dbw', 'Own servers: rent, space, power, network'], ['cpu', 'The extra engineers']]) +
+      '<div class="wf el-rows co-rows"></div><p class="readout" aria-live="polite"></p>' +
+      '<p class="w-note">Starting from Tomazon’s tuned bill of $115K a month. An engineer costs about $6K a month with everything included, and the move itself, months of work and of paying for both sites, about $300K.</p>';
+    var wf = el.querySelector('.wf'), out = el.querySelector('.readout');
+    el.querySelector('.co-steady').appendChild(segmented('Share of the bill that is steady', STEADY, st.steady, function (v) { st.steady = v; draw(); }));
+    el.querySelector('.co-price').appendChild(segmented('Own servers, against the same in the cloud', PRICE, st.price, function (v) { st.price = v; draw(); }));
+    el.querySelector('.co-people').appendChild(segmented('Extra engineers to run them', PEOPLE, st.people, function (v) { st.people = v; draw(); }));
+    function k(x) { return '$' + Math.round(x) + 'K'; }
+
+    function draw() {
+      var s = st.steady / 100, stay = BILL * (1 - s), own = BILL * s * st.price / 100, people = st.people * ENGINEER;
+      var rows = [
+        { name: 'Stay on AWS', segs: [['net', 'AWS', BILL]] },
+        { name: 'Move the steady part', segs: [['net', 'AWS', stay], ['dbw', 'own servers', own], ['cpu', 'engineers', people]] }
+      ];
+      var totals = rows.map(function (row) { return row.segs.reduce(function (a, x) { return a + x[2]; }, 0); });
+      var max = Math.max.apply(null, totals), html = '';
+      rows.forEach(function (row, i) {
+        var at = 0, cells = '';
+        row.segs.forEach(function (x) {
+          cells += '<span class="wf-seg ' + x[0] + '" style="left:' + (at / max * 100) + '%;width:' + (x[2] / max * 100) + '%" tabindex="0" data-tip="<b>' +
+            esc(x[1]) + '</b><br>' + k(x[2]) + ' a month" aria-label="' + esc(x[1]) + ', ' + k(x[2]) + ' a month"><span class="seg-label">' + esc(x[1]) + '</span></span>';
+          at += x[2];
+        });
+        html += '<div class="wf-row"><span class="wf-name">' + row.name + '</span><span class="wf-track">' + cells + '</span><span class="wf-total">' + k(totals[i]) + '</span></div>';
+      });
+      wf.innerHTML = html;
+      fitLabels(wf);
+      var save = totals[0] - totals[1];
+      out.innerHTML = save > 0
+        ? 'Moving the steady ' + st.steady + '% costs <strong>' + k(totals[1]) + '</strong> a month instead of $115K: <strong>' + k(save) + ' a month</strong> saved, ' + k(save * 12) +
+          ' a year. The move pays for itself in about <strong>' + Math.ceil(MOVE / save) + ' months</strong>' + (MOVE / save > 24 ? ', which is a long time to carry the risk.' : '.')
+        : 'Moving <strong>costs more</strong> than staying: ' + k(totals[1]) + ' a month against $115K. The cheaper servers don’t cover the engineers, and the part that has to stay in the cloud.';
+    }
+    bindTips(el);
+    draw();
+    if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(wf); }).observe(wf);
+  };
+
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */
 
   W['percentile-strip'] = function (el) {
@@ -2813,7 +2862,10 @@ window.ZTM = window.ZTM || {};
   W['user-scale'] = function (el) {
     var decades = [0, 1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7];
     function pos(v) { return v <= 0 ? 0 : (Math.log10(v) + 1) / 8 * 100; }
-    var stops = ZTM.chapters.filter(function (c) { return c.users !== null; });
+    /* One marker per chapter up to a million; the chapters past it share one marker at the end of the rail. */
+    var stops = ZTM.chapters.filter(function (c) { return c.users !== null && c.users <= 1e6; });
+    var beyond = ZTM.chapters.filter(function (c) { return c.users !== null && c.users > 1e6; });
+    if (beyond.length) stops.push({ n: beyond[0].n, label: beyond[0].n + '–' + beyond[beyond.length - 1].n, title: 'Beyond a million', users: 1e7 });
     var always = ZTM.chapters.filter(function (c) { return c.users === null; });
     el.innerHTML =
       '<div class="us-count"><b class="us-num">0</b><span class="us-unit">users</span></div>' +
@@ -2822,9 +2874,9 @@ window.ZTM = window.ZTM || {};
         decades.map(function (d) { return '<span class="us-dec" style="left:' + pos(d) + '%">' + ZTM.usersLabel(d) + '</span>'; }).join('') +
         /* Labels alternate between two lanes so neighbours never collide. */
         stops.map(function (c, i) {
-          var cls = 'us-stop' + (i % 2 ? ' lane-b' : '') + (i === 0 ? ' first' : '') + (i === stops.length - 1 ? ' last' : '');
+          var cls = 'us-stop' + (c.label ? ' lane-c' : i % 2 ? ' lane-b' : '') + (i === 0 ? ' first' : '') + (i === stops.length - 1 ? ' last' : '');
           return '<a class="' + cls + '" href="#/' + c.n + '" style="left:' + pos(c.users) + '%" data-at="' + pos(c.users) + '">' +
-            '<i></i><span><em>' + c.n + '</em> ' + esc(c.title) + '</span></a>';
+            '<i></i><span><em>' + (c.label || c.n) + '</em> ' + esc(c.title) + '</span></a>';
         }).join('') +
       '</div>' +
       always.map(function (c) {

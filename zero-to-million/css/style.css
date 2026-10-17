@@ -767,6 +767,9 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .c12-app .nd { width: 16rem; }
 .c12-shards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.4rem; }
 
+/* 14.2: the cost of staying, against moving the steady part */
+.co-rows .wf-row { grid-template-columns: 11rem 1fr 4.5rem; }
+
 /* 13.2: the home region and a regional cell, with the front door at the left */
 .ar2 .c13-left { padding-top: 1.2rem; }
 .c13-regions { display: grid; gap: 2.6rem; }
@@ -992,6 +995,8 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   font-size: var(--fs-sm); line-height: 1.3;
 }
 .us-stop.lane-b span { top: 4.2rem; }
+.us-stop.lane-c::before { height: 6.6rem; }
+.us-stop.lane-c span { top: 6.7rem; }
 .us-stop.first span { transform: none; text-align: left; }
 .us-stop.last span { transform: translateX(-100%); text-align: right; }
 .us-stop.reached span { color: var(--ink); }
@@ -1173,7 +1178,9 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .us-stop span, .us-stop.first span, .us-stop.last span { transform: translateX(-50%); }
   .us-stop.lane-b::before { height: 1.5rem; }
   .us-stop.lane-b span { top: 1.6rem; }
-  .us-rail { height: 4rem; }
+  .us-stop.lane-c::before { height: 2.8rem; }
+  .us-stop.lane-c span { top: 2.9rem; }
+  .us-rail { height: 5.2rem; }
   .page-nav { grid-template-columns: 1fr; }
   .pn.next { grid-column: 1; }
 }

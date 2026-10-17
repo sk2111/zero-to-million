@@ -444,7 +444,7 @@ window.ZTM = window.ZTM || {};
       request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['sql', 0], ['sql', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
       steps: [
         { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
-          say: '<strong>Find the server.</strong> The browser asks DNS for <code>app.example.com</code>. Route 53 answers with the server’s Elastic IP. The answer is cached, so this happens rarely.' },
+          say: '<strong>Find the server.</strong> The browser asks DNS for <code>tomazon.com</code>. Route 53 answers with the server’s Elastic IP. The answer is cached, so this happens rarely.' },
         { on: ['users', 'eip', 'sg', 'nginx'], run: [['in', 0], ['fw', 0], ['ng', 0]], t: '~40 ms: 2 round trips to Mumbai',
           say: '<strong>Connect.</strong> The browser opens a connection to the Elastic IP. The security group lets port 443 through, and Nginx completes the TCP and TLS handshakes.' },
         { on: ['nginx', 'app'], run: [['app', 0]], t: 'microseconds',
@@ -452,12 +452,12 @@ window.ZTM = window.ZTM || {};
         { on: ['app', 'db', 'disk'], run: [['sql', 0], ['sql', 1]], t: '~5 ms of work, ~1 ms per query',
           say: '<strong>Do the work.</strong> FastAPI runs the endpoint and queries PostgreSQL, also over <code>localhost</code>: no network round trip. If the data isn’t in RAM, PostgreSQL reads it from the disk.' },
         { on: ['nginx', 'app', 'users'], run: [['app', 1], ['ng', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
-          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. First request: about 85 ms in all. Later requests on the same connection skip DNS and the handshakes: about 25 ms.' }
+          say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. First request: about 85 ms in all. Later requests on the same connection skip DNS and the handshakes: about 25 ms. Product photos never reach FastAPI: Nginx reads them straight from the disk.' }
       ],
       html:
         '<div class="ar2-left">' +
           node('users', 'user', 'c-user', 'Users', 'in Bangalore') +
-          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
         '</div>' +
         '<div class="ar2-region">' +
           '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
@@ -467,13 +467,13 @@ window.ZTM = window.ZTM || {};
                 node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
                 node('sg', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
               '</div>' +
-              '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'EC2 t4g.nano: 2 vCPUs, 512 MB. Inside, everything talks over localhost.</p>' +
+              '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'EC2 t4g.nano: 2 vCPUs, 512 MB of RAM, 32 Mbps of network (bursts to 5 Gbps). Inside, everything talks over localhost.</p>' +
                 '<div class="ar2-sw">' +
-                  node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443') +
+                  node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443, and the photos') +
                   node('app', 'bolt', 'c-sw', 'FastAPI', '2 workers') +
                   node('db', 'db', 'c-sw', 'PostgreSQL', 'on localhost') +
                 '</div>' +
-                '<div class="ar2-disk">' + node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '20 GB') + '</div>' +
+                '<div class="ar2-disk">' + node('disk', 'disk', 'c-sto', 'EBS gp3 disk, 20 GB', 'Ubuntu, database, photos<br>250 IOPS, 5.4 MB/s steady') + '</div>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -500,7 +500,7 @@ window.ZTM = window.ZTM || {};
       request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['net', 0], ['sql', 0], ['sql', 1], ['net', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
       steps: [
         { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
-          say: '<strong>Find the server.</strong> DNS still points <code>app.example.com</code> at the Elastic IP, now attached to the app server.' },
+          say: '<strong>Find the server.</strong> DNS still points <code>tomazon.com</code> at the Elastic IP, now attached to the app server.' },
         { on: ['users', 'eip', 'sga', 'nginx'], run: [['in', 0], ['fw', 0], ['ng', 0]], t: '~40 ms: 2 round trips to Mumbai',
           say: '<strong>Connect.</strong> The browser connects to the Elastic IP. The app server’s security group lets port 443 through, and Nginx completes the TCP and TLS handshakes.' },
         { on: ['nginx', 'app'], run: [['app', 0]], t: 'microseconds',
@@ -515,7 +515,7 @@ window.ZTM = window.ZTM || {};
       html:
         '<div class="ar2-left">' +
           node('users', 'user', 'c-user', 'Users', 'in Bangalore and beyond') +
-          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
         '</div>' +
         '<div class="ar2-region">' +
           '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1, one zone</p>' +
@@ -763,7 +763,7 @@ window.ZTM = window.ZTM || {};
                 ['in', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['d2', 0], ['d2', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]],
       steps: [
         { on: ['users', 'dns'], run: [['dns', 0], ['dns', 1]], t: '~20 ms, then cached',
-          say: '<strong>Find the service.</strong> DNS now points <code>app.example.com</code> at the load balancer’s Elastic IP. Users never see the app servers directly.' },
+          say: '<strong>Find the service.</strong> DNS now points <code>tomazon.com</code> at the load balancer’s Elastic IP. Users never see the app servers directly.' },
         { on: ['users', 'eip', 'sg', 'lb'], run: [['in', 0], ['fw', 0], ['lb', 0]], t: '~40 ms: 2 round trips to Mumbai',
           say: '<strong>Connect to the load balancer.</strong> The browser’s HTTPS connection ends at Nginx, which holds the TLS certificate. Behind it, everything stays on the private network.' },
         { on: ['lb', 'app1', 'app2'], run: [['a2', 0]], t: 'a fraction of a millisecond',
@@ -778,7 +778,7 @@ window.ZTM = window.ZTM || {};
       html:
         '<div class="ar2-left">' +
           node('users', 'user', 'c-user', 'Users', '10,000 of them') +
-          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
         '</div>' +
         '<div class="ar2-region">' +
           '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1, one zone</p>' +
@@ -851,7 +851,7 @@ window.ZTM = window.ZTM || {};
       html:
         '<div class="ar2-left">' +
           node('users', 'user', 'c-user', 'Users', '100,000 of them') +
-          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for app.example.com') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
         '</div>' +
         '<div class="ar2-region">' +
           '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +

@@ -206,7 +206,7 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
 
 server {
     listen 443 ssl;
-    server_name app.example.com;
+    server_name tomazon.com;
 
     location / {
         proxy_pass http://app;

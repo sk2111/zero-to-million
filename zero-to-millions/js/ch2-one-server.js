@@ -307,8 +307,10 @@ ZTM.content[2] = {
         <table class="data">
           <thead><tr><th>Part</th><th>What it does</th><th>Worth knowing</th></tr></thead>
           <tbody>
-            <tr><td>EC2 instance, t4g.nano</td><td>The virtual machine: 2 vCPUs (ARM, AWS Graviton), 512 MB of RAM, a 20 GB gp3 disk, Ubuntu</td><td>Burstable: it runs at full speed on CPU credits, with a baseline of 5% per vCPU. Fine for a pilot’s light, spiky traffic (page 1.4).</td></tr>
-            <tr><td>Nginx</td><td>Accepts HTTPS on port 443, holds the TLS certificate (free from Let’s Encrypt), and forwards each request to the app</td><td>It also serves static files and shields the app from slow clients.</td></tr>
+            <tr><td>EC2 instance, t4g.nano</td><td>The virtual machine: 2 vCPUs (ARM, AWS Graviton), 512 MB of RAM, Ubuntu</td><td>Burstable: it runs at full speed on CPU credits, with a baseline of 5% per vCPU. Fine for a pilot’s light, spiky traffic (page 1.4).</td></tr>
+            <tr><td>EBS gp3 disk, 20 GB</td><td>The server’s disk, attached over AWS’s network: Ubuntu, PostgreSQL’s data, the product photos and a swap file</td><td>About 9 GB is used: Ubuntu about 5 GB, photos 2 GB, swap 1 GB, and the database well under 1 GB (page 2.2). gp3 is AWS’s default SSD volume (page 1.7).</td></tr>
+            <tr><td>Network</td><td>Carries every request and response, photos included</td><td>Sold as “up to 5 Gbps”, but a t4g.nano’s steady baseline is 32 Mbps. It goes faster only in bursts, while it has network credits (page 1.8).</td></tr>
+            <tr><td>Nginx</td><td>Accepts HTTPS on port 443, holds the TLS certificate (free from Let’s Encrypt), and forwards each request to the app</td><td>It also serves the product photos straight from the disk, and shields the app from slow clients.</td></tr>
             <tr><td>FastAPI under Gunicorn</td><td>Your application, as 2 worker processes, one per vCPU</td><td>With <code>async</code> endpoints, each worker can hold many waiting requests at once (page 1.12).</td></tr>
             <tr><td>PostgreSQL</td><td>The database, reached over <code>localhost</code></td><td>A query has no network round trip. Its data lives on the gp3 disk.</td></tr>
             <tr><td>Elastic IP and Route 53</td><td>A fixed public IP address, and DNS that points your domain at it</td><td>Without an Elastic IP, the address changes when the server is stopped and started.</td></tr>
@@ -330,14 +332,29 @@ ZTM.content[2] = {
         <ol class="points">
           <li>It fits, but only just. PostgreSQL has about 100 MB of page cache for its data, so once the data grows past that, queries start reading from disk (page 1.6).</li>
           <li>Add a 1 GB swap file as a safety net, so a sudden spike slows the server down instead of the OOM killer stopping PostgreSQL.</li>
-          <li>The next size up, t4g.small with 2 GB, costs only a little more each month and removes the worry. Memory is likely to be the first thing this server runs out of.</li>
+          <li>The next size up, t4g.small with 2 GB, costs only a little more each month and removes the worry. It also has four times the steady network and disk speed. Memory is likely to be the first thing this server runs out of.</li>
         </ol>
 
-        <h2>How much can it handle?</h2>
+        <h2>Does it fit the estimates?</h2>
         <ol class="points">
           <li>Say each request needs about 10 ms of CPU. Two vCPUs at full speed could handle about 200 requests a second.</li>
           <li>But a t4g.nano’s baseline is 5% per vCPU. Sustained, that’s about 10 requests a second. CPU credits cover short bursts above that; steady load above it either runs out of credits or, in unlimited mode, costs extra.</li>
-          <li>The estimate on page 2.2 says the pilot needs about 5 requests a second at its busiest. That’s plenty of room.</li>
+        </ol>
+        <p>Every estimate from page 2.2, next to what this server gives:</p>
+        <table class="data">
+          <thead><tr><th>Resource</th><th>The pilot needs</th><th>A t4g.nano gives</th><th>Fits?</th></tr></thead>
+          <tbody>
+            <tr><td>CPU</td><td>5 requests a second × 10 ms: 5% of one core</td><td>2 vCPUs, with a steady baseline of 5% each: 10% of one core</td><td>Yes, with CPU credits for spikes</td></tr>
+            <tr><td>Memory</td><td>About 400 MB</td><td>512 MB</td><td>Yes, only just</td></tr>
+            <tr><td>Disk space</td><td>About 9 GB</td><td>20 GB</td><td>Yes, with room to grow</td></tr>
+            <tr><td>Disk speed</td><td>About 10 reads and 1 MB a second, for photos. Database reads come from RAM.</td><td>250 IOPS and 5.4 MB/s steady. gp3’s 3,000 IOPS and 125 MB/s only in bursts.</td><td>Yes</td></tr>
+            <tr><td>Network</td><td>About 8 Mbps, or 12 Mbps with 50% headroom</td><td>32 Mbps steady, bursts to 5 Gbps</td><td>Yes</td></tr>
+          </tbody>
+        </table>
+        <ol class="points" start="3">
+          <li>The pilot fits on every count, with the most room on disk space and the least on memory.</li>
+          <li><strong>A small instance limits its disk and network, not just its CPU.</strong> A gp3 volume offers 3,000 IOPS and 125 MB/s, but a t4g.nano can only use 250 IOPS and 5.4 MB/s steadily (page 1.7).</li>
+          <li>At 1,000 shoppers, four of the five no longer fit: half a core against 10%, about 670 MB against 512 MB, 10 MB/s of photos against 5.4 MB/s of disk, and about 80 Mbps against 32 Mbps of network. Moving the photos to object storage behind a CDN takes care of the last two.</li>
           <li>When traffic becomes steady rather than spiky, move to a bigger or non-burstable instance. That’s where chapter 3 starts.</li>
         </ol>
 

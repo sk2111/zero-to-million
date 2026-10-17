@@ -19,9 +19,7 @@
     var c = content[ch.n];
     if (ch.status === 'ready' && c) {
       c.sections.forEach(function (s, i) {
-        var inGroup = c.sections.filter(function (x) { return x.group === s.group; });
-        pages.push({ kind: 'section', ch: ch, sec: s, num: ch.n + '.' + (i + 1), id: ch.n + '/' + s.slug, title: s.title,
-          groupPos: inGroup.indexOf(s) + 1, groupLen: inGroup.length });
+        pages.push({ kind: 'section', ch: ch, sec: s, num: ch.n + '.' + (i + 1), id: ch.n + '/' + s.slug, title: s.title });
       });
     }
   });
@@ -38,6 +36,8 @@
 
   /* ---------- sidebar ---------- */
 
+  /* Each chapter reads like a line in a book's contents: number, title, and the
+     number of users it starts from where the page number would be. */
   function renderToc(p) {
     var html = '<ol class="toc-list">';
     chapters.forEach(function (ch) {
@@ -45,15 +45,16 @@
       var c = content[ch.n];
       html += '<li class="toc-ch' + (active ? ' active' : '') + (ch.status !== 'ready' ? ' planned' : '') + '">' +
         '<a href="#/' + ch.n + '"' + (p.kind === 'cover' && active ? ' aria-current="page"' : '') + '>' +
-        '<span class="toc-users">' + ZTM.usersLabel(ch.users) + '</span>' +
         '<span class="toc-dot" aria-hidden="true"></span>' +
-        '<span class="toc-name"><span class="toc-n">' + ch.n + '</span>' + esc(ch.title) +
-        (ch.status !== 'ready' ? '<small>Planned</small>' : '') + '</span></a>';
+        '<span class="toc-n">' + ch.n + '</span>' +
+        '<span class="toc-name">' + esc(ch.title) + (ch.status !== 'ready' ? '<small>Planned</small>' : '') + '</span>' +
+        '<span class="toc-users">' + (ch.users === null ? '<span class="sr">for </span>Any<span class="sr"> number of users</span>'
+          : '<span class="sr">from </span>' + ZTM.usersLabel(ch.users) + '<span class="sr"> users</span>') + '</span></a>';
       if (active && ch.status === 'ready' && c) {
         html += '<ol class="toc-secs">' + c.sections.map(function (s, i) {
           var id = ch.n + '/' + s.slug;
           var head = s.group && (i === 0 || c.sections[i - 1].group !== s.group) ? '<li class="toc-group" aria-hidden="true">' + esc(s.group) + '</li>' : '';
-          return head + '<li><a href="#/' + id + '"' + (p.id === id ? ' aria-current="page"' : '') + '><span class="toc-n">' + ch.n + '.' + (i + 1) + '</span>' + esc(s.title) + '</a></li>';
+          return head + '<li><a href="#/' + id + '"' + (p.id === id ? ' aria-current="page"' : '') + '><span class="toc-n">' + ch.n + '.' + (i + 1) + '</span><span>' + esc(s.title) + '</span></a></li>';
         }).join('') + '</ol>';
       }
       html += '</li>';
@@ -119,9 +120,12 @@
     return html;
   }
 
+  /* The number and the part of the chapter hang in the margin beside the title
+     on wide screens, and sit above it on narrow ones (see .sec-kicker). */
   function sectionHtml(p) {
-    var group = p.sec.group ? '<p class="sec-group">' + esc(p.sec.group) + (p.groupLen > 1 ? '<span>' + p.groupPos + ' of ' + p.groupLen + '</span>' : '') + '</p>' : '';
-    return '<header class="sec-head">' + group + '<h1><span class="sec-num">' + p.num + '</span> ' + esc(p.sec.title) + '</h1>' +
+    return '<header class="sec-head"><p class="sec-kicker"><span class="sec-num">' + p.num + '</span>' +
+      (p.sec.group ? '<span class="sec-group">' + esc(p.sec.group) + '</span>' : '') + '</p>' +
+      '<h1>' + esc(p.sec.title) + '</h1>' +
       '<p class="sec-sub">' + esc(p.sec.sub) + '</p></header>' + p.sec.html;
   }
 
@@ -168,10 +172,10 @@
     renderToc(p);
 
     document.getElementById('crumb').innerHTML = p.kind === 'home' ? '<b>Zero to a million</b>'
-      : '<a href="#/' + p.ch.n + '">Chapter ' + p.ch.n + '</a><b>' + esc(p.kind === 'section' ? p.num + ' ' + p.sec.title : p.ch.title) + '</b>';
+      : p.kind === 'cover' ? '<span>Chapter ' + p.ch.n + '</span><b>' + esc(p.ch.title) + '</b>'
+      : '<a href="#/' + p.ch.n + '">' + esc(p.ch.title) + '</a><span class="sep" aria-hidden="true">/</span><b>' + p.num + ' ' + esc(p.sec.title) + '</b>';
     var inCh = p.ch ? pages.filter(function (x) { return x.ch === p.ch; }) : [];
     document.getElementById('count').textContent = inCh.length > 1 ? (inCh.indexOf(p) + 1) + ' of ' + inCh.length : '';
-    document.getElementById('progress').style.width = (i / (pages.length - 1) * 100) + '%';
     document.getElementById('prevBtn').disabled = i === 0;
     document.getElementById('nextBtn').disabled = i === pages.length - 1;
     document.title = p.kind === 'home' ? 'Zero to a Million' : p.title + ' – Zero to a Million';

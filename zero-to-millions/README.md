@@ -12,7 +12,8 @@ without internet the fonts fall back to Segoe UI.
 - `index.html#/1` opens Chapter 1's cover. `index.html#/1/cpu` opens one section.
 - Light is the default because it projects better. The switch at the bottom of the sidebar
   remembers your choice.
-- On a projector, zoom the browser (Ctrl + / Ctrl −) to taste. The text scales with the window.
+- On a projector, zoom the browser (Ctrl + / Ctrl −) to taste. Text steps up one size on
+  screens 1600 px and wider.
 
 | Key | Does |
 |---|---|
@@ -91,3 +92,9 @@ The building blocks used in Chapter 1's HTML are `.lede`, `.figures`, `.split`, 
 `ol.steps`, `ul.plain`, `table.data`, `.note.design` (for system design), `.note.runs-out`,
 `.note.rule` (rule of thumb), `figure.term`, and
 `<div class="widget" data-widget="…">`.
+
+Layout: text sits in one centred reading column (`--measure`, about 72 characters a line).
+Widgets, terminals, `.compile`, `.cases`, `.split`, `.figures`, `.stack`, `.cpu-line` and tables
+with four or more columns step out to the wider column (`--wide`) on the same centre line. A
+caption right after one of those figures lines up with it. Type is IBM Plex Sans and IBM Plex Mono;
+sizes come from the `--fs-*` tokens at the top of `css/style.css`.

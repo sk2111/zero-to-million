@@ -385,7 +385,31 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <h2>How to tell which kind you have</h2>
         <ol class="points">
           <li>Run <code>top</code> on the server while it’s under real load, and look at one line: the CPU line, which starts with <code>%Cpu(s)</code>.</li>
-          <li>It shows how the CPU spent the last few seconds, in percent. The five parts that matter:</li>
+        </ol>
+        <figure class="term">
+          <figcaption>Try it on a Linux server</figcaption>
+<pre><span class="p">$</span> top
+<span class="o">top - 14:02:11 up 12 days,  3:14,  3 users,  load average: 3.92, 3.10, 2.45
+Tasks: 112 total,   5 running, 107 sleeping,   0 stopped,   0 zombie</span>
+%Cpu(s): 88.1 us,  4.0 sy,  0.0 ni,  6.9 id,  0.6 wa,  0.0 hi,  0.4 si,  0.0 st
+<span class="o">MiB Mem :   7884.8 total,    412.5 free,   3174.8 used,   4297.5 buff/cache
+MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   2214 app       20   0  812344 196520  14200 R  98.7   2.4  41:12.07 python
+   2215 app       20   0  809116 192884  14188 R  97.3   2.4  40:58.33 python
+   2216 app       20   0  811020 194112  14196 R  96.0   2.4  41:03.81 python
+   2217 app       20   0  807452 190240  14176 R  70.2   2.4  39:47.15 python
+   2301 postgres  20   0  226488  27144  24860 S   3.1   0.3   6:02.44 postgres
+    655 www-data  20   0   55732   9120   5340 S   1.2   0.1   1:15.90 nginx</span></pre>
+          <ol class="points term-note">
+            <li>The third line, <code>%Cpu(s)</code>, is the one to read. This server spends 88% of its time running your code and 4% in the kernel, and is idle only 7% of the time.</li>
+            <li>The list underneath shows which processes use the CPU. <code>%CPU</code> counts one core as 100%, so on this 4-core server the column can add up to 400%. Four <code>python</code> workers are using almost all of it.</li>
+            <li>Press <code>1</code> to see one CPU line per core instead of the average, <code>P</code> to sort by CPU, and <code>M</code> to sort by memory.</li>
+          </ol>
+        </figure>
+        <ol class="points" start="2">
+          <li>The CPU line shows how the CPU spent the last few seconds, in percent. The five parts that matter:</li>
         </ol>
         <div class="cpu-line">
           <div><code>us</code><span>running your code</span></div>
@@ -437,9 +461,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <ol class="points">
           <li><code>nproc</code> prints how many cores the server has. <code>uptime</code> prints the <strong>load average</strong>: how many threads, on average, were running or waiting for a core.</li>
           <li>A load below the number of cores means there’s spare CPU. At or above it, threads are queuing for the CPU.</li>
-          <li>You get three numbers: the averages over the last 1, 5 and 15 minutes. If the first is higher than the others, the load is rising.</li>
-          <li>On Linux, threads waiting for the disk count towards the load too, so check <code>wa</code> before blaming the CPU.</li>
-        </ol>
+          <li>You get three numbers: the averages over the last 1, 5 and 15 minutes. If the first is higher than the others, the load is rising.</li>        </ol>
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>
 <pre><span class="p">$</span> nproc
@@ -476,14 +498,6 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           </ol>
         </figure>
 
-        <aside class="note runs-out">
-          <h3>When it runs out</h3>
-          <ol class="points">
-            <li><strong>Load average stays above the core count</strong>, and every request gets slower, not just the heavy
-            ones, because they all share the queue.</li>
-          </ol>
-        </aside>
-
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
@@ -502,7 +516,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Before adding CPU, prove the CPU is the bottleneck: high <code>us</code>, load above the core count, and few threads waiting on I/O.</p>
+          <p>Before adding CPU, prove the CPU is the bottleneck: high <code>us</code>, low <code>wa</code>, and load above the core count.</p>
         </aside>`
     },
 

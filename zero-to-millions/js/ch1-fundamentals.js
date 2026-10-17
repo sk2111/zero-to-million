@@ -136,6 +136,12 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         </ol>
 
         <h2>A core spends most of its life waiting</h2>
+        <ol class="points">
+          <li>The core itself is fast: at 3 GHz it can finish an instruction every third of a nanosecond.</li>
+          <li>But every instruction works on data, and most of that data isn’t in the core. It sits in a cache, in RAM, on a disk or on another machine, and each step further away takes far longer to reach.</li>
+          <li>Until the data arrives, the core can’t carry on. So a CPU is rarely held back by how fast it computes. It is held back by how long it waits.</li>
+          <li>When a core waits for RAM, it simply stalls, and that stall still counts as “CPU busy”.</li>
+        </ol>
         <p>At 3 GHz, a core can do a lot in the time it takes data to arrive:</p>
         <table class="data">
           <thead><tr><th>While the core waits for</th><th class="num">It could have run about</th></tr></thead>
@@ -147,11 +153,6 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             <tr><td>A round trip from India to the US (~200 ms)</td><td class="num">600 million ticks</td></tr>
           </tbody>
         </table>
-        <ol class="points">
-          <li>When a core waits for RAM, it simply stalls, and that stall still counts as “CPU busy”.</li>
-          <li>When a thread waits for disk or network, the OS hands the core to another thread instead.</li>
-          <li>This table is why caches, memory layout and network round trips matter so much.</li>
-        </ol>
 
         <figure class="term">
           <figcaption>Try it on a Linux server</figcaption>

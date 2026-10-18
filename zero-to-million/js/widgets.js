@@ -1435,7 +1435,7 @@ window.ZTM = window.ZTM || {};
         core: 'every shopper request', cat: 'staff browsing only', request: STAFF.concat(CORE),
         steps: [
           { on: ['staff', 'lb', 'cat', 'data'], run: STAFF, t: 'the cookie decides',
-            say: '<strong>A member of staff opens a product page.</strong> Nginx sees the <code>tz_beta</code> cookie and sends the request to the catalogue service, which reads the <code>catalogue_v1</code> view on the replicas.' },
+            say: '<strong>A member of staff opens a product page.</strong> Nginx sees the <code>tz_beta</code> cookie and sends the request to the catalogue service, which answers from its Redis cache and asks the core API for anything missing.' },
           { on: ['shop', 'lb', 'core', 'data'], run: CORE, t: 'no cookie: no change',
             say: '<strong>A shopper opens the same page.</strong> No cookie, and no shoppers are in the split yet, so it goes to the core API as before.' }
         ]
@@ -1492,7 +1492,8 @@ window.ZTM = window.ZTM || {};
           ['core', 'lb', 'core', 'h', ''],
           ['cat', 'lb', 'cat', 'h', ''],
           ['cd', 'core', 'data', 'h', ''],
-          ['ad', 'cat', 'data', 'h', '']
+          ['ad', 'cat', 'data', 'h', ''],
+          ['api', 'core', 'cat', 'v', 'product API']
         ],
         request: s.request,
         steps: s.steps,
@@ -1510,7 +1511,7 @@ window.ZTM = window.ZTM || {};
               '<div class="sf-lb">' + node('lb', 'proxy', 'c-net', 'Nginx', 'load balancer, routes by path') + '</div>' +
               '<div class="sf-core">' + node('core', 'bolt', 'c-cpu', 'Core API', s.core) + '</div>' +
               '<div class="sf-cat">' + node('cat', 'bolt', 'c-cpu', 'Catalogue service', s.cat) + '</div>' +
-              '<div class="sf-data">' + node('data', 'db', 'c-db', 'PostgreSQL and Redis', 'the core’s tables; the catalogue reads a view') + '</div>' +
+              '<div class="sf-data">' + node('data', 'db', 'c-db', 'PostgreSQL and Redis', 'the core’s database; the catalogue’s cache') + '</div>' +
             '</div>' +
           '</div>'
       });

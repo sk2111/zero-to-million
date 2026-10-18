@@ -72,8 +72,6 @@ ZTM.content[7] = {
             often how fast people can change the system safely.</li>
             <li><strong>Test changes together before they ship.</strong> A merge queue tests each change on top of everything
             that’s about to ship, so two changes that only break together are caught before production.</li>
-            <li><strong>Payments need a safety net.</strong> Let the payment gateway retry an update that failed, and check
-            your orders against its records every day.</li>
           </ol>
         </aside>
 
@@ -167,42 +165,24 @@ ZTM.content[7] = {
             <tr><td>Payments</td><td>No: a bug loses money</td><td>No: orders, coupons, the gateway</td><td>Yes</td><td>No</td></tr>
             <tr><td>Orders</td><td>No: a bug loses orders</td><td>No: users, products, payments, delivery</td><td>Yes</td><td>No</td></tr>
             <tr><td>Accounts and sign-in</td><td>No: if it’s down, nobody can sign in</td><td>No: every part needs it</td><td>Yes</td><td>No</td></tr>
-            <tr class="hl"><td>Catalogue: home page, product pages, search</td><td>Fairly: shoppers can’t browse, but no money or data is lost</td><td>Yes: it only reads products, from Redis and the replicas</td><td>Yes: “show what Tomazon sells”</td><td>Yes: most of the traffic, and it spikes in sales</td></tr>
+            <tr class="hl"><td>Catalogue: home page, product pages, search</td><td>Fairly: shoppers can’t browse, but no money or data is lost</td><td>Yes: it only reads products, and asks one place for them</td><td>Yes: “show what Tomazon sells”</td><td>Yes: most of the traffic, and it spikes in sales</td></tr>
           </tbody>
         </table>
 
         <h2>The catalogue service</h2>
         <ol class="points">
-          <li>The catalogue is Tomazon’s best first candidate. It’s almost entirely read-only: it reads products from Redis and the replicas (chapters 5 and 6), and changes nothing.</li>
+          <li>The catalogue is Tomazon’s best first candidate. It only reads: it shows products, and changes nothing.</li>
           <li>It also scales on its own. During a sale, the catalogue service can run on ten servers while the rest of the app stays on three.</li>
           <li>The Shopping squad owns it. The rest of the monolith, now called the <strong>core API</strong>, stays with Orders for now: accounts, carts, orders and payments.</li>
         </ol>
 
         <h2>The first new problem: sharing the data</h2>
         <ol class="points">
-          <li>The catalogue service needs product data, but the core API still owns it: staff change prices and stock there, and checkout reads them there.</li>
-          <li>The tempting shortcut is to point the catalogue service at the core’s tables on the replicas. It works on day one, but it ties the two together again: the core team can no longer rename a column without breaking the catalogue. That’s the coupon bug, now across two services.</li>
-          <li>The fix is a <strong>contract</strong>: a small, versioned interface that the owner promises to keep stable, however its own tables change.</li>
-          <li>Tomazon’s first contract is a database view, <code>catalogue_v1.products</code>. The core team owns the tables behind it. When they rename a column, the same migration updates the view, so the catalogue sees no change.</li>
-          <li>Prices still change in the core API, and the cache invalidator from page 6.3 still deletes the cached copies, so the catalogue’s pages stay fresh.</li>
+          <li><strong>The catalogue needs product data it doesn’t own.</strong> Prices and stock still live in the core API’s database, where staff change them.</li>
+          <li><strong>The shortcut: read the core’s tables directly.</strong> It works on day one. But then the core team can’t change its own tables without breaking the catalogue, and the two are tied together again.</li>
+          <li><strong>The fix: an agreed way in.</strong> The core team gives the catalogue a fixed set of product fields, and promises not to break them. Behind that, it can change its tables freely. This promise is called a <strong>contract</strong>.</li>
+          <li><strong>Tomazon’s contract is an API.</strong> The catalogue asks the core API for products, and gets back just the fields it needs. It keeps the answers in Redis (chapter 6), so the core API is asked only when a copy is missing.</li>
         </ol>
-        <figure class="term">
-          <figcaption>The contract, owned by the core team, in PostgreSQL</figcaption>
-<pre><span class="o">CREATE SCHEMA catalogue_v1;
-
-CREATE VIEW catalogue_v1.products AS          </span><span class="c">-- only what the catalogue needs</span><span class="o">
-  SELECT id, name, description, price, stock > 0 AS in_stock, rating
-  FROM products
-  WHERE listed;
-
-GRANT USAGE ON SCHEMA catalogue_v1 TO catalogue;
-GRANT SELECT ON ALL TABLES IN SCHEMA catalogue_v1 TO catalogue;   </span><span class="c">-- and nothing else</span></pre>
-          <ol class="points term-note">
-            <li>The <code>catalogue</code> login can read the view, but not the <code>products</code> table behind it, so the shortcut isn’t even possible.</li>
-            <li>Views and permissions replicate like everything else, so the catalogue service reads the view on the replicas.</li>
-            <li>A view is a stepping stone: both services still share one database, and a slow catalogue query still slows the replicas the core reads from. The longer-term contract is an API, or events that let the catalogue keep its own copy (chapter 8).</li>
-          </ol>
-        </figure>
 
         <aside class="note design">
           <h3>For system design</h3>
@@ -291,8 +271,8 @@ server {
         <h2>What Tomazon has signed up for</h2>
         <ol class="points">
           <li>The catalogue was the easy one: it only reads. The hard ones are still in the core API, and they write.</li>
-          <li>Picture orders as its own service. Checkout calls the payment service, the payment succeeds, and then the order service crashes before it saves the order. The shopper has paid for an order that doesn’t exist.</li>
-          <li>Inside the monolith, one database transaction made that impossible: both happened, or neither did. Across services, there’s no such transaction. Keeping data consistent across services is one of the hardest problems in software.</li>
+          <li>Say payments and orders become two services. A shopper pays, and the order service crashes before it saves the order. They’ve paid for an order that doesn’t exist.</li>
+          <li>In the monolith, that couldn’t happen: one database saved both, or neither. With two services, nothing ties them together, and keeping them in step is hard.</li>
         </ol>
         <table class="data">
           <thead><tr><th>In the monolith</th><th>Across services</th></tr></thead>

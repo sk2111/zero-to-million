@@ -65,7 +65,7 @@ ZTM.content[8] = {
 
         <h2>More readers are coming</h2>
         <ol class="points">
-          <li><strong>The catalogue service</strong> wants its own copy of the products, instead of reading the core’s view (page 7.3).</li>
+          <li><strong>The catalogue service</strong> wants its own copy of the products, instead of asking the core API for them (page 7.3).</li>
           <li><strong>Search</strong> is moving to OpenSearch, which needs every product change to keep its index right.</li>
           <li><strong>A placed order</strong> should send a confirmation email, book a delivery and update the sales dashboard. None of that should happen while the shopper waits.</li>
           <li>Every one of these readers needs every change, even the ones made while it was down.</li>
@@ -266,7 +266,7 @@ while True:
         <h2>Raw changes or real events: the outbox</h2>
         <ol class="points">
           <li>A CDC message is a row of a table. Its fields are the core’s column names, so a reader that relies on them is tied to the table again: the shared-table problem from page 7.3, by another route.</li>
-          <li>That’s fine for the cache invalidator, which only needs the id. But events other teams build on, such as “order placed”, should be designed and versioned, like the view in page 7.3.</li>
+          <li>That’s fine for the cache invalidator, which only needs the id. But events other teams build on, such as “order placed”, should be designed and versioned, like the product API in page 7.3.</li>
           <li>The <strong>outbox pattern</strong> does that. In the same transaction that saves the order, the core inserts a row into an <code>outbox</code> table: the event’s type and its content. Both commit, or neither does.</li>
           <li>Debezium reads the new outbox row from the WAL, and its outbox event router publishes it as the event itself. The order tables can change freely behind it.</li>
         </ol>

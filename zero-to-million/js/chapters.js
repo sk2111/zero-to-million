@@ -65,10 +65,10 @@ ZTM.chapters = [
     topics: ['Running services by hand', 'What containers leave undone', 'What Kubernetes does', 'Tomazon on Amazon EKS']
   },
   {
-    n: 11, slug: 'go-to-the-edge', title: 'Go to the edge', users: 7000000, status: 'ready', minutes: 45,
+    n: 11, slug: 'go-to-the-edge', title: 'Go to the edge', users: 7000000, status: 'ready', minutes: 15,
     question: 'Pages are slow in Europe, yet every server is fast. Where does the time go?',
-    summary: 'Split load time into processing and network time, count the round trips before the first byte, and move work closer: connections and cached pages at the edge, reads in a second region, writes at home.',
-    topics: ['Processing time and network time', 'Time to first byte', 'Ending connections and caching pages at the edge', 'CloudFront Functions and Lambda@Edge', 'A second region for reads']
+    summary: 'Find where Europe’s slow pages lose their time, end connections and cache pages at the edge, and add a second region for reads.',
+    topics: ['Distance, not servers', 'What the CDN leaves out', 'Connections and pages at the edge', 'A second region for reads']
   },
   {
     n: 12, slug: 'split-the-data', title: 'Split the data', users: 10000000, status: 'ready', minutes: 50,

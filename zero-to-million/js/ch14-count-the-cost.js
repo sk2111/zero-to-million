@@ -225,7 +225,7 @@ ZTM.content[14] = {
           <li><strong>Solve real problems.</strong> Name the problem before the technology. “The app servers are at 100% CPU” chose a load balancer; “two teams keep breaking each other” chose a service. “Microservices are modern” chooses nothing.</li>
           <li><strong>Add value.</strong> Every change should make something better for shoppers or the business: faster pages, fewer failures, a lower cost per order. If you can’t say what a change improves, don’t make it.</li>
           <li><strong>Engineer the solution to fit.</strong> Choose the smallest change that solves the problem: a cache before a rewrite, a replica before a shard, tuning before a migration. Every new part has a running cost (page 8.4).</li>
-          <li><strong>Measure, then optimise.</strong> <code>pg_stat_statements</code> found the busy queries (page 5.1). Testing from two cities found the distance (page 11.1). The bill’s line items found the waste (page 14.1). Work on what the numbers point at.</li>
+          <li><strong>Measure, then optimise.</strong> <code>pg_stat_statements</code> found the busy queries (page 5.1). Testing from two cities found the distance (chapter 11). The bill’s line items found the waste (page 14.1). Work on what the numbers point at.</li>
           <li><strong>Don’t optimise blindly.</strong> Guesses optimise the wrong thing. The scripts weren’t what slowed Europe down; shards wouldn’t have fixed one hot row; a CDN didn’t make India’s bandwidth cheaper. Each time, a measurement told us what a guess would have got wrong.</li>
           <li><strong>Observability is mandatory.</strong> You can’t scale, fix or pay for what you can’t see. Build it in from the first server, not after the first outage.</li>
         </ol>
@@ -237,7 +237,7 @@ ZTM.content[14] = {
             <tr><td>Metrics</td><td>Is it healthy right now? Watch the four golden signals: latency, traffic, errors and saturation</td><td>p95 per endpoint, the primary’s CPU, consumer lag (page 8.4)</td></tr>
             <tr><td>Logs</td><td>What exactly happened?</td><td>The payment errors after the coupon release (page 7.1)</td></tr>
             <tr><td>Traces</td><td>Where did one request spend its time, across services?</td><td>A checkout through the edge, the core API, a shard and the payment gateway</td></tr>
-            <tr><td>Real-user timings</td><td>What do shoppers actually experience, country by country?</td><td>Time to first byte in Frankfurt (page 11.1)</td></tr>
+            <tr><td>Real-user timings</td><td>What do shoppers actually experience, country by country?</td><td>Time to first byte in Frankfurt (chapter 11)</td></tr>
             <tr><td>Cost</td><td>What does each service, and each order, cost?</td><td>The cost per 1,000 orders (page 14.1)</td></tr>
           </tbody>
         </table>

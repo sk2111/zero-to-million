@@ -38,7 +38,7 @@ ZTM.content[13] = {
 
         <h2>What the recipe costs at four regions</h2>
         <ol class="points">
-          <li><strong>Every region holds everything.</strong> Five primaries, the catalogue’s and four order shards, each streamed to three other regions: 15 full copies, with every shopper’s orders and addresses on every continent. Privacy law cares where that data goes (page 11.3).</li>
+          <li><strong>Every region holds everything.</strong> Five primaries, the catalogue’s and four order shards, each streamed to three other regions: 15 full copies, with every shopper’s orders and addresses on every continent. Privacy law cares where that data goes.</li>
           <li><strong>Every region replays every write.</strong> A replica in Ohio applies every order placed in India, though Ohio’s pages never read them, and Mumbai sends its whole write stream across the oceans three times.</li>
           <li><strong>Every region depends on Mumbai.</strong> Last month a network problem between Mumbai and Singapore lasted 40 minutes. Singapore’s replica fell 40 minutes behind, and its shoppers saw old prices and stock the whole time.</li>
           <li><strong>Writes cross the world.</strong> A shopper in Ohio adding to their cart waits for a round trip to Mumbai, about 200 ms, on every write.</li>
@@ -144,7 +144,7 @@ ZTM.content[13] = {
       sub: 'Send every cell the catalogue changes it needs, and nothing else, through Kafka.',
       html: `
         <ol class="points lede">
-          <li>Frankfurt’s read data comes from a streaming replica of the Mumbai primary (page 11.3). Doing that in four regions would work, technically. Streaming replication copes with long distances and many replicas.</li>
+          <li>Frankfurt’s read data comes from a streaming replica of the Mumbai primary (chapter 11). Doing that in four regions would work, technically. Streaming replication copes with long distances and many replicas.</li>
           <li>The problem is what it copies: every table and every row, including every customer’s orders and addresses, to every continent. A physical replica can’t choose.</li>
         </ol>
 

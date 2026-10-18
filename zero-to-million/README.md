@@ -105,11 +105,10 @@ Chapter 10 has 1 page: 5 million users, and too many programs to run by hand (th
 the people running the servers; containers package the services but don't run them; what Kubernetes
 does instead; Tomazon on Amazon EKS, with a live diagram and the data kept outside the cluster).
 
-Chapter 11 has 3 pages: Slow in Europe, fast at home (testing from two cities, processing vs network
-time, the round trips before the first byte, TTFB) · Do more at the edge (ending connections at the
-edge, cacheable pages with stale-while-revalidate, a TTFB calculator by city and protocol,
-CloudFront Functions vs Lambda@Edge) · A second region for Europe (reads in Frankfurt from a
-replica, writes to Mumbai, keeping the copy honest, data across borders, a live diagram, traps).
+Chapter 11 has 1 page: 7 million users, and Europe finds Tomazon slow (testing from two cities shows
+the time is distance, not servers; the CDN has the photos but not the pages; ending connections and
+caching pages at the edge; a second region in Frankfurt for reads while writes go to Mumbai, with a
+live diagram and the before and after).
 
 Chapter 12 has 4 pages: The launch that could sink checkout (a phone brand's flash sale; a hot spot vs
 write volume; noisy neighbours) · Keep the sale off the shared database (waiting room, stock in Redis

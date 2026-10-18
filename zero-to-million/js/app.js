@@ -83,9 +83,11 @@
       '</section>' +
       '<section class="roadmap" id="roadmap">' +
         '<div class="roadmap-head"><h2>The chapters</h2><ol class="points">' +
+        '<li>There is no one right way to design a system, but every good system is built on the same fundamentals.</li>' +
         '<li>Each chapter starts where the last one stopped.</li>' +
         '<li>We add a new piece to the system only when the current design runs out of room.</li>' +
         '<li>Each time, we look at the numbers that tell us it has.</li>' +
+        '<li>Along the way, you’ll sharpen your first-principles thinking: how to approach a design problem, and how to use your judgement in your own projects.</li>' +
         (ready === chapters.length ? '' : '<li>' + ready + ' of ' + chapters.length + ' chapters are written so far.</li>') + '</ol></div>' +
         '<ol class="rm-list">' + chapters.map(function (ch) {
           return '<li class="' + (ch.status === 'ready' ? 'ready' : 'planned') + '"><a href="#/' + ch.n + '">' +

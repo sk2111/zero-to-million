@@ -44,12 +44,12 @@ ZTM.content[6] = {
         <figure class="term">
           <figcaption>The app’s request log, with a query count added, at the start of the sale</figcaption>
 <pre><span class="p">$</span> tail -3 /var/log/tomazon/requests.log
-<span class="o">GET /api/home              200  queries=120  db=962ms   total=1041ms
+<span class="o">GET /api/home              200  queries=100  db=962ms   total=1041ms
 GET /api/products/TZ-10442 200  queries=9    db=31ms    total=38ms
-GET /api/home              200  queries=120  db=1288ms  total=1370ms</span></pre>
+GET /api/home              200  queries=100  db=1288ms  total=1370ms</span></pre>
           <ol class="points term-note">
-            <li>The home page runs 120 queries every time: the banners, 12 categories, the deals in each, and their prices, stock and ratings.</li>
-            <li>Each query is quick, about 8 ms with the network round trip and the ORM, but 120 of them in a row add up to about a second (page 3.2).</li>
+            <li>The home page runs 100 queries every time: the banners, 12 categories, the deals in each, and their prices, stock and ratings.</li>
+            <li>Each query is quick, about 10 ms with the network round trip and the ORM, but 100 of them in a row add up to about a second (page 3.2).</li>
             <li>A product page runs 9 and takes 38 ms. The home page is the problem.</li>
           </ol>
         </figure>
@@ -57,7 +57,7 @@ GET /api/home              200  queries=120  db=1288ms  total=1370ms</span></pre
         <h2>The same answer, for every shopper</h2>
         <ol class="points">
           <li>The home page changes a few times a day: when the team edits a banner, or a deal starts or ends.</li>
-          <li>Yet Tomazon rebuilds it from 120 queries on every visit. During the sale that’s about 500 home page views a second, or 60,000 queries a second, all to produce the same answer.</li>
+          <li>Yet Tomazon rebuilds it from 100 queries on every visit. During the sale that’s about 500 home page views a second, or 50,000 queries a second, all to produce the same answer.</li>
           <li>Fewer, better queries (page 3.2) make each build cheaper. Not building it at all is cheaper still.</li>
         </ol>
 
@@ -70,7 +70,7 @@ GET /api/home              200  queries=120  db=1288ms  total=1370ms</span></pre
         <table class="data">
           <thead><tr><th>Test</th><th>The home page</th><th>A shopper’s cart</th></tr></thead>
           <tbody>
-            <tr><td>Expensive to produce?</td><td>Yes: 120 queries, about 1 second</td><td>No: 2 queries, a few milliseconds</td></tr>
+            <tr><td>Expensive to produce?</td><td>Yes: 100 queries, about 1 second</td><td>No: 2 queries, a few milliseconds</td></tr>
             <tr><td>Asked for often?</td><td>Yes: 500 times a second during the sale</td><td>Only by its owner</td></tr>
             <tr><td>The same for everyone, for a while?</td><td>Yes, until the team edits it</td><td>No: different for every shopper, and it changes with every click</td></tr>
             <tr><td>Verdict</td><td><strong>Cache it</strong></td><td><strong>Leave it</strong>: cheap and personal</td></tr>
@@ -110,7 +110,7 @@ GET /api/home              200  queries=120  db=1288ms  total=1370ms</span></pre
         <h2>Why it’s fast</h2>
         <ol class="points">
           <li><strong>It answers from RAM.</strong> Everything Redis holds is in memory, about a thousand times faster to reach than an SSD (page 1.10).</li>
-          <li><strong>It stores finished answers.</strong> This is the bigger win. One lookup returns the whole home page, instead of 120 queries to rebuild it.</li>
+          <li><strong>It stores finished answers.</strong> This is the bigger win. One lookup returns the whole home page, instead of 100 queries to rebuild it.</li>
           <li><strong>It’s a key-value store.</strong> Every value has a name, its key, such as <code>home:v1</code>, and you fetch it by that name. There are no joins and no query planner: <code>GET home:v1</code> returns the value, or nothing.</li>
           <li><strong>It runs one command at a time.</strong> Commands run one after another on a single thread, so there are no locks to fight over. One Redis server handles over 100,000 simple commands a second.</li>
           <li><strong>The trade-off:</strong> RAM is limited, it costs more than disk, and a restart can empty it. That’s fine for a cache: everything in it can be rebuilt from PostgreSQL, which stays the source of truth.</li>
@@ -149,7 +149,7 @@ async def home():
     cached = await cache.get("home:v1")
     if cached:                                       </span><span class="c"># a hit: no database at all</span><span class="o">
         return json.loads(cached)
-    page = await build_home_page()                   </span><span class="c"># a miss: the 120 queries, about 1 s</span><span class="o">
+    page = await build_home_page()                   </span><span class="c"># a miss: the 100 queries, about 1 s</span><span class="o">
     await cache.set("home:v1", json.dumps(page), ex=HOME_TTL)
     return page</span></pre>
           <ol class="points term-note">
@@ -163,7 +163,7 @@ async def home():
         <p>Redis gets a server of its own on the private network, next to the database. Step through a hit and a miss:</p>
         <div class="widget" data-widget="cache-arch"></div>
         <ol class="points">
-          <li><strong>The result:</strong> the home page drops from about a second to about 2 ms. Its database load drops from 60,000 queries a second to 120 queries every 5 minutes.</li>
+          <li><strong>The result:</strong> the home page drops from about a second to about 2 ms. Its database load drops from 50,000 queries a second to 100 queries every 5 minutes.</li>
           <li><strong>Size it for what you cache.</strong> The home page is about 200 KB, and 10,000 product pages at about 20 KB each are 200 MB. An r7g.large with 16 GB leaves plenty of room. Amazon ElastiCache runs the same Redis as a managed service.</li>
           <li><strong>Set a memory limit, and what to drop when it’s full.</strong> <code>maxmemory 12gb</code> with <code>maxmemory-policy allkeys-lru</code> makes Redis evict the least recently used keys, instead of running out of memory.</li>
         </ol>
@@ -200,7 +200,7 @@ async def home():
         <h2>Option 1: a shorter TTL</h2>
         <ol class="points">
           <li>A shorter TTL limits how long a copy can be wrong. The cost is more misses, and every miss is a rebuild on the database.</li>
-          <li>For one hot page, that cost is tiny: the home page rebuilt every 10 seconds is still only about 12 queries a second.</li>
+          <li>For one hot page, that cost is tiny: the home page rebuilt every 10 seconds is still only about 10 queries a second.</li>
           <li>For thousands of pages, each visited now and then, it’s huge: most visits arrive after their copy has expired, so most of them miss. Compare the two:</li>
         </ol>
         <div class="widget" data-widget="ttl-tradeoff"></div>
@@ -273,7 +273,7 @@ async def forget(product_id):
           <tbody>
             <tr><td>A lost notification</td><td>NOTIFY isn’t stored anywhere. If the invalidator is restarting when a price changes, the message is gone, and the old copy stays.</td><td>Keep the TTL as a safety net. When the invalidator reconnects, delete the keys it may have missed.</td></tr>
             <tr><td>A lagging replica</td><td>The key is deleted, and the next request misses. It rebuilds from a replica that hasn’t replayed the change yet (chapter 5), and puts the old price back for a full TTL.</td><td>Delete the key again a second later, or rebuild from the primary just after a change.</td></tr>
-            <tr><td>A stampede</td><td>A hot key expires during the sale. Hundreds of requests miss in the same second, and all of them run the 120 queries at once.</td><td>Let one request rebuild while the others wait a moment: a short lock in Redis with <code>SET … NX EX 10</code>. Add a little randomness to TTLs, so thousands of keys don’t expire together.</td></tr>
+            <tr><td>A stampede</td><td>A hot key expires during the sale. Hundreds of requests miss in the same second, and all of them run the 100 queries at once.</td><td>Let one request rebuild while the others wait a moment: a short lock in Redis with <code>SET … NX EX 10</code>. Add a little randomness to TTLs, so thousands of keys don’t expire together.</td></tr>
             <tr><td>An empty cache</td><td>After a Redis restart, every request misses, and the full load lands on the database at once.</td><td>Make sure the database can take it for a few minutes, and fill the hottest keys before sending traffic.</td></tr>
           </tbody>
         </table>

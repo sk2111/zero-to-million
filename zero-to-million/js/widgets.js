@@ -1161,7 +1161,7 @@ window.ZTM = window.ZTM || {};
           say: '<strong>Ask Redis first.</strong> The app sends <code>GET home:v1</code> to Redis over the private network.' },
         { on: ['redis', 'app', 'lb', 'users'], run: [['hit', 1], ['lbapp', 1], ['in', 1]], t: 'about 2 ms in the app',
           say: '<strong>A hit.</strong> Redis has the page, so the app returns it at once, and the database isn’t touched. During the sale, almost every request ends here.' },
-        { on: ['app', 'reps'], run: [['miss', 0], ['miss', 1]], t: '120 queries, about 1 s',
+        { on: ['app', 'reps'], run: [['miss', 0], ['miss', 1]], t: '100 queries, about 1 s',
           say: '<strong>A miss.</strong> Once every 5 minutes the key has expired, so the app builds the page from the replicas, as it always did.' },
         { on: ['app', 'redis'], run: [['hit', 0], ['hit', 1]], t: 'the next request is a hit',
           say: '<strong>Store it.</strong> The app saves the page with <code>SET home:v1 … EX 300</code>, then returns it. Every request for the next 5 minutes is a hit.' }
@@ -1205,7 +1205,7 @@ window.ZTM = window.ZTM || {};
 
   W['ttl-tradeoff'] = function (el) {
     var WHAT = [
-      { value: 'home', label: 'Home page', keys: 1, rate: 500, q: 120 },
+      { value: 'home', label: 'Home page', keys: 1, rate: 500, q: 100 },
       { value: 'products', label: '10,000 products', keys: 10000, rate: 5000, q: 9 }
     ];
     var TTLS = [{ value: '10', label: '10 s' }, { value: '60', label: '1 min' }, { value: '300', label: '5 min' }, { value: '3600', label: '1 hour' }];
@@ -1249,7 +1249,7 @@ window.ZTM = window.ZTM || {};
       var say;
       if (w.keys === 1) {
         say = 'The home page is asked for 500 times a second, so even a 10-second copy is used thousands of times before it expires. ' +
-          'The TTL barely changes the database’s load: <b>' + o('db').textContent + ' queries a second</b> instead of 60,000. What it does decide is how long a wrong price can stay up.';
+          'The TTL barely changes the database’s load: <b>' + o('db').textContent + ' queries a second</b> instead of 50,000. What it does decide is how long a wrong price can stay up.';
       } else {
         say = 'Each product page is asked for only about once every 2 seconds. With a ' + AS_WORD[ttl] + ' TTL, ' + ((1 - hit) * 100).toFixed(1) + '%' +
           ' of visits arrive after their copy has expired, and the database still runs <b>' + o('db').textContent + ' queries a second</b>. ' +

@@ -293,7 +293,7 @@ spec:
             <tr><td>Core API, catalogue, cache invalidators, search indexer, email sender, photo resizer</td><td>Pods on EKS</td><td>They keep no state, so any copy can be replaced at any moment</td></tr>
             <tr><td>PostgreSQL and Redis</td><td>Their own EC2 servers, as before</td><td>Data needs careful, rare changes. Moving it into the cluster buys nothing yet</td></tr>
             <tr><td>Kafka and Debezium</td><td>Amazon MSK and MSK Connect</td><td>Already run by AWS (page 8.4)</td></tr>
-            <tr><td>Photos</td><td>S3 and CloudFront</td><td>Already run by AWS (page 9.3)</td></tr>
+            <tr><td>Photos</td><td>S3 and CloudFront</td><td>Already run by AWS (chapter 9)</td></tr>
           </tbody>
         </table>
 

@@ -55,8 +55,8 @@ ZTM.chapters = [
   {
     n: 9, slug: 'serve-it-nearby', title: 'Serve it nearby', users: 3000000, status: 'ready', minutes: 45,
     question: 'Shoppers abroad say pages crawl, and the bandwidth bill keeps climbing. Why?',
-    summary: 'See why distance makes pages slow, put the photos on a CDN in front of a private S3 bucket, name files so they can be cached for a year, and send fewer bytes.',
-    topics: ['Round trips and the speed of light', 'How a CDN works', 'CloudFront in front of S3', 'Versioned names and cache lifetimes', 'Smaller images', 'What a CDN really saves']
+    summary: 'See why distance makes pages slow, put the photos on a CDN, send fewer bytes, and find out what a CDN really saves.',
+    topics: ['Distance and the speed of light', 'How a CDN works', 'Smaller images', 'What a CDN really saves']
   },
   {
     n: 10, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'ready', minutes: 50,

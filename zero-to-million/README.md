@@ -96,11 +96,9 @@ why LISTEN/NOTIFY can't be fixed) · A queue or a log (RabbitMQ and SQS vs Kafka
 widget that sends the same changes through NOTIFY and through a topic) · Capture changes from the
 WAL (the dual-write problem, Debezium, the new cache invalidator as a Kafka consumer) · The price of a log (Amazon MSK or your own, safe settings, consumer lag, the traps).
 
-Chapter 9 has 4 pages: Slow abroad, expensive at home (round trips and the speed of light, TCP slow
-start, a photo-load calculator by city, the egress bill) · A CDN: copies near the shopper (edges,
-hits and misses, regional edge caches, a live diagram, what belongs on a CDN) · Photos through
-CloudFront (a private bucket with origin access control, the distribution, content-hash names cached
-for a year, resizing to WebP on upload) · What the CDN changed (speed, why the bill fell mostly for
+Chapter 9 has 3 pages: Slow abroad, expensive at home (distance and the speed of light, the egress
+bill) · A CDN: copies near the shopper (edges, hits and misses, regional edge caches, a live
+diagram, what belongs on a CDN) · What the CDN changed (speed, why the bill fell mostly for
 other reasons, flat-rate pricing, the traps).
 
 Chapter 10 has 4 pages: The night a server died (programs placed by hand, a 2 a.m. rebuild, the jobs

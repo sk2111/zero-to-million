@@ -556,7 +556,7 @@ window.ZTM = window.ZTM || {};
                 '</div>' +
                 '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'App server: EC2 c7g.large, 2 vCPUs, 4 GB</p>' +
                   '<div class="ar3-two">' +
-                    node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443') +
+                    node('nginx', 'proxy', 'c-sw', 'Nginx', 'HTTPS, port 443, and the photos') +
                     node('app', 'bolt', 'c-sw', 'FastAPI', '2 workers, pooled connections') +
                   '</div>' +
                 '</div>' +
@@ -858,7 +858,8 @@ window.ZTM = window.ZTM || {};
         ['d2', 'app2box', 'pgb', 'v', ''],
         ['pool', 'pgb', 'db', 'h', ''],
         ['io', 'db', 'disk', 'h', ''],
-        ['bak', 'disk', 'snap', 'v', 'daily', true]
+        ['bak', 'disk', 'snap', 'v', 'daily', true],
+        ['ph', 'users', 's3', 'h', '']
       ],
       request: [['in', 0], ['fw', 0], ['lb', 0], ['a1', 0], ['d1', 0], ['pool', 0], ['pool', 1], ['d1', 1], ['a1', 1], ['lb', 1], ['fw', 1], ['in', 1],
                 ['in', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['d2', 0], ['pool', 0], ['pool', 1], ['d2', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]],
@@ -873,6 +874,8 @@ window.ZTM = window.ZTM || {};
           say: '<strong>Do the work.</strong> FastAPI on server 2 sends its query across the private network to PgBouncer on the database server, which lends it one of 20 real connections to PostgreSQL over <code>localhost</code>. Both app servers share that one pool, so PostgreSQL sees 20 connections in all.' },
         { on: ['app2', 'lb', 'users'], run: [['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
           say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. The user can’t tell, and doesn’t need to know, which server answered.' },
+        { on: ['users', 's3'], run: [['ph', 0], ['ph', 1]], t: 'straight from S3',
+          say: '<strong>Fetch the photos.</strong> The page’s photo links point at the S3 bucket, so the browser downloads them straight from S3. The load balancer and the app servers never carry them.' },
         { on: ['lb', 'app2'], run: [['a2', 0]], t: 'after 3 failed attempts',
           say: '<strong>If a server fails.</strong> When requests to app server 1 keep failing, Nginx stops sending it traffic for a while and server 2 takes everything. That’s why each server needs room to spare.' }
       ],
@@ -912,7 +915,8 @@ window.ZTM = window.ZTM || {};
               '</div>' +
             '</div>' +
           '</div>' +
-          '<div class="ar2-bak">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
+          '<div class="ar2-bak g-bak4">' + node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', 'product photos, fetched by browsers') +
+            node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
         '</div>'
     });
   };
@@ -973,7 +977,10 @@ window.ZTM = window.ZTM || {};
             '</div>' +
           '</div>' +
         '</div>' +
-        '<div class="g-bak' + (o.cache ? ' with-cache' : '') + '"><div>' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div></div>' +
+        '<div class="g-bak' + (o.cache ? ' with-cache' : '') + '">' +
+          '<div class="g-s3">' + node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', 'product photos, fetched by browsers') + '</div>' +
+          '<div class="g-snap">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
+        '</div>' +
       '</div>';
   }
 
@@ -993,7 +1000,8 @@ window.ZTM = window.ZTM || {};
       ['io', 'db', 'disk', 'v', ''],
       ['wal1', 'db', 'rep1', 'h', 'WAL', true],
       ['wal2', 'db', 'rep2', 'h', '', true],
-      ['bak', 'disk', 'snap', 'v', 'daily', true]
+      ['bak', 'disk', 'snap', 'v', 'daily', true],
+      ['ph', 'users', 's3', 'h', '']
     ].concat(o.cache ? [['c', 'apps', 'redis', 'vb', '']] : [])
      .concat(o.inv ? [['note', 'db', 'inv', 'v', '', true], ['del', 'redis', 'inv', 'h', 'DEL', 'rev']] : []);
   }

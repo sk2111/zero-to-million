@@ -71,10 +71,10 @@ ZTM.chapters = [
     topics: ['Distance, not servers', 'What the CDN leaves out', 'Connections and pages at the edge', 'A second region for reads']
   },
   {
-    n: 12, slug: 'split-the-data', title: 'Split the data', users: 10000000, status: 'ready', minutes: 50,
+    n: 12, slug: 'split-the-data', title: 'Split the data', users: 10000000, status: 'ready', minutes: 15,
     question: 'One database takes every write. What happens when one launch could swamp it?',
-    summary: 'Tell a hot spot from a volume problem, keep a flash sale off the shared database, then shard the orders by customer, with logical shards and a map.',
-    topics: ['Noisy neighbours and hot spots', 'Flash sales: waiting rooms, Redis and queues', 'Choosing a shard key', 'Logical shards and the shard map', 'Moving to shards without stopping']
+    summary: 'See why replicas and caches can’t take writes, shard the orders by customer across four primaries, and give a flash sale its own path.',
+    topics: ['One primary for every write', 'What replicas and caches can’t do', 'Shard keys, logical shards and the shard map', 'Four order shards']
   },
   {
     n: 13, slug: 'go-global', title: 'Go global', users: 20000000, status: 'ready', minutes: 50,

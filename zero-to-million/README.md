@@ -110,12 +110,10 @@ the time is distance, not servers; the CDN has the photos but not the pages; end
 caching pages at the edge; a second region in Frankfurt for reads while writes go to Mumbai, with a
 live diagram and the before and after).
 
-Chapter 12 has 4 pages: The launch that could sink checkout (a phone brand's flash sale; a hot spot vs
-write volume; noisy neighbours) · Keep the sale off the shared database (waiting room, stock in Redis
-with a Lua script, orders through SQS, a cell of its own) · Sharding: more than one primary (shard
-keys, logical shards and a shard map with a rebalancing widget, the router, a live diagram) · Moving
-to shards, and living with them (one logical shard at a time, own router vs Citus vs Aurora
-Limitless, traps).
+Chapter 12 has 1 page: 10 million users, and one database takes every write (a phone launch; replicas
+and caches can't take writes; sharding by customer with 64 logical shards and a shard map; why one
+hot row needs a waiting room and a Redis counter instead; four order shards, with a live diagram and
+the before and after).
 
 Chapter 13 has 4 pages: 20 million users, and four regions with one home (what copying everything
 to every region costs) · A shop in every region (regional cells, DNS routing vs anycast) · Feeding

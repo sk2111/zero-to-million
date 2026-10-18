@@ -209,7 +209,7 @@ ON CONFLICT (id) DO UPDATE
       html: `
         <ol class="points lede">
           <li>Browsing is local everywhere now. Writes still all go to Mumbai, where the four order shards are, so a shopper in Ohio crosses the world to add to their cart.</li>
-          <li>The shard map from page 12.3 already has the answer: a logical shard can live on a primary in any region.</li>
+          <li>The shard map from chapter 12 already has the answer: a logical shard can live on a primary in any region.</li>
         </ol>
 
         <h2>Home regions</h2>

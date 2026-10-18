@@ -854,21 +854,22 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .fa-left .fa-eu { margin-top: 8rem; }
 .fa-right { display: flex; flex-direction: column; gap: 2.6rem; min-width: 0; }
 .fa-region { padding: 0.7rem 1.7rem 0.9rem 0.9rem; }
-.fa-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2.6rem 0.9rem; align-items: center; padding: 0.4rem 0 1.5rem; }
+.fa-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2.6rem 1.7rem; align-items: center; padding: 0.4rem 0 1.5rem; }
 .fa-grid .nd { padding: 0.4rem 0.25rem 0.45rem; font-size: 0.66rem; }
 .fa-grid .nd b { font-size: 0.72rem; }
 .fa-grid .ic, .fa-left .ic { width: 1.7rem; height: 1.7rem; margin-bottom: 0.15rem; }
 .fa-grid .ic svg, .fa-left .ic svg { width: 1.15rem; height: 1.15rem; }
 .fa-c1 { grid-column: 1; } .fa-c2 { grid-column: 2; } .fa-c3 { grid-column: 3; }
 .fa-c4 { grid-column: 4; } .fa-c5 { grid-column: 5; }
-.fa-r2 { grid-row: 2; } .fa-r3 { grid-row: 3; } .fa-r4 { grid-row: 4; } .fa-r5 { grid-row: 5; }
-.fa-alb { grid-area: 1 / 2 / 2 / 4; justify-self: center; width: calc(50% - 0.45rem); }
+.fa-r2 { grid-row: 2; } .fa-r3 { grid-row: 3; } .fa-r4 { grid-row: 4; } .fa-r5 { grid-row: 5; } .fa-r6 { grid-row: 6; }
+.fa-alb { grid-area: 1 / 2 / 2 / 4; justify-self: center; width: calc(50% - 0.85rem); }
 .fa-box { display: flex; align-self: stretch; border-radius: 10px; }
 .fa-box .ar2-k { margin: 0.3rem 0.55rem; font-size: 0.66rem; }
 .fa-k8s { grid-area: 2 / 2 / 3 / 6; justify-content: flex-end; align-items: flex-start; margin: -1.5rem -0.45rem -0.45rem; border: 2px dashed #ed7100; }
 .fa-k8s-fra { grid-area: 2 / 2 / 3 / 5; }
 .fa-fra > .ar2-k { justify-content: flex-end; }   /* wires from Mumbai come down on the left */
 .fa-db { grid-area: 3 / 2 / 6 / 3; align-items: flex-end; margin: -0.45rem -0.4rem -1.5rem; border: 2px solid #c925d1; }
+.fa-shards { grid-area: 6 / 2 / 7 / 6; align-items: flex-end; margin: -0.45rem -0.45rem -1.5rem; border: 2px solid #c925d1; }
 .fa-msk { grid-area: 4 / 4 / 5 / 6; align-items: flex-end; margin: -0.45rem -0.4rem -1.5rem; border: 2px solid #7aa116; }
 
 /* 12.3: customers and logical shards, coloured by the primary that holds them */

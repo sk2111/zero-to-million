@@ -355,6 +355,10 @@ window.ZTM = window.ZTM || {};
         } else if (x[3] === 'ld') {   /* out of the source's left, across, then down into the target's top */
           pts = [[A.l - 3, A.cy], [B.cx, A.cy], [B.cx, B.t - 3]];
           lx = B.cx + 6; ly = A.cy + 16;
+        } else if (x[3] === 'lb') {   /* out of the source's left, down a lane beside it, into the target's left */
+          var xl = Math.min(A.l, B.l) - 10;
+          pts = [[A.l - 3, A.cy], [xl, A.cy], [xl, B.cy], [B.l - 3, B.cy]];
+          lx = xl + 6; ly = B.cy - 8;
         } else if (x[3] === 'u') {   /* under a row: down, across, back up */
           var yb = Math.max(A.b, B.b) + 18;
           pts = [[A.cx, A.b + 3], [A.cx, yb], [B.cx, yb], [B.cx, B.b + 3]];
@@ -2104,7 +2108,8 @@ window.ZTM = window.ZTM || {};
 
   /* Five columns: S3, then one per program, each above the store it uses most, so nearly every wire
      runs straight. Group boxes (the cluster, the database server, MSK) sit behind the nodes they hold.
-     o.europe adds chapter 11's CloudFront edges in front, and the Frankfurt region below. */
+     o.europe adds chapter 11's CloudFront edges in front, and the Frankfurt region below.
+     o.shards adds chapter 12's four order shards, in a row of their own under the database server. */
   function fullLayout(o) {
     var node = archNode;
     function at(cls, id, g, cat, title, sub) { return '<div class="' + cls + '">' + node(id, g, cat, title, sub) + '</div>'; }
@@ -2135,11 +2140,18 @@ window.ZTM = window.ZTM || {};
             at('fa-c3 fa-r3', 'reps', 'db', 'c-db', 'Replicas 1 and 2', 'read-only') +
             at('fa-c4 fa-r3', 'redis', 'cache', 'c-db', 'Redis', 'cached pages') +
             at('fa-c5 fa-r3', 'os', 'search', 'c-db', 'OpenSearch', 'the search index') +
-            at('fa-c2 fa-r4', 'pg', 'db', 'c-sw', 'PostgreSQL', 'the primary: every write') +
+            at('fa-c2 fa-r4', 'pg', 'db', 'c-sw', 'PostgreSQL', o.shards ? 'the primary: products' : 'the primary: every write') +
             at('fa-c4 fa-r4', 'dbz', 'bolt', 'c-sw', 'Debezium', 'reads the WAL') +
             at('fa-c5 fa-r4', 'kafka', 'log', 'c-sto', 'Kafka', 'product changes') +
             at('fa-c2 fa-r5', 'disk', 'disk', 'c-sto', 'EBS disk', 'the data') +
             at('fa-c3 fa-r5', 'snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') +
+            (o.shards
+              ? '<div class="fa-box fa-shards" data-p="shards"><p class="ar2-k">New: order shards, each a primary and a replica</p></div>' +
+                at('fa-c2 fa-r6', 'o1', 'db', 'c-db', 'orders-1', 'logical shards 0–15') +
+                at('fa-c3 fa-r6', 'o2', 'db', 'c-db', 'orders-2', 'logical shards 16–31') +
+                at('fa-c4 fa-r6', 'o3', 'db', 'c-db', 'orders-3', 'logical shards 32–47') +
+                at('fa-c5 fa-r6', 'o4', 'db', 'c-db', 'orders-4', 'logical shards 48–63')
+              : '') +
           '</div>' +
         '</div>' +
         (o.europe
@@ -2187,7 +2199,7 @@ window.ZTM = window.ZTM || {};
       ['rf', 'catF', 'repF', 'v', ''],
       ['cf', 'catF', 'redisF', 'v', ''],
       ['walF', 'pg', 'repF', 'ld', 'WAL', true]
-    ] : [
+    ].concat(o.shards ? [['sh', 'core', 'shards', 'lb', '']] : []) : [
       ['dns', 'dns', 'shop', 'v', 'DNS lookup'],
       ['in', 'shop', 'alb', 'hl', 'HTTPS'],
       ['ph', 'shop', 'edge', 'v', 'photos'],
@@ -2378,46 +2390,31 @@ window.ZTM = window.ZTM || {};
     draw();
   };
 
-  /* ---------- Chapter 12: the shard router in the core API, and four primaries ---------- */
+  /* ---------- Chapter 12: chapter 11's architecture, with the orders split across four shards ---------- */
 
   W['shard-arch'] = function (el) {
-    var node = archNode;
+    var o = { europe: true, shards: true };
+    var india = [['ia', 0], ['a1', 0], ['sh', 0], ['sh', 1], ['a1', 1], ['ia', 1], ['iIn', 1]];
+    var europe = [['fIn', 0], ['fw', 0], ['a1', 0], ['sh', 0], ['sh', 1], ['a1', 1], ['fw', 1], ['fIn', 1]];
+    var products = [['w', 0], ['pool', 0], ['wal', 0], ['walF', 0], ['cdc', 0]];
     el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
     liveArch(el.querySelector('.arch-scroll > div'), {
       joints: true,
-      wires: [
-        ['in', 'shop', 'app', 'h', ''],
-        ['q1', 'app', 's1', 'v', ''],
-        ['q2', 'app', 's2', 'v', ''],
-        ['q3', 'app', 's3', 'v', ''],
-        ['q4', 'app', 's4', 'v', '']
-      ],
-      request: [['in', 0], ['q3', 0], ['q3', 1], ['in', 1], ['in', 0], ['q1', 0], ['q1', 1], ['in', 1]],
-      start: 'Follow a request',
+      wires: fullWires(o),
+      request: [['iIn', 0]].concat(india, europe),
+      start: 'Follow two orders',
+      idle: 'Chapter 11’s architecture, with one new part: four order shards in Mumbai, under the database server. Press <strong>Follow two orders</strong> to go through it step by step.',
       steps: [
-        { on: ['shop', 'app'], run: [['in', 0]], t: 'customer 48213',
-          say: '<strong>“My orders”.</strong> Customer 48213 opens their orders, and the request reaches one of the core API’s pods.' },
-        { on: ['app'], run: [], t: 'microseconds, no network call',
-          say: '<strong>Find the shard.</strong> The router hashes 48213 to logical shard 37 of 64, and looks it up in the shard map, a 64-row table cached in every pod: shard 37 lives on orders-3.' },
-        { on: ['app', 's3', 'shop'], run: [['q3', 0], ['q3', 1], ['in', 1]], t: 'one primary, as before',
-          say: '<strong>Ask one primary.</strong> The query goes to orders-3 only, exactly as it used to go to the single primary. Everything about one customer lives on one shard, so “My orders” never needs another.' },
-        { on: ['shop', 'app', 's1'], run: [['in', 0], ['q1', 0], ['q1', 1], ['in', 1]], t: 'another customer, another primary',
-          say: '<strong>Another customer, another primary.</strong> Customer 1150 hashes to logical shard 9, on orders-1. The writes are spread over four primaries, each with its own replicas, disk and backups.' },
-        { on: ['app', 's1', 's2', 's3', 's4'], run: [['q1', 0], ['q2', 0], ['q3', 0], ['q4', 0]], t: 'every shard: avoid',
-          say: '<strong>A question about everyone,</strong> such as “today’s orders for one phone”, would have to ask all four primaries and merge the answers. Reports like that go to the data warehouse, fed from Kafka (chapter 8), not to the shards.' }
+        { on: ['shopIn', 'edgeIn'], run: [['iIn', 0]], t: 'at noon: a queue at the edge',
+          say: '<strong>The launch.</strong> 5 million shoppers arrive for 200,000 phones. A waiting room at the edge lets them into the sale at a pace the system can take, and the stock is counted in Redis, not in a database row.' },
+        { on: ['shopIn', 'edgeIn', 'alb', 'core', 'o3'], run: india, t: 'customer 48213: orders-3',
+          say: '<strong>An order, routed by customer.</strong> The core API hashes customer 48213 to logical shard 37 of 64. Its shard map, cached in every pod, says shard 37 lives on orders-3, so the order is written there, and nowhere else.' },
+        { on: ['shopFr', 'edgeFr', 'alb', 'core', 'o1'], run: europe, t: 'customer 1150: orders-1',
+          say: '<strong>Another customer, another shard.</strong> Customer 1150, in Europe, hashes to logical shard 9, on orders-1. Each primary takes about a quarter of the writes, and holds about a quarter of the data.' },
+        { on: ['core', 'pgb', 'pg', 'reps', 'repF', 'dbz'], run: products, t: 'products stay where they were',
+          say: '<strong>The catalogue isn’t sharded.</strong> Products stay on the original primary, which still feeds the replicas, Frankfurt and Debezium. Only customers’ data moves to the shards: orders, carts, payments and addresses.' }
       ],
-      html:
-        '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shopper', 'customer 48213') + '</div>' +
-        '<div class="ar2-region">' +
-          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai)</p>' +
-          '<div class="c12-app">' + node('app', 'bolt', 'c-cpu', 'Core API pods', 'router and shard map, in memory') + '</div>' +
-          '<div class="c12-shards">' +
-            node('s1', 'db', 'c-db', 'orders-1', 'logical shards 0–15') +
-            node('s2', 'db', 'c-db', 'orders-2', 'logical shards 16–31') +
-            node('s3', 'db', 'c-db', 'orders-3', 'logical shards 32–47') +
-            node('s4', 'db', 'c-db', 'orders-4', 'logical shards 48–63') +
-          '</div>' +
-        '</div>'
+      html: fullLayout(o)
     });
   };
 

@@ -293,7 +293,7 @@ async def forget(product_id):
         <h2>Where this leads</h2>
         <ol class="points">
           <li>Reads are now fast: Redis answers the popular pages, and the replicas take the rest.</li>
-          <li>Every server now has room to spare at a million users. The next limit isn’t a machine: a dozen engineers in two squads change one app every day, and their changes have started to break each other. Chapter 7 splits the monolith.</li>
+          <li>Every server now has room to spare at a million users.</li>
         </ol>
 
         <aside class="note design">

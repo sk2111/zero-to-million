@@ -38,19 +38,19 @@ ZTM.content[7] = {
 
         <h2>The afternoon payments broke</h2>
         <ol class="steps">
-          <li><strong>Orders adds a delivery partner.</strong> The change rewrites the payment webhook: the request the payment gateway sends when a shopper’s payment succeeds. The new webhook checks the amount paid against the order’s <code>total</code>, marks the order paid, and books the delivery.</li>
-          <li><strong>Shopping adds coupons.</strong> The change renames the order’s <code>total</code> to <code>subtotal</code>, adds a <code>discount</code>, and updates every line that used <code>total</code>, in the code as it was when the work began.</li>
-          <li><strong>Each passes its tests.</strong> The two changes touch different files, so they merge without a conflict, and each was tested on its own branch. Orders ships at 2 p.m., Shopping at 3 p.m.</li>
-          <li><strong>Payments stop being recorded.</strong> The new webhook still reads <code>total</code>, which no longer exists, and fails on every payment. Shoppers are charged, but their orders stay “awaiting payment”.</li>
+          <li><strong>Orders changes the payment step,</strong> so that a paid order also books a delivery.</li>
+          <li><strong>Shopping changes how an order’s price is stored,</strong> to make room for coupons.</li>
+          <li><strong>Each change works on its own.</strong> Both pass their tests, and both ship the same afternoon.</li>
+          <li><strong>Together, they break payments.</strong> The payment step still expects the price stored the old way. Shoppers are charged, but their orders stay “awaiting payment”.</li>
         </ol>
         <ol class="points">
-          <li>Rolling back the coupon change stops the damage. The gateway retries a webhook that failed, so most of the stuck orders are marked paid once the fix is out. A reconciliation job, comparing the gateway’s list of payments with the orders table, finds the rest.</li>
-          <li>Nothing was wrong with the servers, the database or the deploy. The deploy shipped exactly what it was given: two changes that were each correct, and wrong together.</li>
+          <li>Undoing the coupon change fixes it, and the stuck orders are matched to their payments afterwards.</li>
+          <li>Nothing was wrong with the servers. Two correct changes broke when they met.</li>
         </ol>
 
         <h2>The bottleneck is the codebase</h2>
         <ol class="points">
-          <li>Over time, the modules from page 2.4 grew into each other. Coupons reach into orders, the webhook reaches into products, and anything can change a shared model.</li>
+          <li>Over time, the modules from page 2.4 grew into each other. Coupons reach into orders, payments reach into products, and any part can change data that others depend on.</li>
           <li>No one can change one area without understanding all of it, so every change needs more meetings, more coordination and more care.</li>
           <li>This has a name. <strong>Conway’s law</strong> says a system ends up shaped like the teams that build it. Two squads in one tangled codebase get a tangled system, and step on each other in it.</li>
         </ol>
@@ -72,8 +72,8 @@ ZTM.content[7] = {
             often how fast people can change the system safely.</li>
             <li><strong>Test changes together before they ship.</strong> A merge queue tests each change on top of everything
             that’s about to ship, so two changes that only break together are caught before production.</li>
-            <li><strong>Payment flows need a safety net.</strong> Webhooks fail. Keep the handler simple, let the gateway retry,
-            and reconcile against the gateway’s records every day.</li>
+            <li><strong>Payments need a safety net.</strong> Let the payment gateway retry an update that failed, and check
+            your orders against its records every day.</li>
           </ol>
         </aside>
 

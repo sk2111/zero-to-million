@@ -184,7 +184,7 @@ def orders_db(customer_id: int):
           <ol class="points term-note">
             <li>The hash must give the same answer in every process, forever. Python’s built-in <code>hash()</code> doesn’t for strings: it changes with every restart.</li>
             <li>The map is a 64-row table, cached in every pod and reloaded when it changes. Every order query goes through <code>orders_db()</code>; nothing else knows that shards exist.</li>
-            <li>An order id must lead to its shard too: the payment gateway’s webhook (page 7.1) knows only the order id. So each order id carries its logical shard in a few of its bits, next to a timestamp.</li>
+            <li>An order id must lead to its shard too: when a payment succeeds, the payment gateway tells Tomazon only the order id (page 7.1). So each order id carries its logical shard in a few of its bits, next to a timestamp.</li>
           </ol>
         </figure>
         <p>Follow two customers to their shards:</p>

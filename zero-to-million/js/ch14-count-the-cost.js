@@ -235,7 +235,7 @@ ZTM.content[14] = {
           <thead><tr><th>Signal</th><th>The question it answers</th><th>At Tomazon</th></tr></thead>
           <tbody>
             <tr><td>Metrics</td><td>Is it healthy right now? Watch the four golden signals: latency, traffic, errors and saturation</td><td>p95 per endpoint, the primary’s CPU, consumer lag (page 8.4)</td></tr>
-            <tr><td>Logs</td><td>What exactly happened?</td><td>The payment webhook’s error after the coupon release (page 7.1)</td></tr>
+            <tr><td>Logs</td><td>What exactly happened?</td><td>The payment errors after the coupon release (page 7.1)</td></tr>
             <tr><td>Traces</td><td>Where did one request spend its time, across services?</td><td>A checkout through the edge, the core API, a shard and the payment gateway</td></tr>
             <tr><td>Real-user timings</td><td>What do shoppers actually experience, country by country?</td><td>Time to first byte in Frankfurt (page 11.1)</td></tr>
             <tr><td>Cost</td><td>What does each service, and each order, cost?</td><td>The cost per 1,000 orders (page 14.1)</td></tr>

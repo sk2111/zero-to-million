@@ -642,13 +642,6 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 
 /* ---------- Chapter 5: replicas diagram and the lag timeline ---------- */
 
-.ar5-mid { display: flex; justify-content: center; }
-.ar5-mid .nd { width: 15rem; }
-.ar5-apps, .ar5-db { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3rem; }
-.ar5-apps { margin-top: 1.6rem; }
-.ar5-db { padding-bottom: 2.4rem; }
-.ar5-sub { padding-top: 0.9rem; }
-.ar2 .ar5-foot { margin: 0; }
 .lag-tl { --lag-name: 6rem; position: relative; margin-top: 0.4rem; padding-top: 1.7rem; }
 .lag-row { display: grid; grid-template-columns: var(--lag-name) 1fr; align-items: center; margin: 0.4rem 0; }
 .lag-name { font-size: 0.88rem; font-weight: 600; }
@@ -666,10 +659,31 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .lag-mark b { position: absolute; top: 0; left: 0.35rem; font-size: 0.76rem; white-space: nowrap; }
 .lag-result { margin: 0.9rem 0 0; padding: 0.6rem 0.9rem; border-radius: 8px; }
 
-/* Chapter 6: load balancer, app servers and Redis on top; the database tier below */
-.c6-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3rem; align-items: start; padding-bottom: 2.6rem; }
-.c6-lb { grid-area: 1 / 1; } .c6-app { grid-area: 1 / 2; } .c6-redis { grid-area: 1 / 3; }
-.c6-primary { grid-area: 2 / 1; } .c6-reps { grid-area: 2 / 2; } .c6-inv { grid-area: 2 / 3; }
+/* Tall diagrams: the step controls and the explanation sit in the left column, mid-screen while scrolling */
+.ar2-left.has-dock { align-self: stretch; }
+.pt-dock.docked { position: sticky; top: max(4.5rem, calc(50vh - 10rem)); z-index: 3; margin-top: 0.5rem; padding: 0.9rem 0.9rem 1rem; border: 1px solid var(--rule-2); border-radius: 10px; background: var(--sheet); box-shadow: 0 6px 24px var(--shadow); }
+.pt-dock.docked .pt-controls { flex-direction: column; align-items: stretch; gap: 0.5rem; margin-top: 0; }
+.pt-dock.docked .btn-sm { width: 100%; }
+.pt-dock.docked .pt-count { font-size: var(--fs-xs); color: var(--muted); }
+.pt-dock.docked .readout { margin: 0.7rem 0 0; font-size: 0.85rem; line-height: 1.5; }
+
+/* Chapters 5 and 6: chapter 4's architecture, grown with replicas, then Redis and the cache invalidator */
+.g-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6rem; }
+.ar2 .g-foot { justify-content: flex-end; margin: 0.7rem 0 0; }
+.g-data { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 2.4rem; margin-top: 2.6rem; }
+.g-data.with-cache { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 2rem; }
+.g-data .ar2-ec2 { flex: none; }
+.g-data > .ar3-subnet + .ar3-subnet { margin-top: 0; }
+.ar2 .g-foot.left { justify-content: flex-start; }
+.g-data > .ar3-subnet { display: flex; flex-direction: column; justify-content: space-between; }
+.g-primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.8rem 1.4rem; }
+.g-pgb { grid-area: 1 / 1; } .g-db { grid-area: 2 / 1; } .g-inv { grid-area: 3 / 1; } .g-disk { grid-area: 3 / 2; }
+.g-reps { display: grid; gap: 2.4rem; padding-top: 1.2rem; }
+.g-bak { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); margin-top: 2.2rem; padding: 0 1.7rem; }
+.g-bak.with-cache { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 2rem; }
+.g-bak > div { display: flex; justify-content: flex-end; }
+.g-bak.with-cache > div { grid-column: 2; }
+.g-bak .nd { width: 9rem; }
 
 /* 6.1: a sketch of the home page, section by section, beside the queries each section runs */
 .hq { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 1.8rem; align-items: start; }
@@ -1163,10 +1177,8 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .sa { grid-template-columns: 1fr; }
   .ar3-two { gap: 1rem; }
   .lb-servers, .ar4-apps { grid-template-columns: 1fr; gap: 1rem; }
-  .ar5-apps, .ar5-db { gap: 0.8rem; }
   .lag-tl { --lag-name: 4.6rem; }
   .cap-dbs { gap: 4.25rem; }
-  .c6-grid { gap: 2.4rem 1.2rem; }
   .c8-grid { gap: 2.2rem 1.2rem; }
   .hq { grid-template-columns: 1fr; }
   .hq-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -1175,6 +1187,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   /* Diagrams too tangled to stack keep their wide layout on phones, and scroll sideways */
   .arch-scroll > div { overflow-x: auto; padding-bottom: 0.4rem; }
   .arch-scroll .ar2 { grid-template-columns: 8.5rem minmax(0, 1fr); gap: 2rem; min-width: 42rem; }
+  .arch-scroll .ar2:has(.g-data) { min-width: 56rem; }
   .arch-scroll .ar2-left { flex-direction: column; gap: 3rem; padding-top: 4.6rem; }
   .arch-scroll .ar2-left .nd { flex: none; }
   .arch-hint { display: block; }

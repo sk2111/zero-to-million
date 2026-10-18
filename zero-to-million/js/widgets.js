@@ -305,8 +305,23 @@ window.ZTM = window.ZTM || {};
         '<svg class="ar2-wires" aria-hidden="true"><defs><marker id="' + head + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs><g class="wires"></g><g class="joints"></g><g class="labels"></g><circle class="pkt" r="5" cx="-20" cy="-20"/></svg>' +
         spec.html +
       '</div>' +
-      '<div class="pt-controls"><button type="button" class="btn-sm" data-next>' + (spec.start || 'Follow a request') + '</button><span class="pt-count"></span></div>' +
-      '<p class="readout" aria-live="polite"></p>';
+      '<div class="pt-dock">' +
+        '<div class="pt-controls"><button type="button" class="btn-sm" data-next>' + (spec.start || 'Follow a request') + '</button><span class="pt-count"></span></div>' +
+        '<p class="readout" aria-live="polite"></p>' +
+      '</div>';
+
+    /* On a tall diagram, the controls and the explanation move into the left column, and stay
+       mid-screen while the reader scrolls through it. Below the diagram otherwise, and on phones. */
+    var dock = el.querySelector('.pt-dock'), left = el.querySelector('.ar2 > .ar2-left');
+    var wide = window.matchMedia ? window.matchMedia('(min-width: 721px)') : null;
+    function placeDock() {
+      var region = left && left.nextElementSibling;
+      var side = !!region && region.getBoundingClientRect().height > 700 && (!wide || wide.matches);
+      if (side && dock.parentNode !== left) left.appendChild(dock);
+      if (!side && dock.parentNode !== el) el.appendChild(dock);
+      dock.classList.toggle('docked', side);
+      if (left) left.classList.toggle('has-dock', side);
+    }
 
     var box = el.querySelector('.ar2'), svg = el.querySelector('.ar2-wires'), wiresG = svg.querySelector('.wires'),
         jointsG = svg.querySelector('.joints'), labelsG = svg.querySelector('.labels'), pkt = svg.querySelector('.pkt');
@@ -334,7 +349,8 @@ window.ZTM = window.ZTM || {};
           pts = [[A.cx, A.b + 3], [A.cx, yb], [B.cx, yb], [B.cx, B.b + 3]];
           lx = (A.cx + B.cx) / 2 - 24; ly = yb + 14;
         } else {   /* 'v' turns halfway down; 'vt' turns just above the target, below a label at the top of its box */
-          var y1 = A.b + 3, y2 = B.t - 3, my = x[3] === 'vt' ? y2 - 14 : (y1 + y2) / 2;
+          /* 'vb' turns just below the source, so several wires from one box share one bus */
+          var y1 = A.b + 3, y2 = B.t - 3, my = x[3] === 'vt' ? y2 - 14 : x[3] === 'vb' ? y1 + 16 : (y1 + y2) / 2;
           pts = Math.abs(A.cx - B.cx) < 2 ? [[A.cx, y1], [A.cx, y2]] : [[A.cx, y1], [A.cx, my], [B.cx, my], [B.cx, y2]];
           lx = Math.max(A.cx, B.cx) + 8; ly = my + 4;
         }
@@ -342,8 +358,10 @@ window.ZTM = window.ZTM || {};
         bends = bends.concat(pts.slice(1, -1));
         var d = 'M' + pts.map(function (p) { return p[0] + ' ' + p[1]; }).join('L');
         /* requests go both ways; a backup (one-way) is marked with a fifth flag */
-        var oneWay = !!x[5];
-        w += '<path data-w="' + x[0] + '" class="wire' + (oneWay ? ' slow' : '') + '" d="' + d + '"' + (oneWay ? '' : ' marker-start="url(#' + head + ')"') + ' marker-end="url(#' + head + ')"/>';
+        /* a one-way flag of 'rev' points the arrow at the wire's start instead of its end */
+        var oneWay = !!x[5], rev = x[5] === 'rev';
+        w += '<path data-w="' + x[0] + '" class="wire' + (oneWay ? ' slow' : '') + '" d="' + d + '"' +
+          (!oneWay || rev ? ' marker-start="url(#' + head + ')"' : '') + (rev ? '' : ' marker-end="url(#' + head + ')"') + '/>';
         if (x[4]) lab += '<text x="' + lx + '" y="' + ly + '">' + x[4] + '</text>';
       });
       wiresG.innerHTML = w; labelsG.innerHTML = lab;
@@ -426,9 +444,10 @@ window.ZTM = window.ZTM || {};
     }
     btn.addEventListener('click', function () { k = k === STEPS.length - 1 ? -1 : k + 1; draw(); });
 
+    placeDock();
     layout();
     draw();
-    if (window.ResizeObserver) new ResizeObserver(function () { layout(); }).observe(box);
+    if (window.ResizeObserver) new ResizeObserver(function () { placeDock(); layout(); }).observe(box);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
   }
 
@@ -898,67 +917,114 @@ window.ZTM = window.ZTM || {};
     });
   };
 
+  /* Chapters 5 and 6 keep chapter 4's architecture and add to it: read replicas in chapter 5,
+     then Redis and the cache invalidator in chapter 6. o: { who, users, cache, inv } */
+  function growLayout(o) {
+    var node = archNode;
+    return '<div class="ar2-left">' +
+        node('users', 'user', 'c-user', o.who || 'Users', o.users) +
+        node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
+      '</div>' +
+      '<div class="ar2-region">' +
+        '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+        '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
+          '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
+            '<div class="ar2-row">' +
+              '<div class="ar2-edge ar3-edge">' +
+                node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address') +
+                node('sg', 'shield', 'c-sec', 'Security group', '443 open') +
+              '</div>' +
+              '<div class="ar2-ec2 ar4-lb"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'Load balancer: EC2 c7g.medium</p>' +
+                node('lb', 'proxy', 'c-net', 'Nginx', 'least_conn, health checks') +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ar3-subnet ar3-private" data-p="apps">' +
+            '<div class="ar2-ec2 g-apps"><div class="g-three">' +
+              node('app1', 'bolt', 'c-sw', 'FastAPI', 'app server 1') +
+              node('app2', 'bolt', 'c-sw', 'FastAPI', 'app server 2') +
+              node('app3', 'bolt', 'c-sw', 'FastAPI', 'app server 3') +
+            '</div><p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + '3 × EC2 c7g.2xlarge, 8 workers each' + (o.cache ? '; check Redis first' : '') + '</p></div>' +
+            '<p class="ar2-k g-foot">Private subnet: app servers</p>' +
+          '</div>' +
+          '<div class="g-data' + (o.cache ? ' with-cache' : '') + '">' +
+            (o.cache
+              ? '<div class="ar3-subnet ar3-private">' +
+                  '<div class="ar2-ec2 ar3-db">' + node('redis', 'cache', 'c-db', 'Redis', 'finished pages') +
+                  '<p class="ar2-k ar4-cap">' + icon('cache', 'c-db') + 'r7g.large, 16 GB, 10.0.4.10</p></div>' +
+                  '<p class="ar2-k g-foot">Private subnet: cache</p>' +
+                '</div>'
+              : '') +
+            '<div class="ar3-subnet ar3-private">' +
+              '<div class="ar2-ec2 ar3-db"><div class="g-primary">' +
+                '<div class="g-pgb">' + node('pgb', 'proxy', 'c-db', 'PgBouncer', 'port 6432: one pool of 20') + '</div>' +
+                '<div class="g-db">' + node('db', 'db', 'c-sw', 'PostgreSQL', 'the primary: every write') + '</div>' +
+                (o.inv ? '<div class="g-inv">' + node('inv', 'bolt', 'c-sw', 'Cache invalidator', 'LISTENs on localhost') + '</div>' : '') +
+                '<div class="g-disk">' + node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB') + '</div>' +
+              '</div><p class="ar2-k ar4-cap">' + icon('db', 'c-db') + 'Primary: EC2 r7g.large, 10.0.2.14</p></div>' +
+              '<p class="ar2-k g-foot left">Private subnet: database</p>' +
+            '</div>' +
+            '<div class="ar3-subnet ar3-private" data-p="reps">' +
+              '<div class="g-reps">' +
+                node('rep1', 'db', 'c-db', 'Replica 1', 'read-only, via db-read.internal') +
+                node('rep2', 'db', 'c-db', 'Replica 2', 'read-only, via db-read.internal') +
+              '</div>' +
+              '<p class="ar2-k g-foot">Private subnet: replicas</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="g-bak' + (o.cache ? ' with-cache' : '') + '"><div>' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div></div>' +
+      '</div>';
+  }
+
+  /* The wires every stage shares: chapter 4's path in, and to the primary, plus the replicas. */
+  function growWires(o) {
+    return [
+      ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+      ['in', 'users', 'eip', 'h', 'HTTPS'],
+      ['fw', 'eip', 'sg', 'v', ''],
+      ['lb', 'sg', 'lb', 'h', ''],
+      ['a1', 'lb', 'app1', 'v', ''],
+      ['a2', 'lb', 'app2', 'v', ''],
+      ['a3', 'lb', 'app3', 'v', 'least connections'],
+      ['w', 'apps', 'pgb', 'vb', ''],
+      ['r', 'apps', 'reps', 'vb', ''],
+      ['pool', 'pgb', 'db', 'v', ''],
+      ['io', 'db', 'disk', 'v', ''],
+      ['wal1', 'db', 'rep1', 'h', 'WAL', true],
+      ['wal2', 'db', 'rep2', 'h', '', true],
+      ['bak', 'disk', 'snap', 'v', 'daily', true]
+    ].concat(o.cache ? [['c', 'apps', 'redis', 'vb', '']] : [])
+     .concat(o.inv ? [['note', 'db', 'inv', 'v', '', true], ['del', 'redis', 'inv', 'h', 'DEL', 'rev']] : []);
+  }
+  /* A request's way in and back out, through a given app server. */
+  function inPath(app) { return [['in', 0], ['fw', 0], ['lb', 0], [app, 0]]; }
+  function outPath(app) { return [[app, 1], ['lb', 1], ['fw', 1], ['in', 1]]; }
+
   /* ---------- Chapter 5: a primary for writes, replicas for reads ---------- */
 
   W['replica-live'] = function (el) {
-    var node = archNode;
-    liveArch(el, {
-      wires: [
-        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
-        ['in', 'users', 'lb', 'h', 'HTTPS'],
-        ['lb1', 'lb', 'app1', 'vt', ''],
-        ['lb2', 'lb', 'app2', 'vt', ''],
-        ['lb3', 'lb', 'app3', 'vt', ''],
-        ['q1', 'app1', 'rep1', 'v', ''],
-        ['q2', 'app3', 'primary', 'v', 'SQL'],
-        ['q3', 'app2', 'rep2', 'v', ''],
-        ['wal1', 'primary', 'rep1', 'h', 'WAL', true],
-        ['wal2', 'primary', 'rep2', 'u', 'WAL stream', true]
-      ],
+    var o = { users: '100,000 of them' };
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
       joints: true,
-      request: [['in', 0], ['lb1', 0], ['q1', 0], ['q1', 1], ['lb1', 1], ['in', 1],
-                ['in', 0], ['lb3', 0], ['q2', 0], ['wal1', 0], ['wal2', 0], ['q2', 1], ['lb3', 1], ['in', 1],
-                ['in', 0], ['lb2', 0], ['q3', 0], ['q3', 1], ['lb2', 1], ['in', 1]],
+      wires: growWires(o),
+      request: inPath('a1').concat([['r', 0], ['r', 1]], outPath('a1'), inPath('a3'), [['w', 0], ['pool', 0], ['wal1', 0], ['wal2', 0], ['pool', 1], ['w', 1]], outPath('a3')),
       steps: [
-        { on: ['users', 'lb', 'app1', 'rep1'], run: [['in', 0], ['lb1', 0], ['q1', 0], ['q1', 1], ['lb1', 1], ['in', 1]], t: 'a read',
-          say: '<strong>Open a product page.</strong> The load balancer sends the request to app server 1. Loading the product only reads data, so the app sends the query to a replica, and replica 1 answers from its own copy.' },
-        { on: ['users', 'lb', 'app3', 'primary'], run: [['in', 0], ['lb3', 0], ['q2', 0], ['q2', 1], ['lb3', 1], ['in', 1]], t: 'a write',
-          say: '<strong>Add it to the cart.</strong> This request lands on app server 3. Saving the cart item changes data, so it goes to the primary, whichever app server sends it. Every <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> does.' },
-        { on: ['primary', 'rep1', 'rep2'], run: [['wal1', 0], ['wal2', 0]], t: 'usually a few milliseconds',
+        { on: ['users', 'eip', 'sg', 'lb', 'app1', 'rep1'], run: inPath('a1').concat([['r', 0], ['r', 1]], outPath('a1')), t: 'a read',
+          say: '<strong>Open a product page.</strong> The way in is the same as in chapter 4. Loading the product only reads data, so app server 1 sends the query to <code>db-read.internal</code>, and replica 1 answers from its own copy.' },
+        { on: ['users', 'lb', 'app3', 'pgb', 'db', 'disk'], run: inPath('a3').concat([['w', 0], ['pool', 0], ['pool', 1], ['w', 1]], outPath('a3')), t: 'a write',
+          say: '<strong>Add it to the cart.</strong> This request lands on app server 3. Saving the cart item changes data, so it goes to the primary through PgBouncer, exactly as in chapter 4. Every <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> does.' },
+        { on: ['db', 'rep1', 'rep2'], run: [['wal1', 0], ['wal2', 0]], t: 'usually a few milliseconds',
           say: '<strong>Stream the change.</strong> The primary appends the new cart item to its write-ahead log, and streams that record to both replicas over the private network.' },
         { on: ['rep1', 'rep2'], run: [], t: 'applied in the same order',
           say: '<strong>Replay it.</strong> Each replica applies the record exactly as the primary did, in the same order. A few milliseconds after the write, both replicas have the cart item too.' },
-        { on: ['users', 'lb', 'app2', 'rep2'], run: [['in', 0], ['lb2', 0], ['q3', 0], ['q3', 1], ['lb2', 1], ['in', 1]], t: 'reads spread across replicas',
-          say: '<strong>Spread the reads.</strong> Every app server can reach every database. The next read lands on app server 2 and goes to replica 2. The primary is left with the writes, and each new replica adds more read capacity.' }
+        { on: ['users', 'lb', 'app2', 'rep2'], run: inPath('a2').concat([['r', 0], ['r', 1]], outPath('a2')), t: 'reads spread across replicas',
+          say: '<strong>Spread the reads.</strong> The next read lands on app server 2, and <code>db-read.internal</code> sends it to replica 2. The primary is left with the writes, and each new replica adds more read capacity.' },
+        { on: ['disk', 'snap'], run: [['bak', 0]], t: 'as in chapter 4',
+          say: '<strong>Back up the primary.</strong> The daily snapshots carry on as before. A replica is a live copy, not a backup: a mistaken <code>DELETE</code> reaches it within milliseconds.' }
       ],
-      html:
-        '<div class="ar2-left">' +
-          node('users', 'user', 'c-user', 'Users', '100,000 of them') +
-          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
-        '</div>' +
-        '<div class="ar2-region">' +
-          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
-          '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
-            '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
-              '<div class="ar5-mid">' + node('lb', 'proxy', 'c-net', 'Load balancer', 'least connections') + '</div>' +
-            '</div>' +
-            '<div class="ar3-subnet ar3-private"><p class="ar2-k">Private subnet: app servers</p>' +
-              '<div class="ar5-apps">' +
-                node('app1', 'bolt', 'c-cpu', 'App server 1', 'FastAPI, 8 workers') +
-                node('app2', 'bolt', 'c-cpu', 'App server 2', 'FastAPI, 8 workers') +
-                node('app3', 'bolt', 'c-cpu', 'App server 3', 'FastAPI, 8 workers') +
-              '</div>' +
-            '</div>' +
-            '<div class="ar3-subnet ar3-private ar5-sub">' +
-              '<div class="ar5-db">' +
-                node('primary', 'db', 'c-db', 'Primary', 'every write, and reads that must be fresh') +
-                node('rep1', 'db', 'c-db', 'Replica 1', 'read-only copy') +
-                node('rep2', 'db', 'c-db', 'Replica 2', 'read-only copy') +
-              '</div>' +
-              '<p class="ar2-k ar5-foot">Private subnet: database</p>' +
-            '</div>' +
-          '</div>' +
-        '</div>'
+      html: growLayout(o)
     });
   };
 
@@ -1119,85 +1185,51 @@ window.ZTM = window.ZTM || {};
 
   /* ---------- Chapter 6: Redis between the app and the database ---------- */
 
-  /* One layout for both cache diagrams: load balancer, app servers and Redis on top;
-     the primary, the replicas and (for invalidation) the cache invalidator below. */
-  function cacheLayout(withInvalidator) {
-    var node = archNode;
-    return '<div class="ar2-left">' +
-        node('users', 'user', 'c-user', withInvalidator ? 'Shoppers and staff' : 'Shoppers', '500,000 of them') +
-        node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
-      '</div>' +
-      '<div class="ar2-region">' +
-        '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
-        '<div class="ar2-vpc"><p class="ar2-k">VPC: only the load balancer is in a public subnet</p>' +
-          '<div class="c6-grid">' +
-            '<div class="c6-lb">' + node('lb', 'proxy', 'c-net', 'Load balancer', 'least connections') + '</div>' +
-            '<div class="c6-app">' + node('app', 'bolt', 'c-cpu', 'App servers', '3 × FastAPI, check Redis first') + '</div>' +
-            '<div class="c6-redis">' + node('redis', 'cache', 'c-db', 'Redis', 'r7g.large, 16 GB, finished pages') + '</div>' +
-            '<div class="c6-primary">' + node('primary', 'db', 'c-db', 'Primary', 'every write') + '</div>' +
-            '<div class="c6-reps">' + node('reps', 'db', 'c-db', 'Replicas 1 and 2', 'reads on a miss') + '</div>' +
-            (withInvalidator ? '<div class="c6-inv">' + node('inv', 'bolt', 'c-sw', 'Cache invalidator', 'LISTENs on the primary') + '</div>' : '') +
-          '</div>' +
-        '</div>' +
-      '</div>';
-  }
-
+  /* Chapter 5's architecture, with Redis added in a subnet of its own. */
   W['cache-arch'] = function (el) {
-    liveArch(el, {
+    var o = { users: '500,000 of them', cache: true };
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
       joints: true,
-      wires: [
-        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
-        ['in', 'users', 'lb', 'h', 'HTTPS'],
-        ['lbapp', 'lb', 'app', 'h', ''],
-        ['hit', 'app', 'redis', 'h', 'GET'],
-        ['miss', 'app', 'reps', 'v', 'on a miss'],
-        ['wal', 'primary', 'reps', 'h', 'WAL', true]
-      ],
-      request: [['in', 0], ['lbapp', 0], ['hit', 0], ['hit', 1], ['lbapp', 1], ['in', 1]],
+      wires: growWires(o),
+      request: inPath('a1').concat([['c', 0], ['c', 1]], outPath('a1')),
       steps: [
-        { on: ['users', 'lb', 'app'], run: [['in', 0], ['lbapp', 0]], t: 'as before',
-          say: '<strong>A shopper opens the home page.</strong> The request reaches an app server through the load balancer.' },
-        { on: ['app', 'redis'], run: [['hit', 0]], t: '~0.2 ms round trip',
-          say: '<strong>Ask Redis first.</strong> The app sends <code>GET home:v1</code> to Redis over the private network.' },
-        { on: ['redis', 'app', 'lb', 'users'], run: [['hit', 1], ['lbapp', 1], ['in', 1]], t: 'about 2 ms in the app',
+        { on: ['users', 'eip', 'sg', 'lb', 'app1'], run: inPath('a1'), t: 'as before',
+          say: '<strong>A shopper opens the home page.</strong> The request comes in exactly as in chapters 4 and 5, and reaches an app server through the load balancer.' },
+        { on: ['app1', 'redis'], run: [['c', 0]], t: '~0.2 ms round trip',
+          say: '<strong>Ask Redis first.</strong> The app sends <code>GET home:v1</code> to Redis, on its own server in a new private subnet.' },
+        { on: ['redis', 'app1', 'lb', 'users'], run: [['c', 1]].concat(outPath('a1')), t: 'about 2 ms in the app',
           say: '<strong>A hit.</strong> Redis has the page, so the app returns it at once, and the database isn’t touched. During the sale, almost every request ends here.' },
-        { on: ['app', 'reps'], run: [['miss', 0], ['miss', 1]], t: '100 queries, about 1 s',
-          say: '<strong>A miss.</strong> Once every 5 minutes the key has expired, so the app builds the page from the replicas, as it always did.' },
-        { on: ['app', 'redis'], run: [['hit', 0], ['hit', 1]], t: 'the next request is a hit',
+        { on: ['app1', 'rep1', 'rep2'], run: [['r', 0], ['r', 1]], t: '100 queries, about 1 s',
+          say: '<strong>A miss.</strong> Once every 5 minutes the key has expired, so the app builds the page from the replicas, exactly as in chapter 5.' },
+        { on: ['app1', 'redis'], run: [['c', 0], ['c', 1]], t: 'the next request is a hit',
           say: '<strong>Store it.</strong> The app saves the page with <code>SET home:v1 … EX 300</code>, then returns it. Every request for the next 5 minutes is a hit.' }
       ],
-      html: cacheLayout(false)
+      html: growLayout(o)
     });
   };
 
+  /* The same again, with the cache invalidator on the database server. */
   W['invalidate-arch'] = function (el) {
-    liveArch(el, {
+    var o = { who: 'Shoppers and staff', users: '500,000 of them', cache: true, inv: true };
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
       joints: true,
-      wires: [
-        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
-        ['in', 'users', 'lb', 'h', 'HTTPS'],
-        ['lbapp', 'lb', 'app', 'h', ''],
-        ['hit', 'app', 'redis', 'h', 'GET'],
-        ['miss', 'app', 'reps', 'v', ''],
-        ['write', 'app', 'primary', 'v', ''],
-        ['wal', 'primary', 'reps', 'h', 'WAL', true],
-        ['note', 'primary', 'inv', 'u', 'NOTIFY', true],
-        ['del', 'redis', 'inv', 'v', 'DEL']
-      ],
-      request: [['in', 0], ['lbapp', 0], ['write', 0], ['write', 1], ['note', 0], ['del', 1]],
+      wires: growWires(o),
+      request: inPath('a2').concat([['w', 0], ['pool', 0], ['pool', 1], ['w', 1]], outPath('a2'), [['note', 0], ['del', 1]]),
       start: 'Follow a price change',
       idle: 'A price change, from the database to Redis. Press <strong>Follow a price change</strong> to go through it step by step.',
       steps: [
-        { on: ['users', 'lb', 'app', 'primary'], run: [['in', 0], ['lbapp', 0], ['write', 0], ['write', 1]], t: 'a normal write',
-          say: '<strong>The team changes a price.</strong> The update goes to the primary, like every write, and commits.' },
-        { on: ['primary', 'inv'], run: [['note', 0]], t: 'when the transaction commits',
-          say: '<strong>The database announces it.</strong> The trigger on the products table calls NOTIFY. When the transaction commits, PostgreSQL delivers the message to the cache invalidator, which is listening.' },
+        { on: ['users', 'lb', 'app2', 'pgb', 'db'], run: inPath('a2').concat([['w', 0], ['pool', 0], ['pool', 1], ['w', 1]], outPath('a2')), t: 'a normal write',
+          say: '<strong>The team changes a price.</strong> The update goes to the primary through PgBouncer, like every write, and commits.' },
+        { on: ['db', 'inv'], run: [['note', 0]], t: 'when the transaction commits',
+          say: '<strong>The database announces it.</strong> The trigger on the products table calls NOTIFY. When the transaction commits, PostgreSQL delivers the message to the cache invalidator, which runs on the same server and listens on <code>127.0.0.1</code>.' },
         { on: ['inv', 'redis'], run: [['del', 1]], t: 'about a millisecond',
           say: '<strong>Forget the old copies.</strong> The invalidator deletes <code>home:v1</code> and the product’s own key in Redis. A second later it deletes them again, in case a lagging replica put an old copy back.' },
-        { on: ['users', 'lb', 'app', 'redis', 'reps'], run: [['in', 0], ['lbapp', 0], ['hit', 0], ['hit', 1], ['miss', 0], ['miss', 1]], t: 'one rebuild',
-          say: '<strong>The next shopper rebuilds it.</strong> Their request misses in Redis, so the app builds the page again, with the new price, and stores it. Everyone after them gets the new price straight from Redis.' }
+        { on: ['users', 'lb', 'app1', 'redis', 'rep1', 'rep2'], run: inPath('a1').concat([['c', 0], ['c', 1], ['r', 0], ['r', 1]], outPath('a1')), t: 'one rebuild',
+          say: '<strong>The next shopper rebuilds it.</strong> Their request misses in Redis, so the app builds the page again from the replicas, with the new price, and stores it. Everyone after them gets the new price straight from Redis.' }
       ],
-      html: cacheLayout(true)
+      html: growLayout(o)
     });
   };
 

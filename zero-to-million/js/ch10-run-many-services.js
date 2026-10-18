@@ -71,12 +71,7 @@ ZTM.content[10] = {
           <li>All six programs move into the cluster. An Application Load Balancer, set up by Kubernetes, replaces the Nginx load balancer from chapters 4 and 7.</li>
           <li><strong>The data stays outside:</strong> PostgreSQL and Redis on their own EC2 servers, Kafka on MSK, photos on S3 and CloudFront. A pod can be replaced at any moment; the data can’t.</li>
         </ol>
-        <div class="widget" data-widget="eks-arch"></div>
-
-        <h2>Where this leads</h2>
-        <ol class="points">
-          <li>The programs now run themselves, and a new cluster anywhere is the same manifests, applied again. That matters soon: Tomazon opens in Europe next, and every page still comes from Mumbai (chapter 11).</li>
-        </ol>`
+        <div class="widget" data-widget="eks-arch"></div>`
     }
   ]
 };

@@ -101,6 +101,8 @@ ZTM.content[9] = {
         </ol>
         <p>Step through a product page from New York:</p>
         <div class="widget" data-widget="cdn-arch"></div>
+        <p>And the whole of Tomazon, with shoppers in India and in New York:</p>
+        <div class="widget" data-widget="cdn-full"></div>
 
         <h2>What belongs on a CDN</h2>
         <table class="data">
@@ -142,39 +144,29 @@ ZTM.content[9] = {
 
         <h2>Faster</h2>
         <ol class="points">
-          <li><strong>New York:</strong> a product page’s photos now take about 60 ms from the edge, instead of about 1.8 s from Mumbai. The whole page drops from about 6 s to about 2 s.</li>
-          <li><strong>What’s left</strong> is mostly the API: prices, stock and the cart still come from Mumbai, at 200 ms a round trip. Serving those from closer needs servers in more regions (chapter 11).</li>
-          <li><strong>India gains less time,</strong> because Mumbai is already close. There the CDN’s main gift is load: the origin hardly sees photo traffic any more.</li>
-          <li><strong>Watch the hit rate.</strong> CloudFront reports it for each distribution. For photos with year-long names, aim for 95% or more; lower means the cache key is too wide, or quiet edges keep missing. Origin Shield, which costs $0.009 per 10,000 requests in India, collapses those misses into one request to S3.</li>
+          <li><strong>New York:</strong> photos now arrive in about 60 ms from a nearby edge, instead of about 1.8 s from Mumbai. The whole page drops from about 6 s to about 2 s.</li>
+          <li><strong>What’s left</strong> is mostly the API, which still runs in Mumbai (chapter 11).</li>
+          <li><strong>India gains less,</strong> because Mumbai is already close. There, the CDN mainly takes load off the origin.</li>
         </ol>
 
         <h2>Cheaper, but not because of the CDN</h2>
         <table class="data">
-          <thead><tr><th>Setup</th><th>Sent a month</th><th>About, a month</th></tr></thead>
+          <thead><tr><th>Setup</th><th>About, a month</th></tr></thead>
           <tbody>
-            <tr><td>Before: photos straight from S3 in Mumbai</td><td>100 TB</td><td>$8,800</td></tr>
-            <tr><td>CloudFront, the same photos, pay as you go</td><td>100 TB</td><td>$9,100</td></tr>
-            <tr><td>CloudFront, right-sized WebP photos, pay as you go</td><td>15 TB</td><td>$2,100</td></tr>
-            <tr class="hl"><td>CloudFront, right-sized WebP photos, flat-rate plan</td><td>15 TB</td><td>$1,450</td></tr>
+            <tr><td>Before: photos straight from S3 in Mumbai</td><td>$8,800</td></tr>
+            <tr><td>Through the CDN, the same photos</td><td>$9,100</td></tr>
+            <tr><td>Through the CDN, smaller photos</td><td>$2,100</td></tr>
+            <tr class="hl"><td>Smaller photos, on a flat-rate CDN plan</td><td>$1,450</td></tr>
           </tbody>
         </table>
-        <ol class="points">
-          <li><strong>In India, a CDN’s gigabyte costs about the same.</strong> CloudFront charges $0.109 per GB from Indian edges after a free first terabyte, falling to $0.085 and $0.082: close to sending from Mumbai directly. Add $0.012 per 10,000 requests, and the same 100 TB costs a little more. Moving the same bytes to a CDN makes them faster, not cheaper.</li>
-          <li><strong>Fetching from the origin is free.</strong> CloudFront doesn’t charge for data it pulls from S3 or EC2, so misses add nothing to the bill.</li>
-          <li><strong>The big saving is sending fewer bytes.</strong> The product page used to load five full-size photos. Now, whenever a photo is uploaded, a resize job taken from a queue makes small WebP copies, and the page loads about 140 KB instead of 1 MB: 7 times less. Browsers also keep each photo for a year, so returning shoppers don’t download it again.</li>
-          <li><strong>The pricing plan does the rest.</strong> AWS added flat-rate CloudFront plans in late 2025. The Premium plan, at its 750-million-request level, costs $1,450 a month, and includes AWS WAF, DDoS protection and Route 53 DNS. Its allowances aren’t hard limits, but traffic that stays well above them for months can get slower delivery, so choose the level that fits.</li>
-        </ol>
 
         <h2>The traps</h2>
         <table class="data">
           <thead><tr><th>Trap</th><th>What happens</th><th>The fix</th></tr></thead>
           <tbody>
-            <tr><td>Overwriting a file under the same name</td><td>Shoppers see the old one until it expires, and different edges disagree</td><td>A new name for every version; invalidate only in an emergency</td></tr>
-            <tr><td>Caching something personal</td><td>One shopper’s cart or account page is shown to others near that edge</td><td>Cache only what’s the same for everyone. Never cache a response that sets a cookie</td></tr>
-            <tr><td>A cache key that’s too wide</td><td>Cookies, headers or query strings such as <code>?v=123</code> in the key turn most requests into misses</td><td>Keep them out of the key; watch the hit rate</td></tr>
-            <tr><td>A public bucket</td><td>Bots and old links fetch from S3 directly, at full price</td><td>Make the bucket private, so only CloudFront can read it</td></tr>
-            <tr><td>Fonts from another domain</td><td>Browsers refuse to use them</td><td>Send an <code>Access-Control-Allow-Origin</code> header with the fonts</td></tr>
-            <tr><td>Putting the API behind the CDN later</td><td>Nginx sees the edge’s address, not the shopper’s, so page 7.4’s split and any rate limits break</td><td>Take the shopper’s address from <code>X-Forwarded-For</code>, trusting it only from CloudFront’s address ranges</td></tr>
+            <tr><td>Changing a photo under the same name</td><td>Shoppers keep seeing the old one until it expires</td><td>Give every new version a new name</td></tr>
+            <tr><td>Caching something personal</td><td>One shopper’s cart is shown to others</td><td>Cache only what’s the same for everyone</td></tr>
+            <tr><td>Leaving the bucket public</td><td>Bots fetch from S3 directly, at full price</td><td>Make it private, so only CloudFront can read it</td></tr>
           </tbody>
         </table>
 
@@ -182,37 +174,28 @@ ZTM.content[9] = {
         <table class="data">
           <thead><tr><th>Part</th><th>Choice</th></tr></thead>
           <tbody>
-            <tr><td>Photos</td><td>The <code>tomazon-photos</code> bucket, now private, behind CloudFront at <code>img.tomazon.com</code></td></tr>
-            <tr><td>Smaller photos</td><td>A resize job, from a queue, makes small WebP copies of every new photo</td></tr>
+            <tr><td>Photos</td><td>A private S3 bucket behind CloudFront, at <code>img.tomazon.com</code></td></tr>
+            <tr><td>Smaller photos</td><td>Small WebP copies, made when a photo is uploaded</td></tr>
             <tr><td>Caching</td><td>A new name for every version of a photo, cached for a year</td></tr>
-            <tr><td>The API</td><td>Still straight to the load balancer in Mumbai</td></tr>
-            <tr><td>Pricing</td><td>A flat-rate Premium plan, at the level that fits the traffic</td></tr>
-            <tr><td>Watching</td><td>Hit rate, requests to the origin, errors at the edge, and p95 page load per country</td></tr>
+            <tr><td>The API</td><td>Still in Mumbai, for now</td></tr>
           </tbody>
         </table>
 
         <h2>Where this leads</h2>
         <ol class="points">
-          <li>Tomazon now runs many kinds of program: the core API, the catalogue service, two cache invalidators, the search indexer, the email sender, the photo resizer and Debezium. Each runs on servers set up by hand, and each is deployed its own way.</li>
-          <li>Questions that were easy with one app are hard now. If a server dies, who starts its programs somewhere else? If one crashes, who restarts it? How do you replace 40 running copies with a new version without downtime? And how does the catalogue service find the core API, when copies come and go?</li>
-          <li>Chapter 10 packages each service as a container, and hands the running of them to an orchestrator: Kubernetes.</li>
-        </ol>
+          <li>Tomazon now runs many kinds of program: the core API, the catalogue service, the cache invalidators, the search indexer, the email sender and the photo resizer. Each is set up and deployed by hand.</li>        </ol>
 
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>A CDN cuts latency; it doesn’t always cut cost.</strong> Compare the price per gigabyte for the regions
-            your shoppers are in before promising savings.</li>
-            <li><strong>The cheapest byte is the one you don’t send.</strong> Right-sized images and long browser caching saved
-            more than the CDN did.</li>
-            <li><strong>Check the bill by region and by line.</strong> Data transfer grows with traffic, quietly, and is easy to
-            miss until it’s one of the biggest costs.</li>
+            <li><strong>A CDN cuts latency; it doesn’t always cut cost.</strong> Check the price per GB where your users are.</li>
+            <li><strong>The cheapest byte is the one you don’t send.</strong> Smaller photos saved more than the CDN did.</li>
           </ol>
         </aside>
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Serve the same bytes from near the shopper, send as few as you can, and check what each gigabyte costs.</p>
+          <p>Serve the same bytes from near the shopper, and send as few as you can.</p>
         </aside>`
     }
   ]

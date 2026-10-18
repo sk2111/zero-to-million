@@ -340,8 +340,8 @@ window.ZTM = window.ZTM || {};
       var w = '', lab = '', segs = [], bends = [];
       WIRES.forEach(function (x) {
         var A = r(x[1]), B = r(x[2]), pts, lx, ly;
-        if (x[3] === 'h') {
-          var x1 = A.r + 3, x2 = B.l - 3, mx = (x1 + x2) / 2;
+        if (x[3] === 'h' || x[3] === 'hl') {   /* 'hl' turns just after leaving the source, to keep a lane of its own */
+          var x1 = A.r + 3, x2 = B.l - 3, mx = x[3] === 'hl' ? x1 + 12 : (x1 + x2) / 2;
           pts = Math.abs(A.cy - B.cy) < 2 ? [[x1, A.cy], [x2, A.cy]] : [[x1, A.cy], [mx, A.cy], [mx, B.cy], [x2, B.cy]];
           lx = x1 + 6; ly = A.cy - 8;
         } else if (x[3] === 'u') {   /* under a row: down, across, back up */
@@ -925,10 +925,11 @@ window.ZTM = window.ZTM || {};
      then Redis and the cache invalidator in chapter 6. o: { who, users, cache, inv } */
   function growLayout(o) {
     var node = archNode;
-    return '<div class="ar2-left">' +
+    var apps = o.apps || [['FastAPI', 'app server 1'], ['FastAPI', 'app server 2'], ['FastAPI', 'app server 3']];
+    return (o.left || '<div class="ar2-left">' +
         node('users', 'user', 'c-user', o.who || 'Users', o.users) +
         node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
-      '</div>' +
+      '</div>') +
       '<div class="ar2-region">' +
         '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
         '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
@@ -945,10 +946,10 @@ window.ZTM = window.ZTM || {};
           '</div>' +
           '<div class="ar3-subnet ar3-private" data-p="apps">' +
             '<div class="ar2-ec2 g-apps"><div class="g-three">' +
-              node('app1', 'bolt', 'c-sw', 'FastAPI', 'app server 1') +
-              node('app2', 'bolt', 'c-sw', 'FastAPI', 'app server 2') +
-              node('app3', 'bolt', 'c-sw', 'FastAPI', 'app server 3') +
-            '</div><p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + '3 × EC2 c7g.2xlarge, 8 workers each' + (o.cache ? '; check Redis first' : '') + '</p></div>' +
+              node('app1', 'bolt', 'c-sw', apps[0][0], apps[0][1]) +
+              node('app2', 'bolt', 'c-sw', apps[1][0], apps[1][1]) +
+              node('app3', 'bolt', 'c-sw', apps[2][0], apps[2][1]) +
+            '</div><p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + (o.appCap || '3 × EC2 c7g.2xlarge, 8 workers each' + (o.cache ? '; check Redis first' : '')) + '</p></div>' +
             '<p class="ar2-k g-foot">Private subnet: app servers</p>' +
           '</div>' +
           '<div class="g-data' + (o.cache ? ' with-cache' : '') + '">' +
@@ -978,7 +979,7 @@ window.ZTM = window.ZTM || {};
           '</div>' +
         '</div>' +
         '<div class="g-bak' + (o.cache ? ' with-cache' : '') + '">' +
-          '<div class="g-s3">' + node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', 'product photos, fetched by browsers') + '</div>' +
+          '<div class="g-s3">' + node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', o.s3sub || 'product photos, fetched by browsers') + '</div>' +
           '<div class="g-snap">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
         '</div>' +
       '</div>';
@@ -2440,6 +2441,58 @@ window.ZTM = window.ZTM || {};
     bindTips(el);
     draw();
     if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(wf); }).observe(wf);
+  };
+
+  /* ---------- Chapter 9: the whole of Tomazon, with shoppers and CloudFront edges in India and New York ---------- */
+
+  W['cdn-full'] = function (el) {
+    var node = archNode;
+    var o = {
+      cache: true,
+      apps: [['Core API', 'carts, orders, payments'], ['Catalogue', 'pages, prices, search'], ['Workers', 'invalidators, indexer, resizer']],
+      appCap: 'EC2 app servers: several copies of each service',
+      s3sub: 'private: only CloudFront reads it',
+      left: '<div class="ar2-left c9-left">' +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
+          node('shopIn', 'user', 'c-user', 'Shoppers in India', 'most of the 3 million') +
+          node('edgeIn', 'edge', 'c-net', 'CloudFront edge', 'Bengaluru') +
+          node('shopNY', 'user', 'c-user', 'Shoppers in New York', 'buying from abroad') +
+          node('edgeNY', 'edge', 'c-net', 'CloudFront edge', 'New York') +
+        '</div>'
+    };
+    var own = [
+      ['dns', 'dns', 'shopIn', 'v', 'DNS lookup'],
+      ['in', 'shopIn', 'eip', 'hl', 'HTTPS'],
+      ['inNY', 'shopNY', 'eip', 'hl', ''],
+      ['pIn', 'shopIn', 'edgeIn', 'v', 'photos'],
+      ['pNY', 'shopNY', 'edgeNY', 'v', 'photos'],
+      ['oIn', 'edgeIn', 's3', 'h', ''],
+      ['oNY', 'edgeNY', 's3', 'h', '']
+    ];
+    var wires = growWires(o).filter(function (w) { return ['dns', 'in', 'ph'].indexOf(w[0]) < 0; }).concat(own);
+    var pageIn = [['in', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['c', 0], ['c', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]];
+    var pageNY = [['inNY', 0], ['fw', 0], ['lb', 0], ['a2', 0], ['c', 0], ['c', 1], ['a2', 1], ['lb', 1], ['fw', 1], ['inNY', 1]];
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      joints: true,
+      wires: wires,
+      request: pageIn.concat([['pIn', 0], ['pIn', 1]], pageNY, [['pNY', 0], ['pNY', 1]]),
+      start: 'Follow two shoppers',
+      idle: 'Shoppers in India and New York open the same product page. Kafka and Debezium (chapter 8) are left out, to keep the picture readable. Press <strong>Follow two shoppers</strong> to go through it step by step.',
+      steps: [
+        { on: ['shopIn', 'eip', 'sg', 'lb', 'app2', 'redis'], run: pageIn, t: 'about 20 ms a round trip',
+          say: '<strong>India: the page.</strong> A shopper in Bangalore opens a product page. The page and its prices come from Mumbai, as always: through the load balancer to the catalogue, which answers from Redis.' },
+        { on: ['shopIn', 'edgeIn'], run: [['pIn', 0], ['pIn', 1]], t: 'a few milliseconds',
+          say: '<strong>India: the photos.</strong> The photo links point at <code>img.tomazon.com</code>, so the browser fetches the photos from a CloudFront edge in Bengaluru, a few milliseconds away.' },
+        { on: ['shopNY', 'eip', 'sg', 'lb', 'app2', 'redis'], run: pageNY, t: 'about 200 ms a round trip',
+          say: '<strong>New York: the page.</strong> The same page, for a shopper in New York, still comes from Mumbai: every round trip crosses the world. That’s what is left of the slowness (chapter 11).' },
+        { on: ['shopNY', 'edgeNY'], run: [['pNY', 0], ['pNY', 1]], t: 'a hit: tens of milliseconds',
+          say: '<strong>New York: the photos.</strong> They come from a CloudFront edge in New York. Most of the page’s bytes no longer cross the world.' },
+        { on: ['edgeNY', 's3'], run: [['oNY', 0], ['oNY', 1]], t: 'a miss: one trip to Mumbai',
+          say: '<strong>A miss.</strong> If the New York edge doesn’t have a photo yet, it fetches it once from the S3 bucket in Mumbai, keeps a copy, and serves every shopper nearby from that copy.' }
+      ],
+      html: growLayout(o)
+    });
   };
 
   /* ---------- Measuring: 100 requests, sorted, with p50 and p99 marked ---------- */

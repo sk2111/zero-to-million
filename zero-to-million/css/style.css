@@ -823,6 +823,7 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .c9-edge { padding: 0.7rem 0.9rem 0.9rem; border: 2px dashed #8c4fff; border-radius: 12px; }
 .c9-mum { display: grid; gap: 2.4rem; }
 .c9-grid .nd { min-height: 6.6rem; justify-content: center; }
+.ar2 .c9-left { gap: 2.2rem; }
 
 /* 10.3: a small cluster. Each node has room for 4 pods; pods are coloured by service */
 .kc-nodes { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.8rem; }

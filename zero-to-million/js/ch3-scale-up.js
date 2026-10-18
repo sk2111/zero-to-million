@@ -159,6 +159,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <li><strong>Every query crosses the network.</strong> A round trip inside one zone takes about 0.2–0.5 ms, instead of microseconds over <code>localhost</code>. Page 3.3 shows what that adds up to, and how to keep it small.</li>
           <li><strong>Connections cost more.</strong> Opening a PostgreSQL connection now means a TCP handshake across the network, plus a new process on the database server. Page 3.3 covers keeping them open with pooling.</li>
           <li><strong>Each side can grow on its own:</strong> a bigger app server when CPU runs out, a bigger database server when memory or disk does. Page 3.4 picks the right kind of server for each.</li>
+          <li><strong>The photos stay with the app, for now.</strong> They’re still on the app server’s disk, and Nginx still serves them. Chapter 4 moves them to S3, once there’s more than one app server.</li>
         </ol>
 
         <h2>Moving the database without losing data</h2>

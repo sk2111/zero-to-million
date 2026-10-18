@@ -255,11 +255,21 @@ server {
 
         <h2>What scaling out needs</h2>
         <ol class="points">
-          <li><strong>Stateless app servers.</strong> Any server must be able to handle any request, so nothing a user needs can live in one server’s memory or disk. Sessions go in the database or Redis, or in a signed cookie; uploaded files go to S3.</li>
+          <li><strong>Stateless app servers.</strong> Any server must be able to handle any request, so nothing a user needs can live in one server’s memory or disk. Sessions go in the database or Redis, or in a signed cookie; photos go to S3 (below).</li>
           <li><strong>Health checks.</strong> Open-source Nginx only notices a broken server when real requests to it fail. For active checks that call a <code>/health</code> endpoint every few seconds, use an AWS load balancer or Nginx Plus.</li>
           <li><strong>Rolling deploys.</strong> Take one app server out of the <code>upstream</code>, deploy to it, put it back, then do the next. Users never see an outage.</li>
           <li><strong>Logs and metrics in one place.</strong> Logging in to a server to read its logs no longer works when there are two. Send them all to one place, such as CloudWatch Logs.</li>
           <li><strong>Database connections add up.</strong> Two app servers × 8 workers × a pool of 10 = 160 connections from the app. One PgBouncer in front of the database turns them into 20 (below).</li>
+        </ol>
+
+        <h2>Where the photos go</h2>
+        <ol class="points">
+          <li><strong>They can’t stay on an app server’s disk.</strong> A photo uploaded to app server 1 isn’t on app server 2, so half the shoppers would see a broken image.</li>
+          <li><strong>They’d swamp the load balancer too.</strong> At 10,000 shoppers, the busiest hour needs about 100 MB/s of photos, about 800 Mbps: page 2.2’s numbers, ten times over. A c7g.medium’s steady network bandwidth is about 0.5 Gbps.</li>
+          <li><strong>So they move to Amazon S3,</strong> AWS’s object storage. A bucket, <code>tomazon-photos</code>, keeps each file on many disks across zones, grows without limit, and costs about $0.025 per GB a month: Tomazon’s 10 GB of photos cost about 25 cents.</li>
+          <li><strong>Browsers fetch the photos straight from S3.</strong> Each photo’s link on the page points at the bucket, and a bucket policy lets anyone read the photos, and nothing else. Photo traffic never touches the load balancer or the app servers.</li>
+          <li><strong>The app uploads new photos to the bucket</strong> when staff add a product, so every app server sees the same files.</li>
+          <li>A CDN in front of the bucket would make photos faster still for shoppers far from Mumbai. That comes in chapter 9.</li>
         </ol>
 
         <h2>Move PgBouncer next to the database</h2>

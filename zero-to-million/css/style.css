@@ -681,8 +681,10 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .g-reps { display: grid; gap: 2.4rem; padding-top: 1.2rem; }
 .g-bak { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); margin-top: 2.2rem; padding: 0 1.7rem; }
 .g-bak.with-cache { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr) minmax(0, 1fr); gap: 2rem; }
-.g-bak > div { display: flex; justify-content: flex-end; }
-.g-bak.with-cache > div { grid-column: 2; }
+.g-bak > .g-s3 { grid-column: 1; grid-row: 1; justify-self: start; }
+.g-bak > .g-snap { grid-column: 1; grid-row: 1; justify-self: end; }
+.g-bak.with-cache > .g-snap { grid-column: 2; }
+.ar2-bak.g-bak4 { justify-content: space-between; padding-left: 0.9rem; }
 .g-bak .nd { width: 9rem; }
 
 /* 6.1: a sketch of the home page, section by section, beside the queries each section runs */
@@ -1253,6 +1255,8 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .ar2-edge { flex-direction: row; width: auto; gap: 2rem; padding-top: 0; }
   .ar2-edge .nd { flex: 1; }
   .ar2-sw, .ar2-disk { gap: 1rem; }
+  .ar2-bak.g-bak4 { gap: 0.8rem; padding: 0; }
+  .ar2-bak.g-bak4 .nd { width: auto; flex: 1; }
   .ev-conns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ev-row { grid-template-columns: 1fr; }
   .cpu-line { grid-template-columns: repeat(2, 1fr); }

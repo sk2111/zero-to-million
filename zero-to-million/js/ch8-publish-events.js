@@ -281,9 +281,7 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
           <thead><tr><th>Watch</th><th>Alert when</th></tr></thead>
           <tbody>
             <tr><td>Consumer lag, for each group</td><td>It keeps growing for 5 minutes</td></tr>
-            <tr><td>Broker disks</td><td>They’re more than 70% full</td></tr>
-            <tr><td>WAL the database keeps for Debezium</td><td>It passes 10 GB: Debezium has probably stopped</td></tr>
-          </tbody>
+            <tr><td>Broker disks</td><td>They’re more than 70% full</td></tr>          </tbody>
         </table>
 
         <h2>The traps</h2>
@@ -309,10 +307,7 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
 
         <h2>Where this leads</h2>
         <ol class="points">
-          <li>Changes now reach every service that needs them, even one that was down when they happened.</li>
-          <li>The next problem comes from outside. Tomazon starts delivering abroad, and its first shoppers in Dubai, London and New York say product pages crawl. In the same month, sending data to the internet becomes one of the biggest lines on the AWS bill.</li>
-          <li>Chapter 9 shows that both have the same cause, and fixes them at the edge of the network.</li>
-        </ol>
+          <li>Changes now reach every service that needs them, even one that was down when they happened.</li>        </ol>
 
         <aside class="note design">
           <h3>For system design</h3>

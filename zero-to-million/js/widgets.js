@@ -1648,6 +1648,121 @@ window.ZTM = window.ZTM || {};
     timer = setInterval(tick, 650);
   };
 
+  /* ---------- Chapter 8: the parts of Kafka in one picture: producer, topic, partitions, groups ---------- */
+
+  W['kafka-anatomy'] = function (el) {
+    var PARTS = 3, SHOW = 8, MAX_COPIES = 4;
+    var KEYS = [1042, 2210, 377, 5120, 918, 4410];                 /* product ids, in the order they change */
+    var HOME = { 1042: 0, 2210: 1, 377: 2, 5120: 0, 918: 1, 4410: 2 };   /* where each key hashes to */
+    var TERMS = [
+      { value: 'producer', label: 'Producer', say: 'A <strong>producer</strong> writes messages to a topic. Here it’s Debezium, publishing every product change.' },
+      { value: 'topic', label: 'Topic', say: 'A <strong>topic</strong> is a named stream of messages: here, every change to a product.' },
+      { value: 'partition', label: 'Partition', say: 'A topic is split into <strong>partitions</strong>. Each one is an ordered list that only grows at the end, and they can be read in parallel.' },
+      { value: 'key', label: 'Key', say: 'Every message has a <strong>key</strong>, here the product id. The same key always goes to the same partition, so one product’s changes stay in order. The colours show the keys.' },
+      { value: 'offset', label: 'Offset', say: 'A message’s <strong>offset</strong> is its position in its partition: 0, 1, 2 and so on. The markers show the offset each group will read next.' },
+      { value: 'group', label: 'Consumer group', say: 'A <strong>consumer group</strong> is one reader, under one name. Every group gets every message, at its own pace, and keeps its own offsets.' },
+      { value: 'consumer', label: 'Consumer', say: 'A <strong>consumer</strong> is one running copy inside a group. Kafka gives each partition to one copy of the group, so the copies share the work.' },
+      { value: 'broker', label: 'Broker', say: 'A <strong>broker</strong> is one Kafka server. Each partition has a leader on one broker, which takes its writes, and copies on two others.' }
+    ];
+    var st;
+
+    el.innerHTML =
+      '<div class="w-controls"><span class="ka-terms"></span></div>' +
+      '<p class="calc-math ka-def" aria-live="polite"></p>' +
+      '<div class="ka">' +
+        '<div class="ka-prod" data-t="producer"><p class="ka-h">Producer</p><b>Debezium</b><span>publishes each product change, keyed by product id</span></div>' +
+        '<div class="ka-arrow" aria-hidden="true">→</div>' +
+        '<div class="ka-topic" data-t="topic"><p class="ka-h">Topic: tomazon.public.products</p><div class="ka-parts"></div>' +
+          '<p class="ka-legend"><span><i class="ka-ptr g0"></i>cache invalidator reads next</span><span><i class="ka-ptr g1"></i>search indexer reads next</span></p></div>' +
+        '<div class="ka-arrow" aria-hidden="true">→</div>' +
+        '<div class="ka-groups"></div>' +
+      '</div>' +
+      '<div class="pt-controls">' +
+        '<button type="button" class="btn-sm" data-act="produce">Produce a message</button>' +
+        '<button type="button" class="btn-sm" data-act="copy">Add an invalidator copy</button>' +
+        '<button type="button" class="btn-sm quiet" data-act="reset">Start again</button>' +
+      '</div>' +
+      '<p class="readout" aria-live="polite"></p>';
+    el.querySelector('.ka-terms').appendChild(segmented('Kafka terms', TERMS, 'topic', function (v) { st.term = v; render(); }));
+
+    function owner(p, copies) { return Math.floor(p * copies / PARTS); }   /* which copy of a group reads partition p */
+    function fresh() {
+      st = { term: st ? st.term : 'topic', parts: [[], [], []], n: 0, groups: [
+        { name: 'cache-invalidator', label: 'cache invalidator', copies: 2, next: [0, 0, 0], delay: 500 },
+        { name: 'search-indexer', label: 'search indexer', copies: 1, next: [0, 0, 0], delay: 1300 }
+      ], say: 'Each square is one message, coloured by its key. Pick a term above to see where it is, then produce a few messages.' };
+      for (var i = 0; i < 5; i++) append();
+      st.groups.forEach(function (g) { g.next = st.parts.map(function (p) { return p.length; }); });
+      render();
+    }
+    function append() {
+      var key = KEYS[st.n % KEYS.length], p = HOME[key];
+      st.n++;
+      st.parts[p].push({ off: st.parts[p].length, key: key });
+      return { p: p, key: key, off: st.parts[p].length - 1 };
+    }
+
+    function render() {
+      var t = st.term;
+      el.querySelector('.ka-def').innerHTML = TERMS.filter(function (x) { return x.value === t; })[0].say;
+      el.querySelector('.ka-parts').innerHTML = st.parts.map(function (msgs, p) {
+        var from = Math.max(0, msgs.length - (SHOW - 1)), cells = '', ptrs = '';
+        for (var i = 0; i < SHOW; i++) {
+          var m = msgs[from + i];
+          cells += m ? '<i class="ka-msg k' + KEYS.indexOf(m.key) + '" title="Product ' + m.key + ', offset ' + m.off + '">' + m.off + '</i>' : '<i class="ka-empty"></i>';
+        }
+        st.groups.forEach(function (g, gi) {
+          var at = g.next[p] - from;
+          if (at >= 0 && at < SHOW) ptrs += '<i class="ka-ptr g' + gi + '" style="left:calc(' + at + ' * 100% / ' + SHOW + ')" title="' + g.label + ' reads offset ' + g.next[p] + ' next"></i>';
+        });
+        return '<div class="ka-part" data-t="partition"><p class="ka-pl"><b>Partition ' + p + '</b><span data-t="broker">leader on broker ' + (p + 1) + '</span></p>' +
+          '<div class="ka-strip"><div class="ka-cells">' + cells + '</div><div class="ka-ptrs">' + ptrs + '</div></div></div>';
+      }).join('');
+      el.querySelector('.ka-groups').innerHTML = st.groups.map(function (g, gi) {
+        var copies = '';
+        for (var c = 0; c < g.copies; c++) {
+          var mine = [];
+          for (var p = 0; p < PARTS; p++) if (owner(p, g.copies) === c) mine.push(p);
+          copies += '<div class="ka-copy' + (mine.length ? '' : ' idle') + '" data-t="consumer"><b>Copy ' + (c + 1) + '</b><span>' +
+            (mine.length ? 'reads partition' + (mine.length > 1 ? 's ' : ' ') + (mine.length > 2 ? mine.slice(0, -1).join(', ') + ' and ' + mine[mine.length - 1] : mine.join(' and ')) : 'idle: no partition left') + '</span></div>';
+        }
+        return '<div class="ka-group g' + gi + '" data-t="group"><p class="ka-h">Consumer group</p><b class="ka-gname">' + g.name + '</b>' + copies + '</div>';
+      }).join('');
+      el.querySelectorAll('.ka [data-t]').forEach(function (n) { n.classList.toggle('hl', n.getAttribute('data-t') === t); });
+      el.querySelector('.ka').className = 'ka show-' + t;
+      el.querySelector('[data-act="copy"]').disabled = st.groups[0].copies >= MAX_COPIES;
+      el.querySelector('.readout').innerHTML = st.say;
+    }
+
+    el.querySelector('.pt-controls').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-act]');
+      if (!b || b.disabled) return;
+      var act = b.getAttribute('data-act');
+      if (act === 'reset') { fresh(); return; }
+      if (act === 'produce') {
+        var m = append();
+        st.say = '<strong>Product ' + m.key + ' changed.</strong> Its key always goes to partition ' + m.p + ', so the message is added to the end of that partition as offset ' + m.off +
+          '. Each group reads it when it gets there: the cache invalidator quickly, the search indexer a little later.';
+        st.groups.forEach(function (g) {
+          setTimeout(function () {
+            if (!el.isConnected || g.next[m.p] > m.off) return;
+            g.next[m.p] = m.off + 1;
+            render();
+          }, reduceMotion ? 0 : g.delay);
+        });
+      } else if (act === 'copy') {
+        var g = st.groups[0];
+        g.copies++;
+        st.say = g.copies <= PARTS
+          ? '<strong>Copy ' + g.copies + ' joins the cache invalidator.</strong> Kafka shares the partitions out again, so each copy has less to read.'
+          : '<strong>Copy ' + g.copies + ' has nothing to do.</strong> There are only ' + PARTS + ' partitions, and each is read by one copy of the group. Partitions limit how many copies can share the work.';
+      }
+      render();
+    });
+
+    fresh();
+  };
+
   /* ---------- Chapter 8: change data capture, from the WAL to Redis and search ---------- */
 
   W['cdc-arch'] = function (el) {

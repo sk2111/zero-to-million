@@ -49,8 +49,8 @@ ZTM.chapters = [
   {
     n: 8, slug: 'publish-events', title: 'Publish events', users: 2000000, status: 'ready', minutes: 50,
     question: 'How does every service hear about a change, even one that was down?',
-    summary: 'Replace a fragile listener with a durable log: queues and logs, Kafka, change data capture with Debezium, the outbox, and what it costs to run.',
-    topics: ['Message queues and logs', 'Kafka: topics, partitions, consumer groups', 'Change data capture with Debezium', 'The outbox pattern', 'At-least-once delivery and idempotency', 'Consumer lag']
+    summary: 'Replace a fragile listener with a durable log: queues and logs, Kafka, change data capture with Debezium, and what it costs to run.',
+    topics: ['Message queues and logs', 'Kafka: topics, partitions, consumer groups', 'Change data capture with Debezium', 'At-least-once delivery and idempotency', 'Consumer lag']
   },
   {
     n: 9, slug: 'serve-it-nearby', title: 'Serve it nearby', users: 3000000, status: 'ready', minutes: 45,

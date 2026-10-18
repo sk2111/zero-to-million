@@ -761,6 +761,53 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .btn-sm:disabled { opacity: 0.45; cursor: default; }
 .btn-sm:disabled:hover { background: var(--ink); border-color: var(--ink); }
 
+/* 8.2: the parts of Kafka. Producer, topic with partitions, consumer groups; the chosen term is highlighted */
+.ka-def { margin: 0 0 1.25rem; }
+.ka { display: grid; grid-template-columns: minmax(0, 0.8fr) auto minmax(0, 2.6fr) auto minmax(0, 1.2fr); gap: 0.9rem; align-items: center; }
+.ka-arrow { font-size: 1.4rem; color: var(--muted); }
+.ka-prod, .ka-topic, .ka-group { padding: 0.8rem 0.9rem; border: 1.5px solid var(--rule-2); border-radius: 10px; background: var(--sheet); transition: border-color 0.15s, box-shadow 0.15s; }
+.ka-prod { display: grid; gap: 0.2rem; font-size: var(--fs-sm); }
+.ka-prod span { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.4; }
+.ka-h { margin: 0 0 0.5rem; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+.ka-parts { display: grid; gap: 0.75rem; }
+.ka-part { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 0.6rem; align-items: start; padding: 0.35rem; border: 1.5px solid transparent; border-radius: 8px; transition: border-color 0.15s, background 0.15s; }
+.ka-pl { display: grid; gap: 0.1rem; margin: 0; font-size: var(--fs-xs); }
+.ka-pl span { color: var(--muted); border-radius: 4px; }
+.ka-strip { display: grid; gap: 3px; }
+.ka-cells { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+.ka-cells i { display: grid; place-items: center; height: 1.8rem; border-radius: 5px; font-style: normal; font-size: 0.74rem; font-weight: 600; color: #ffffff; font-variant-numeric: tabular-nums; }
+.ka-empty { box-shadow: inset 0 0 0 1px var(--rule); }
+.ka-msg.k0 { background: var(--accent); } .ka-msg.k1 { background: #ed7100; } .ka-msg.k2 { background: #8c4fff; }
+.ka-msg.k3 { background: #2f74d0; } .ka-msg.k4 { background: #c9a227; } .ka-msg.k5 { background: #7a8699; }
+.ka-ptrs { position: relative; height: 0.9rem; }
+.ka-ptrs .ka-ptr { position: absolute; top: 0; width: calc(100% / 8); }
+.ka-ptr { display: block; height: 0.9rem; }
+.ka-ptr::before { content: ""; display: block; width: 0; height: 0; margin: 0 auto; border: 0.4rem solid transparent; border-bottom-width: 0.55rem; border-top: 0; }
+.ka-ptr.g0::before { border-bottom-color: var(--accent); }
+.ka-ptr.g1::before { border-bottom-color: #8c4fff; }
+.ka-ptrs .ka-ptr.g0 { transform: translateX(-0.35rem); }
+.ka-ptrs .ka-ptr.g1 { transform: translateX(0.35rem); }
+.ka-legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.2rem; margin: 0.7rem 0 0; font-size: var(--fs-xs); color: var(--muted); }
+.ka-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ka-legend .ka-ptr { width: 0.9rem; }
+.ka-groups { display: grid; gap: 0.9rem; }
+.ka-group { display: grid; gap: 0.4rem; }
+.ka-group .ka-h { margin: 0; }
+.ka-gname { font-size: var(--fs-sm); }
+.ka-group.g0 { box-shadow: inset 3px 0 0 var(--accent); }
+.ka-group.g1 { box-shadow: inset 3px 0 0 #8c4fff; }
+.ka-copy { display: grid; gap: 0.05rem; padding: 0.35rem 0.55rem; border: 1.5px solid var(--rule); border-radius: 7px; background: var(--paper); font-size: var(--fs-xs); transition: border-color 0.15s; }
+.ka-copy span { color: var(--ink-2); }
+.ka-copy.idle span { color: var(--muted); font-style: italic; }
+/* The highlighted term */
+.ka-prod.hl, .ka-topic.hl, .ka-group.hl, .ka-copy.hl, .ka-part.hl { border-color: var(--accent); }
+.ka-prod.hl, .ka-topic.hl, .ka-group.hl { box-shadow: 0 0 0 3px var(--accent-soft); }
+.ka-part.hl { background: var(--accent-soft); }
+.ka-pl span.hl { background: var(--accent-soft); color: var(--ink); font-weight: 600; padding: 0 0.25rem; }
+.ka.show-key .ka-msg { outline: 2px solid var(--ink); outline-offset: -2px; }
+.ka.show-offset .ka-msg { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6); }
+.ka.show-offset .ka-ptrs { outline: 1.5px dashed var(--accent); outline-offset: 2px; border-radius: 3px; }
+
 /* 8.3: change data capture, from the WAL through Kafka to Redis and search */
 .c8-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.6rem 3.2rem; align-items: center; }
 .c8-app { grid-area: 1 / 1; } .c8-primary { grid-area: 1 / 2; } .c8-dbz { grid-area: 1 / 3; }
@@ -1180,6 +1227,9 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   .lag-tl { --lag-name: 4.6rem; }
   .cap-dbs { gap: 4.25rem; }
   .c8-grid { gap: 2.2rem 1.2rem; }
+  .ka { grid-template-columns: 1fr; }
+  .ka-arrow { justify-self: center; transform: rotate(90deg); }
+  .ka-part { grid-template-columns: 1fr; gap: 0.3rem; }
   .hq { grid-template-columns: 1fr; }
   .hq-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .kc-nodes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }

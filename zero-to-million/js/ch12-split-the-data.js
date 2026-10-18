@@ -245,7 +245,7 @@ def orders_db(customer_id: int):
           <thead><tr><th>Trap</th><th>What happens</th><th>The fix</th></tr></thead>
           <tbody>
             <tr><td>Queries without the shard key</td><td>They must ask every shard and merge the answers: slow, and only as available as the slowest shard</td><td>Every order query carries the customer. Reports and analytics go to the data warehouse, fed from Kafka</td></tr>
-            <tr><td>Transactions across shards</td><td>There’s no single transaction to keep them consistent</td><td>Keep each transaction on one shard. Work that spans shards goes through events and the outbox (page 8.3)</td></tr>
+            <tr><td>Transactions across shards</td><td>There’s no single transaction to keep them consistent</td><td>Keep each transaction on one shard. Work that spans shards goes through events (chapter 8)</td></tr>
             <tr><td>A hot shard</td><td>One huge customer, such as a company buying for its 50,000 staff, overloads its shard</td><td>The map can give them a logical shard, even a primary, of their own</td></tr>
             <tr><td>IDs from a sequence</td><td>Each shard’s sequence makes the same numbers</td><td>Time-ordered IDs with the shard inside them</td></tr>
             <tr><td>Schema changes</td><td>Four databases, changed one by one, briefly disagree</td><td>Changes that work with old and new code alike: add first, remove later (page 7.3)</td></tr>

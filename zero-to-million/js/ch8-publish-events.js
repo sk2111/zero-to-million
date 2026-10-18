@@ -17,7 +17,7 @@ ZTM.content[8] = {
         <li>Explain why LISTEN/NOTIFY, and any message sent once and kept nowhere, loses data.</li>
         <li>Choose between a message queue and a log, and say why.</li>
         <li>Explain Kafka’s topics, partitions, offsets, consumer groups and replication.</li>
-        <li>Capture database changes with Debezium, and publish events safely with an outbox.</li>
+        <li>Capture database changes with Debezium, and turn them into Kafka messages.</li>
         <li>Run Kafka safely: duplicates, lag, a full primary disk, and what to watch.</li>
       </ul>
     </div>`,
@@ -101,6 +101,8 @@ ZTM.content[8] = {
         </ol>
 
         <h2>How Kafka works</h2>
+        <p>Here’s how the parts fit together. Pick a term to see where it is:</p>
+        <div class="widget" data-widget="kafka-anatomy"></div>
         <dl class="terms">
           <div><dt>Topic</dt><dd>A named log of messages, such as <code>tomazon.public.products</code>.</dd></div>
           <div><dt>Partition</dt><dd>A topic is split into partitions, each an append-only file on disk. Messages with the same key, such as a product id, always go to the same partition, so the changes to one product stay in order.</dd></div>
@@ -173,49 +175,11 @@ max_slot_wal_keep_size = 50GB          </span><span class="c"># a stopped reader
 
 </span><span class="c">-- in psql, as the database owner</span><span class="o">
 CREATE ROLE debezium WITH LOGIN REPLICATION PASSWORD '…';
-GRANT SELECT ON products, outbox TO debezium;
-CREATE PUBLICATION debezium FOR TABLE products, outbox;</span></pre>
+GRANT SELECT ON products TO debezium;
+CREATE PUBLICATION debezium FOR TABLE products;</span></pre>
           <ol class="points term-note">
             <li><code>wal_level = logical</code> makes the WAL carry enough detail to rebuild each changed row, not just the bytes that changed on disk.</li>
-            <li>The publication lists the tables Debezium may read. The <code>outbox</code> table is explained below.</li>
-          </ol>
-        </figure>
-        <figure class="term">
-          <figcaption>The Debezium connector, registered with Kafka Connect</figcaption>
-<pre><span class="o">{
-  "name": "tomazon-postgres",
-  "config": {
-    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "plugin.name": "pgoutput",
-    "database.hostname": "10.0.2.14",
-    "database.port": "5432",
-    "database.user": "debezium",
-    "database.password": "\${file:/opt/connect/secrets.properties:db_password}",
-    "database.dbname": "tomazon",
-    "topic.prefix": "tomazon",
-    "table.include.list": "public.products,public.outbox",
-    "publication.name": "debezium",
-    "publication.autocreate.mode": "disabled",
-    "slot.name": "debezium",
-    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "key.converter.schemas.enable": "false",
-    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "value.converter.schemas.enable": "false",
-    "transforms": "outbox",
-    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
-    "transforms.outbox.table.expand.json.payload": "true",
-    "transforms.outbox.predicate": "isOutbox",
-    "predicates": "isOutbox",
-    "predicates.isOutbox.type": "org.apache.kafka.connect.transforms.predicates.TopicNameMatches",
-    "predicates.isOutbox.pattern": "tomazon.public.outbox"
-  }
-}</span></pre>
-          <ol class="points term-note">
-            <li>Debezium connects straight to the primary on port 5432, not through PgBouncer: like LISTEN, a replication connection needs a session of its own (page 6.3).</li>
-            <li>Each table gets its own topic, named after it: changes to products go to <code>tomazon.public.products</code>. Each message is keyed by the row’s primary key, and written as plain JSON.</li>
-            <li>The <code>transforms</code> and <code>predicates</code> lines apply Debezium’s outbox event router to the outbox table only. The outbox is explained below.</li>
-            <li>On its first start, Debezium takes a snapshot: it reads every existing row once, then streams changes from that point.</li>
-            <li>The password comes from a secrets file on the Kafka Connect server, not from the config.</li>
+            <li>The publication lists the tables Debezium may read: for now, just <code>products</code>.</li>
           </ol>
         </figure>
 
@@ -246,38 +210,11 @@ while True:
         <p>Here’s the whole path, from a price change to Redis and search:</p>
         <div class="widget" data-widget="cdc-arch"></div>
 
-        <h2>Raw changes or real events: the outbox</h2>
-        <ol class="points">
-          <li>A CDC message is a row of a table. Its fields are the core’s column names, so a reader that relies on them is tied to the table again: the shared-table problem from page 7.3, by another route.</li>
-          <li>That’s fine for the cache invalidator, which only needs the id. But events other teams build on, such as “order placed”, should be designed and versioned, like the product API in page 7.3.</li>
-          <li>The <strong>outbox pattern</strong> does that. In the same transaction that saves the order, the core inserts a row into an <code>outbox</code> table: the event’s type and its content. Both commit, or neither does.</li>
-          <li>Debezium reads the new outbox row from the WAL, and its outbox event router publishes it as the event itself. The order tables can change freely behind it.</li>
-        </ol>
-        <figure class="term">
-          <figcaption>Saving an order and its event in one transaction</figcaption>
-<pre><span class="o">async with primary.begin() as db:                </span><span class="c"># one transaction</span><span class="o">
-    order_id = await db.scalar(INSERT_ORDER, order)
-    await db.execute(INSERT_OUTBOX, {
-        "aggregatetype": "order",
-        "aggregateid": order_id,
-        "type": "order_placed.v1",
-        "payload": json.dumps({"order_id": order_id, "user_id": user.id,
-                               "total": total, "items": items}),
-    })</span></pre>
-          <ol class="points term-note">
-            <li>The router publishes each outbox row to <code>outbox.event.order</code>, keyed by the order id, so the events for one order stay in order.</li>
-            <li>A cleanup job deletes old outbox rows. Debezium doesn’t need them: it read them from the WAL.</li>
-            <li>This is how the core will tell delivery, email and analytics about an order: one transaction saves the order and its event, and each reader acts when it can.</li>
-          </ol>
-        </figure>
-
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>Don’t write to two systems and hope.</strong> Write once, to the database, and let the WAL carry the change
             everywhere else.</li>
-            <li><strong>Publish events, not tables, to other teams.</strong> Raw CDC is fine within one team. Between teams, use an
-            outbox, with versioned event types.</li>
             <li><strong>Every consumer must be idempotent.</strong> At-least-once delivery means duplicates, so handling a message
             twice must do no harm.</li>
           </ol>
@@ -285,7 +222,7 @@ while True:
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Save the change and its event in one transaction, and let change data capture deliver it.</p>
+          <p>Write each change once, to the database, and let change data capture deliver it.</p>
         </aside>`
     },
 
@@ -297,41 +234,36 @@ while True:
       sub: 'Kafka is now as important as the database, and needs the same care.',
       html: `
         <ol class="points lede">
-          <li>The fragile listener is gone. In its place is a cluster of servers that holds every change Tomazon makes.</li>
-          <li>That cluster is now as critical as the database. If it stops, cache invalidation, search updates and order emails stop with it.</li>
+          <li>The fragile listener is gone. In its place is a small cluster of servers that holds every change Tomazon makes.</li>
+          <li>That cluster now matters as much as the database: if it stops, cache invalidation and search updates stop with it.</li>
         </ol>
 
         <h2>Run it yourself, or managed?</h2>
         <table class="data">
-          <thead><tr><th></th><th>Kafka on EC2</th><th>Amazon MSK</th></tr></thead>
+          <thead><tr><th></th><th>Kafka on your own servers</th><th>Amazon MSK</th></tr></thead>
           <tbody>
-            <tr><td>What you run</td><td>Brokers in three zones, KRaft controllers, disks, upgrades</td><td>You choose the broker size and count; AWS runs them</td></tr>
-            <tr><td>When a broker dies</td><td>You replace it, and move its partitions</td><td>AWS replaces it</td></tr>
-            <tr><td>Kafka Connect for Debezium</td><td>You run it too</td><td>MSK Connect can run it</td></tr>
-            <tr><td>Cost</td><td>Cheaper servers, more engineers’ time</td><td>A premium on the servers, less time</td></tr>
+            <tr><td>Who runs the brokers</td><td>You: setup, disks, upgrades</td><td>AWS</td></tr>
+            <tr><td>When a broker dies</td><td>You replace it</td><td>AWS replaces it</td></tr>
+            <tr><td>Cost</td><td>Cheaper servers, more of your team’s time</td><td>Pricier servers, less of your time</td></tr>
           </tbody>
         </table>
         <ol class="points">
-          <li>KRaft is how Kafka’s brokers agree on the cluster’s state, without ZooKeeper. Since Kafka 4.0, it’s the only way.</li>
-          <li>Tomazon’s team understands how Kafka works, but doesn’t want to be on call for brokers. It runs Amazon MSK: three <code>kafka.m7g.large</code> brokers, one in each zone in Mumbai.</li>
+          <li>Tomazon uses Amazon MSK: three brokers, one in each zone in Mumbai.</li>
         </ol>
 
         <h2>Settings that keep messages safe</h2>
         <table class="data">
-          <thead><tr><th>Setting</th><th>Tomazon’s value</th><th>Why</th></tr></thead>
+          <thead><tr><th>Setting</th><th>Tomazon’s value</th><th>What it means</th></tr></thead>
           <tbody>
-            <tr><td><code>replication.factor</code></td><td>3</td><td>Each partition lives on three brokers, one per zone</td></tr>
-            <tr><td><code>min.insync.replicas</code></td><td>2</td><td>A write is refused unless at least two copies are in sync, so losing one broker loses nothing</td></tr>
-            <tr><td><code>acks</code> (producers)</td><td>all</td><td>The producer waits until every in-sync copy has the message. It’s the default since Kafka 3.0</td></tr>
-            <tr><td><code>enable.idempotence</code> (producers)</td><td>true</td><td>A producer’s retry can’t write the same message twice. Also the default since Kafka 3.0</td></tr>
-            <tr><td><code>retention.ms</code></td><td>7 days</td><td>A reader that breaks on a Friday night can still catch up after a long weekend</td></tr>
-            <tr><td>Partitions for products</td><td>12</td><td>Room for up to 12 working copies of each consumer group</td></tr>
+            <tr><td><code>replication.factor</code></td><td>3</td><td>Every message is kept on three brokers</td></tr>
+            <tr><td><code>min.insync.replicas</code></td><td>2</td><td>A write only counts once two brokers have it, so losing one loses nothing</td></tr>
+            <tr><td><code>retention.ms</code></td><td>7 days</td><td>A reader that stops can catch up any time within a week</td></tr>
           </tbody>
         </table>
 
         <h2>What to watch</h2>
         <ol class="points">
-          <li><strong>Consumer lag</strong> is the gap between the newest message and a group’s committed offset. It’s the number that would have caught the stopped invalidator in minutes.</li>
+          <li><strong>Consumer lag</strong> is how many messages a reader still has to read. It’s the number that would have caught the stopped invalidator in minutes.</li>
         </ol>
         <figure class="term">
           <figcaption>Lag for each partition (some columns left out)</figcaption>
@@ -342,18 +274,15 @@ cache-invalidator  tomazon.public.products  0          48211           48211    
 cache-invalidator  tomazon.public.products  1          47120           47120           0
 cache-invalidator  tomazon.public.products  2          46875           47302           427</span></pre>
           <ol class="points term-note">
-            <li><code>CURRENT-OFFSET</code> is where the group has got to; <code>LOG-END-OFFSET</code> is the newest message. Partition 2 is 427 changes behind.</li>
-            <li>A lag that’s large but falling is a reader catching up. A lag that keeps growing is a reader that has stopped, or can’t keep up.</li>
+            <li>Partition 2 is 427 messages behind. If that number keeps growing, the reader has stopped or can’t keep up.</li>
           </ol>
         </figure>
         <table class="data">
-          <thead><tr><th>Watch</th><th>Why</th><th>Alert when</th></tr></thead>
+          <thead><tr><th>Watch</th><th>Alert when</th></tr></thead>
           <tbody>
-            <tr><td>Consumer lag, per group</td><td>A reader has stopped, or fallen behind</td><td>It grows for 5 minutes in a row</td></tr>
-            <tr><td>Under-replicated partitions</td><td>A broker is down or slow, so fewer copies are safe</td><td>Above 0 for more than a few minutes</td></tr>
-            <tr><td>Broker disk</td><td>7 days of messages must fit</td><td>Above 70% full</td></tr>
-            <tr><td>WAL kept for the replication slot, in <code>pg_replication_slots</code></td><td>If Debezium stops, the primary keeps every WAL file since, and its disk fills</td><td>Above 10 GB</td></tr>
-            <tr><td>Connector status</td><td>A failed connector stops publishing, quietly</td><td>Anything but <code>RUNNING</code></td></tr>
+            <tr><td>Consumer lag, for each group</td><td>It keeps growing for 5 minutes</td></tr>
+            <tr><td>Broker disks</td><td>They’re more than 70% full</td></tr>
+            <tr><td>WAL the database keeps for Debezium</td><td>It passes 10 GB: Debezium has probably stopped</td></tr>
           </tbody>
         </table>
 
@@ -361,10 +290,9 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
         <table class="data">
           <thead><tr><th>Trap</th><th>What happens</th><th>The fix</th></tr></thead>
           <tbody>
-            <tr><td>Duplicates</td><td>After a crash or a rebalance, a consumer reads again everything since its last commit</td><td>Make every consumer idempotent. Deleting a key twice is harmless; for emails, record which event ids were sent</td></tr>
-            <tr><td>A poison message</td><td>One message makes the consumer crash. It restarts, reads the same message, and crashes again, and its partition stops moving</td><td>Catch the error, send the message to a dead-letter topic, carry on, and alert</td></tr>
-            <tr><td>A full primary disk</td><td>Debezium is down for a long time, and its slot keeps all the WAL since</td><td><code>max_slot_wal_keep_size</code>, and an alert on the slot. Past the limit, the slot is dropped, and Debezium must take a new snapshot</td></tr>
-            <tr><td>A renamed column</td><td>Every raw CDC message changes shape, and readers break</td><td>Readers use only the fields they need. Events between teams go through the outbox</td></tr>
+            <tr><td>Duplicates</td><td>After a crash, a reader can see the same message twice</td><td>Make handling a message twice harmless, like deleting a key twice</td></tr>
+            <tr><td>A bad message</td><td>One message crashes the reader every time it tries it, and that partition stops</td><td>Set the message aside in a separate topic, carry on, and alert</td></tr>
+            <tr><td>A full database disk</td><td>Debezium is down for long, and PostgreSQL keeps all the WAL it hasn’t read</td><td>Cap how much WAL it may keep (<code>max_slot_wal_keep_size</code>), and alert early</td></tr>
           </tbody>
         </table>
 
@@ -372,11 +300,10 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
         <table class="data">
           <thead><tr><th>Part</th><th>Choice</th></tr></thead>
           <tbody>
-            <tr><td>The cluster</td><td>Amazon MSK: 3 × <code>kafka.m7g.large</code>, one per zone</td></tr>
-            <tr><td>Getting changes in</td><td>Debezium on MSK Connect, reading the WAL of <code>products</code> and <code>outbox</code></td></tr>
-            <tr><td>Topics</td><td><code>tomazon.public.products</code> (12 partitions, 7 days) and <code>outbox.event.order</code></td></tr>
-            <tr><td>Readers</td><td>The cache invalidator (2 copies), the search indexer, the catalogue service’s own copy of products, and order emails</td></tr>
-            <tr><td>Safety</td><td>Replication factor 3, <code>min.insync.replicas</code> 2, idempotent consumers, and alerts on lag</td></tr>
+            <tr><td>The cluster</td><td>Amazon MSK, three brokers, one per zone</td></tr>
+            <tr><td>Getting changes in</td><td>Debezium, reading the database’s WAL</td></tr>
+            <tr><td>Readers</td><td>The cache invalidator (2 copies), the search indexer and the catalogue service</td></tr>
+            <tr><td>Safety</td><td>3 copies of every message, readers safe to repeat, and alerts on lag</td></tr>
           </tbody>
         </table>
 
@@ -390,18 +317,14 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>A log is a database.</strong> Treat it like one: replicate it, watch its disk, plan its capacity, and test
-            what happens when a broker dies.</li>
-            <li><strong>Alert on lag, not just on “up”.</strong> Most failures in asynchronous systems are quiet: everything is
-            running, and nothing is moving.</li>
-            <li><strong>Every new moving part has a price.</strong> Kafka fixed lost changes, and brought brokers, connectors, slots
-            and lag to look after. Add one only when it solves a problem you have.</li>
+            <li><strong>A log is a database.</strong> Keep copies, watch its disk, and test what happens when a broker dies.</li>
+            <li><strong>Alert on lag, not just on “up”.</strong> When readers fail quietly, everything looks up, and nothing moves.</li>
           </ol>
         </aside>
 
         <aside class="note rule">
           <h3>Rule of thumb</h3>
-          <p>Make every consumer idempotent, and put every group’s lag on a dashboard.</p>
+          <p>Make every reader safe to repeat, and watch every group’s lag.</p>
         </aside>`
     }
   ]

@@ -29,62 +29,44 @@ ZTM.content[8] = {
       group: 'The next bottleneck',
       slug: 'listener-died',
       title: 'The listener that went deaf',
-      sub: 'The cache invalidator stopped working at 7:35, and nothing noticed until shoppers did.',
+      sub: 'The cache invalidator stopped working, and nothing noticed until shoppers did.',
       html: `
         <ol class="points lede">
-          <li>Friday, 8 p.m.: Tomazon’s flash sale starts, and the pricing team cuts the prices of 40 products in the first ten minutes.</li>
-          <li>Shoppers keep seeing the old prices. Some add products to their cart at one price, and find another at checkout. Support tickets pile up.</li>
-          <li>PostgreSQL has the new prices. Redis still has the old pages. The cache invalidator from page 6.3 hasn’t deleted anything since 7:35.</li>
+          <li>During a sale, the team cuts the prices of a few products.</li>
+          <li>Shoppers keep seeing the old prices, and some find a different price at checkout.</li>
+          <li>The database has the new prices, but Redis still has the old pages. The cache invalidator from page 6.3 has stopped deleting them.</li>
         </ol>
 
         <h2>What happened</h2>
         <ol class="steps">
-          <li><strong>7:35: PostgreSQL restarts.</strong> A configuration change needs a restart, and the database is back in 5 seconds. The app servers reconnect on their own.</li>
-          <li><strong>The invalidator doesn’t.</strong> Its code reconnects when a query fails, but a listener never sends a query. It sits waiting on a connection that no longer exists.</li>
-          <li><strong>Nothing notices.</strong> The process is still running, so its health check, “is the process up?”, keeps passing.</li>
-          <li><strong>Every notification is dropped.</strong> NOTIFY delivers only to sessions listening at that moment. With nobody listening, PostgreSQL throws each one away.</li>
-          <li><strong>8:20: someone restarts the invalidator,</strong> and it works again. The 45 minutes of changes it missed are gone, and it has no record of which products they were.</li>
-        </ol>
-        <ol class="points">
-          <li>The TTL safety net from page 6.3 did its job: no copy stayed wrong for much more than 10 minutes.</li>
-          <li>But in a flash sale, the first 10 minutes after a price change are the ones that matter most.</li>
+          <li><strong>The database restarts briefly</strong> for a settings change. The app servers reconnect on their own.</li>
+          <li><strong>The invalidator doesn’t.</strong> It keeps running, but it’s no longer listening.</li>
+          <li><strong>Nothing notices.</strong> Its health check only asks “is it running?”, and it is.</li>
+          <li><strong>Every change message is lost.</strong> PostgreSQL sends each NOTIFY only to whoever is listening at that moment, and keeps nothing.</li>
+          <li><strong>Someone restarts the invalidator,</strong> and it works again. But the changes it missed are gone for good.</li>
         </ol>
 
-        <h2>Why more care won’t fix LISTEN/NOTIFY</h2>
-        <table class="data">
-          <thead><tr><th>What Tomazon needs</th><th>What LISTEN/NOTIFY does</th></tr></thead>
-          <tbody>
-            <tr><td>Keep changes while a reader is down</td><td>Sends each notification once, to whoever is listening, and keeps nothing</td></tr>
-            <tr><td>Let a reader catch up after a restart</td><td>Has no record of what any reader has seen</td></tr>
-            <tr><td>Add a new reader that needs the history</td><td>A new listener hears only what happens from now on</td></tr>
-            <tr><td>Share the work between several copies of a reader</td><td>Every listener gets every message, so two copies do the same work twice</td></tr>
-            <tr><td>See how far behind a reader is</td><td>There’s no such number</td></tr>
-            <tr><td>Keep the primary for the database’s own work</td><td>Every listener holds a connection to the primary, because replicas don’t deliver notifications</td></tr>
-          </tbody>
-        </table>
+        <h2>Why LISTEN/NOTIFY isn’t enough</h2>
+        <ol class="points">
+          <li><strong>It keeps nothing.</strong> A message sent while a reader is down is lost.</li>
+          <li><strong>It can’t catch up.</strong> A reader that restarts can’t ask what it missed.</li>
+          <li><strong>It can’t show progress.</strong> There’s no way to tell whether a reader is keeping up.</li>
+        </ol>
 
         <h2>More readers are coming</h2>
         <ol class="points">
-          <li><strong>The catalogue service</strong> wants its own copy of the products, instead of asking the core API for them (page 7.3).</li>
-          <li><strong>Search</strong> is moving to OpenSearch, which needs every product change to keep its index right.</li>
-          <li><strong>A placed order</strong> should send a confirmation email, book a delivery and update the sales dashboard. None of that should happen while the shopper waits.</li>
-          <li>Every one of these readers needs every change, even the ones made while it was down.</li>
+          <li><strong>The catalogue service</strong> wants its own copy of the products (page 7.3).</li>
+          <li><strong>Search</strong> needs every product change to keep its results right.</li>
+          <li><strong>A placed order</strong> should send an email, book a delivery and update the sales dashboard.</li>
+          <li>Each of them needs every change, even ones made while it was down.</li>
         </ol>
 
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>A message that can be lost will be lost.</strong> If missing one would leave data wrong, it needs delivery
-            that survives restarts, crashes and deploys.</li>
-            <li><strong>Health checks must test the work, not the process.</strong> A deaf listener passes “is it running?”. Check
-            “when did it last handle a change?” instead.</li>
-            <li><strong>Every background reader needs one number on a dashboard:</strong> how far behind it is.</li>
+            <li><strong>A message that can be lost will be lost.</strong> If missing one leaves data wrong, use something that
+            keeps messages until they’re handled.</li>
           </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>Never send a change that must arrive through something that can drop it.</p>
         </aside>`
     },
 
@@ -140,9 +122,10 @@ ZTM.content[8] = {
             need to know something happened, use a log.</li>
             <li><strong>The key decides the order.</strong> Kafka keeps order only within a partition. Key each message by the thing
             whose changes must stay in order, and never rely on order across keys.</li>
-            <li><strong>Partitions cap a group’s parallelism.</strong> A group can’t have more working copies than the topic has
-            partitions. Choose enough for the future (Tomazon uses 12): adding partitions later sends some keys to new
-            partitions, and breaks their order while it happens.</li>
+            <li><strong>Partitions limit how many copies can share the work.</strong> Each partition is read by one copy of a
+            reader at a time. With 12 partitions, up to 12 copies can work side by side; a 13th would sit idle. So choose
+            enough partitions at the start: adding more later moves some products to a different partition, and for a
+            while their changes can arrive out of order.</li>
           </ol>
         </aside>
 
@@ -348,7 +331,7 @@ while True:
 
         <h2>What to watch</h2>
         <ol class="points">
-          <li><strong>Consumer lag</strong> is the gap between the newest message and a group’s committed offset. It’s the number that would have caught the deaf listener in minutes, not 45.</li>
+          <li><strong>Consumer lag</strong> is the gap between the newest message and a group’s committed offset. It’s the number that would have caught the stopped invalidator in minutes.</li>
         </ol>
         <figure class="term">
           <figcaption>Lag for each partition (some columns left out)</figcaption>

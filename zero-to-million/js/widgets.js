@@ -1623,7 +1623,7 @@ window.ZTM = window.ZTM || {};
         inv.on = !inv.on;
         if (!inv.on) st.say = kafka
           ? '<strong>The invalidator stops.</strong> Its position stays in Kafka: it will carry on from offset ' + inv.pos + '. Now change a price.'
-          : '<strong>The invalidator stops listening,</strong> like at 7:35, and nothing else notices. Now change a price.';
+          : '<strong>The invalidator stops listening,</strong> and nothing else notices. Now change a price.';
         else if (kafka) {
           var behind = st.msgs.length - inv.pos;
           st.say = behind

@@ -119,11 +119,10 @@ every region doesn't stretch to four; replicas copy everything and take no write
 only the catalogue through Kafka; home regions through the shard map, with standbys; the full
 architecture with a Frankfurt cell, and the before and after).
 
-Chapter 14, the last, has 4 pages: The bill that outgrew the business (where $180,000 a month goes,
-cost per 1,000 orders, making cost visible) · Tune first, then decide where to run (five levers that
-cut a third, cloud vs your own servers, a stay-or-move calculator, Tomazon's hybrid decision) ·
-Moving without stopping (the playbook: stateless first by weight, data last shard by shard) · What it
-all comes down to (the journey in one table, the takeaways, and what to observe from day one).
+Chapter 14, the last, has 2 pages: 25 million users, and a bill that outgrew the business (where
+$180,000 a month goes, cost per 1,000 orders, tuning first, cloud vs your own servers, moving only the
+steady part, the before and after) · What it all comes down to (the journey in one table, the
+takeaways, and what to observe from day one).
 
 ## Files
 

@@ -83,10 +83,10 @@ ZTM.chapters = [
     topics: ['Every region depends on Mumbai', 'What replicas can’t do', 'Cells and home regions', 'Four regions']
   },
   {
-    n: 14, slug: 'count-the-cost', title: 'Count the cost', users: 25000000, status: 'ready', minutes: 50,
+    n: 14, slug: 'count-the-cost', title: 'Count the cost', users: 25000000, status: 'ready', minutes: 20,
     question: 'The bill grows faster than the business. Is the cloud still the right home?',
-    summary: 'Find where the money goes, cut the waste without moving, weigh the cloud against your own servers, move only the steady part, and finish with what the whole journey comes down to.',
-    topics: ['Unit cost and cost visibility', 'Tuning a cloud bill', 'Cloud or your own servers', 'Moving between providers without stopping', 'The takeaways, and observability']
+    summary: 'Find where the money goes, tune before moving anything, move only the steady part, and end with what the whole journey comes down to.',
+    topics: ['Cost per order', 'Tuning before moving', 'Cloud or your own servers', 'What it all comes down to']
   }
 ];
 

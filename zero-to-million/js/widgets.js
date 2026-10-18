@@ -1261,6 +1261,115 @@ window.ZTM = window.ZTM || {};
     draw();
   };
 
+  /* ---------- Chapter 6: the Tomazon home page, and where its 100 queries come from ---------- */
+
+  W['home-queries'] = function (el) {
+    /* Each section runs a few queries of its own, then 3 lookups (price, stock, rating) per product it shows. */
+    var SECS = [
+      { id: 'header', name: 'Header and category menu', lists: ['SELECT id, name FROM categories WHERE in_menu'], products: 0 },
+      { id: 'banners', name: 'Sale banners', lists: ['SELECT * FROM banners WHERE live_now', 'SELECT * FROM campaigns WHERE id = ANY($1)'], products: 0 },
+      { id: 'deals', name: 'Today’s deals', lists: ['SELECT product_id FROM deals WHERE day = today() LIMIT 8'], products: 8 },
+      { id: 'tr1', name: 'Trending in Electronics', lists: ['SELECT product_id FROM trending WHERE category = \'electronics\' LIMIT 6'], products: 6 },
+      { id: 'tr2', name: 'Trending in Home & Kitchen', lists: ['SELECT product_id FROM trending WHERE category = \'home\' LIMIT 6'], products: 6 },
+      { id: 'tr3', name: 'Trending in Fashion', lists: ['SELECT product_id FROM trending WHERE category = \'fashion\' LIMIT 6'], products: 6 },
+      { id: 'new', name: 'New arrivals', lists: ['SELECT id FROM products ORDER BY created_at DESC LIMIT 4'], products: 4 },
+      { id: 'brands', name: 'Top brands', lists: ['SELECT name, logo FROM brands WHERE featured'], products: 0 },
+      { id: 'footer', name: 'Footer', lists: ['SELECT * FROM site_links WHERE area = \'footer\''], products: 0 }
+    ];
+    var LOOKUPS = [
+      ['SELECT price FROM prices WHERE product_id = $1', 'SELECT product_id, price FROM prices WHERE product_id = ANY($1)'],
+      ['SELECT qty FROM stock WHERE product_id = $1', 'SELECT product_id, qty FROM stock WHERE product_id = ANY($1)'],
+      ['SELECT avg(stars), count(*) FROM reviews WHERE product_id = $1', 'SELECT product_id, avg(stars), count(*) FROM reviews WHERE product_id = ANY($1) GROUP BY product_id']
+    ];
+    var st = { sel: 'deals', batch: false };
+    function lookups(s) { return s.products ? (st.batch ? 3 : 3 * s.products) : 0; }
+    function count(s) { return s.lists.length + lookups(s); }
+    function repeat(html, n) { var out = ''; for (var i = 0; i < n; i++) out += html; return out; }
+    var CARD = '<span class="hq-card"><i class="hq-img"></i><i class="hq-l hq-price"></i><i class="hq-l hq-stock"></i><i class="hq-l hq-rate"></i></span>';
+    function sec(id, inner) {
+      return '<div class="hq-sec" data-sec="' + id + '" tabindex="0" role="button"><b class="hq-badge"></b>' + inner + '</div>';
+    }
+    function shelf(id, title, n) { return sec(id, '<p class="hq-h">' + title + '</p><div class="hq-row r' + n + '">' + repeat(CARD, n) + '</div>'); }
+
+    el.innerHTML =
+      '<div class="hq">' +
+        '<div class="hq-page" aria-label="A sketch of Tomazon’s home page">' +
+          '<div class="hq-chrome"><i></i><i></i><i></i><span>tomazon.com</span></div>' +
+          sec('header', '<div class="hq-top"><b class="hq-logo">tomazon</b><span class="hq-search">Search Tomazon</span><span class="hq-cart">Cart</span></div>' +
+            '<div class="hq-menu">' + ['Electronics', 'Home &amp; Kitchen', 'Fashion', 'Grocery', 'Books', 'Toys'].map(function (c) { return '<span>' + c + '</span>'; }).join('') + '</div>') +
+          sec('banners', '<div class="hq-hero"><b>The 8 p.m. sale</b><span>Up to 60% off, tonight only</span></div>') +
+          shelf('deals', 'Today’s deals', 8) +
+          shelf('tr1', 'Trending in Electronics', 6) +
+          shelf('tr2', 'Trending in Home &amp; Kitchen', 6) +
+          shelf('tr3', 'Trending in Fashion', 6) +
+          shelf('new', 'New arrivals', 4) +
+          sec('brands', '<p class="hq-h">Top brands</p><div class="hq-brands">' + repeat('<i></i>', 6) + '</div>') +
+          sec('footer', '<div class="hq-foot">' + repeat('<i></i>', 4) + '</div>') +
+        '</div>' +
+        '<div class="hq-side">' +
+          '<div class="hq-total"><b class="hq-num"></b><span>queries for one home page</span></div>' +
+          '<div class="hq-bar"><i class="lst"></i><i class="look"></i></div>' +
+          '<p class="kl-key hq-key"><span><i class="hq-k-list"></i>lists and page parts</span><span><i class="hq-k-look"></i>price, stock and rating, per product</span></p>' +
+          '<label class="ql-check"><input type="checkbox" class="hq-batch"> Batch the per-product lookups (page 3.2)</label>' +
+          '<ol class="hq-list"></ol>' +
+          '<figure class="hq-q"><figcaption></figcaption><pre></pre></figure>' +
+        '</div>' +
+      '</div>' +
+      '<p class="readout" aria-live="polite"></p>';
+
+    var list = el.querySelector('.hq-list');
+    list.innerHTML = SECS.map(function (s) {
+      return '<li><button type="button" data-sec="' + s.id + '"><span>' + s.name + '</span><b></b></button></li>';
+    }).join('');
+
+    function draw() {
+      var total = 0, listed = 0;
+      SECS.forEach(function (s) {
+        var n = count(s);
+        total += n; listed += s.lists.length;
+        el.querySelector('.hq-sec[data-sec="' + s.id + '"] .hq-badge').textContent = n;
+        list.querySelector('[data-sec="' + s.id + '"] b').textContent = n;
+      });
+      el.querySelector('.hq-num').textContent = total;
+      el.querySelector('.hq-bar .lst').style.width = listed + '%';
+      el.querySelector('.hq-bar .look').style.width = (total - listed) + '%';
+      el.querySelectorAll('[data-sec]').forEach(function (n) {
+        var on = n.getAttribute('data-sec') === st.sel;
+        n.classList.toggle('on', on);
+        n.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+
+      var s = SECS.filter(function (x) { return x.id === st.sel; })[0], lines = '';
+      s.lists.forEach(function (q) { lines += '<span class="c">×1  </span><span class="o">' + esc(q) + '</span>\n'; });
+      if (s.products) {
+        LOOKUPS.forEach(function (q) {
+          lines += '<span class="c">×' + (st.batch ? 1 : s.products) + '  </span><span class="o">' + esc(q[st.batch ? 1 : 0]) + '</span>\n';
+        });
+      }
+      el.querySelector('.hq-q figcaption').textContent = s.name + ': ' + count(s) + ' quer' + (count(s) === 1 ? 'y' : 'ies') +
+        (s.products ? (st.batch ? ', with the ' + s.products + ' products’ lookups batched' : ', 3 of them for each of its ' + s.products + ' products') : '');
+      el.querySelector('.hq-q pre').innerHTML = lines.replace(/\n$/, '');
+
+      el.querySelector('.readout').innerHTML = st.batch
+        ? '<strong>Batched, it’s ' + total + ' queries,</strong> about a quarter of a second. Better, but during the sale that’s still 500 × ' + total + ' = ' + fmtInt(500 * total) +
+          ' queries a second, for a page that’s the same for every shopper.'
+        : '<strong>' + (total - listed) + ' of the ' + total + ' queries</strong> are the same three lookups, a price, a stock level and a rating, asked one product at a time for the 30 products on the page: the N+1 pattern from page 3.2. At about 10 ms each, in a row, they add up to about a second.';
+    }
+
+    function pick(e) {
+      var t = e.target.closest('[data-sec]');
+      if (!t) return;
+      st.sel = t.getAttribute('data-sec');
+      draw();
+    }
+    el.addEventListener('click', pick);
+    el.addEventListener('keydown', function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('hq-sec')) { e.preventDefault(); pick(e); }
+    });
+    el.querySelector('.hq-batch').addEventListener('change', function (e) { st.batch = e.target.checked; draw(); });
+    draw();
+  };
+
   /* ---------- Chapter 7: the strangler fig, one rollout stage at a time ---------- */
 
   W['strangler-arch'] = function (el) {

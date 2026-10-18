@@ -48,11 +48,13 @@ ZTM.content[6] = {
 GET /api/products/TZ-10442 200  queries=9    db=31ms    total=38ms
 GET /api/home              200  queries=100  db=1288ms  total=1370ms</span></pre>
           <ol class="points term-note">
-            <li>The home page runs 100 queries every time: the banners, 12 categories, the deals in each, and their prices, stock and ratings.</li>
+            <li>The home page runs 100 queries every time.</li>
             <li>Each query is quick, about 10 ms with the network round trip and the ORM, but 100 of them in a row add up to about a second (page 3.2).</li>
             <li>A product page runs 9 and takes 38 ms. The home page is the problem.</li>
           </ol>
         </figure>
+        <p>Here’s Tomazon’s home page, section by section. Pick a section, on the page or in the list, to see the queries it runs:</p>
+        <div class="widget" data-widget="home-queries"></div>
 
         <h2>The same answer, for every shopper</h2>
         <ol class="points">
@@ -83,7 +85,7 @@ GET /api/home              200  queries=100  db=1288ms  total=1370ms</span></pre
             <li><strong>Healthy servers and slow pages mean repeated work.</strong> Count the queries per request. The cost is
             usually in one or two endpoints, not spread evenly.</li>
             <li><strong>Cache finished answers, not tables.</strong> Store the home page’s whole JSON, not raw rows that still
-            need 119 more lookups to become a page.</li>
+            need 99 more lookups to become a page.</li>
             <li><strong>A cache hides slow code; it doesn’t fix it.</strong> Fix N+1 queries first (page 3.2), then cache
             what’s still expensive.</li>
           </ol>

@@ -86,13 +86,13 @@
         '<li>Each chapter starts where the last one stopped.</li>' +
         '<li>We add a new piece to the system only when the current design runs out of room.</li>' +
         '<li>Each time, we look at the numbers that tell us it has.</li>' +
-        '<li>' + (ready === chapters.length ? 'All ' + ready + ' chapters, about ' + Math.round(chapters.reduce(function (a, c) { return a + (c.minutes || 0); }, 0) / 60) + ' hours in all.' : ready + ' of ' + chapters.length + ' chapters are written so far.') + '</li></ol></div>' +
+        (ready === chapters.length ? '' : '<li>' + ready + ' of ' + chapters.length + ' chapters are written so far.</li>') + '</ol></div>' +
         '<ol class="rm-list">' + chapters.map(function (ch) {
           return '<li class="' + (ch.status === 'ready' ? 'ready' : 'planned') + '"><a href="#/' + ch.n + '">' +
             '<span class="rm-users"><b>' + ZTM.usersLabel(ch.users) + '</b><small>' + (ch.users === null ? 'at every stage' : 'users') + '</small></span>' +
             '<span class="rm-body"><span class="rm-title"><span class="rm-n">' + ch.n + '</span>' + esc(ch.title) + '</span>' +
             '<span class="rm-q">' + esc(ch.question) + '</span></span>' +
-            '<span class="rm-status">' + (ch.status === 'ready' ? 'About ' + ch.minutes + ' min' : 'Planned') + '</span>' +
+            (ch.status === 'ready' ? '' : '<span class="rm-status">Planned</span>') +
           '</a></li>';
         }).join('') + '</ol>' +
       '</section>';
@@ -112,8 +112,8 @@
       }).join('') + '</ol>';
       var term = c.sections.some(function (s) { return s.html.indexOf('class="term"') >= 0; });
       var widget = c.sections.some(function (s) { return s.html.indexOf('class="widget"') >= 0; });
-      html += '<p class="cover-time">About ' + ch.minutes + ' minutes' +
-        (term ? ', with a few things to try in the terminal and on the page' : widget ? ', with a few things to try on the page' : '') + '.</p>';
+      if (term || widget) html += '<p class="cover-note">There are a few things to try ' +
+        (term ? 'in the terminal and on the page' : 'on the page') + '.</p>';
     } else {
       html += '<p class="lede">' + esc(ch.summary) + '</p>' +
         '<div class="planned-box"><h2>What this chapter will cover</h2><ol class="points">' +

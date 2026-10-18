@@ -1165,7 +1165,6 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .rm-n { margin-right: 0.5rem; font-weight: 400; color: var(--muted); }
 .rm-q { display: block; margin-top: 0.15rem; font-size: var(--fs-ui); color: var(--ink-2); }
 .rm-status { font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
-.rm-list .ready .rm-status { font-weight: 600; color: var(--accent); }
 
 /* ---------- chapter cover ---------- */
 
@@ -1191,7 +1190,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .sec-n { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
 .sec-list b { display: block; font-weight: 600; line-height: 1.35; }
 .sec-list a span span { display: block; margin-top: 0.15rem; font-size: var(--fs-md); line-height: 1.5; color: var(--ink-2); }
-.cover-time { font-size: var(--fs-sm); color: var(--muted); }
+.cover-note { font-size: var(--fs-sm); color: var(--muted); }
 
 .planned-box { margin-block: 2rem; padding: 1.25rem 1.5rem; border: 1px solid var(--rule-2); border-radius: 12px; font-size: var(--fs-ui); }
 .page .planned-box h2 { margin: 0 0 0.5rem; font-size: 1.125rem; }

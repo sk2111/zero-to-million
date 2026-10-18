@@ -15,7 +15,6 @@ ZTM.content[12] = {
       <ul>
         <li>Explain why replicas and caches can’t help with writes.</li>
         <li>Choose a shard key, and explain logical shards and a shard map.</li>
-        <li>Tell a hot row from too many writes, and fix each one.</li>
       </ul>
     </div>`,
 
@@ -50,9 +49,7 @@ ZTM.content[12] = {
           <li><strong>Sharding</strong> splits a table’s rows across several primaries, called <strong>shards</strong>. Each one takes only its share of the writes, and holds only its share of the data.</li>
           <li><strong>A shard key decides where each row lives.</strong> Tomazon uses the customer: orders, carts, payments and addresses are almost always about one customer, so nearly every query stays on one shard.</li>
           <li><strong>Logical shards keep growth cheap.</strong> Customers are hashed into 64 logical shards, and a small <strong>shard map</strong> says which primary holds each one. Adding a fifth primary later moves a few logical shards, not most of the data.</li>
-          <li><strong>The catalogue isn’t sharded.</strong> Everyone reads the same products, and replicas and caches already spread those reads. Products stay on the original primary.</li>
-          <li><strong>Sharding can’t fix one hot row.</strong> However many shards there are, the phone’s stock is one row on one of them. So the launch gets its own path: shoppers wait in a queue at the edge and are let in at a pace the system can take, the stock is a counter in Redis, reserved in one atomic step, and the orders are written at a steady pace.</li>
-        </ol>
+          <li><strong>The catalogue isn’t sharded.</strong> Everyone reads the same products, and replicas and caches already spread those reads. Products stay on the original primary.</li>        </ol>
 
         <h2>The new architecture</h2>
         <ol class="points">
@@ -64,9 +61,8 @@ ZTM.content[12] = {
         <table class="data">
           <thead><tr><th></th><th>Before</th><th>After</th></tr></thead>
           <tbody>
-            <tr><td>Writes at the 8 p.m. peak</td><td>4,000 a second, on one primary</td><td>About 1,000 a second on each of four</td></tr>
+            <tr class="hl"><td>Writes at the 8 p.m. peak</td><td>4,000 a second, on one primary</td><td>About 1,000 a second on each of four</td></tr>
             <tr><td>Order data on each primary</td><td>2.5 TB</td><td>About 625 GB</td></tr>
-            <tr class="hl"><td>The launch</td><td>20,000 attempts a second on one row, and every checkout waiting</td><td>A steady stream of orders, and ordinary checkout untouched</td></tr>
           </tbody>
         </table>`
     }

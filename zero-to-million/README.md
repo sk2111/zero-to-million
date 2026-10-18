@@ -111,15 +111,13 @@ caching pages at the edge; a second region in Frankfurt for reads while writes g
 live diagram and the before and after).
 
 Chapter 12 has 1 page: 10 million users, and one database takes every write (a phone launch; replicas
-and caches can't take writes; sharding by customer with 64 logical shards and a shard map; why one
-hot row needs a waiting room and a Redis counter instead; four order shards, with a live diagram and
-the before and after).
+and caches can't take writes; sharding by customer with 64 logical shards and a shard map; four
+order shards, with a live diagram and the before and after).
 
-Chapter 13 has 4 pages: 20 million users, and four regions with one home (what copying everything
-to every region costs) · A shop in every region (regional cells, DNS routing vs anycast) · Feeding
-each region its data (CDC through Kafka and MSK Replicator into regional read databases, an
-idempotent upsert, reconciliation, a live diagram) · Writes near home, and losing a region (home
-regions through the shard map, what keeps working when a region is lost, traps).
+Chapter 13 has 1 page: 20 million users, and four regions with one home (copying every database to
+every region doesn't stretch to four; replicas copy everything and take no writes; regional cells fed
+only the catalogue through Kafka; home regions through the shard map, with standbys; the full
+architecture with a Frankfurt cell, and the before and after).
 
 Chapter 14, the last, has 4 pages: The bill that outgrew the business (where $180,000 a month goes,
 cost per 1,000 orders, making cost visible) · Tune first, then decide where to run (five levers that

@@ -73,14 +73,14 @@ ZTM.chapters = [
   {
     n: 12, slug: 'split-the-data', title: 'Split the data', users: 10000000, status: 'ready', minutes: 15,
     question: 'One database takes every write. What happens when one launch could swamp it?',
-    summary: 'See why replicas and caches can’t take writes, shard the orders by customer across four primaries, and give a flash sale its own path.',
+    summary: 'See why replicas and caches can’t take writes, and shard the orders by customer across four primaries.',
     topics: ['One primary for every write', 'What replicas and caches can’t do', 'Shard keys, logical shards and the shard map', 'Four order shards']
   },
   {
-    n: 13, slug: 'go-global', title: 'Go global', users: 20000000, status: 'ready', minutes: 50,
+    n: 13, slug: 'go-global', title: 'Go global', users: 20000000, status: 'ready', minutes: 15,
     question: 'How does Tomazon serve every continent, and survive losing one?',
-    summary: 'See why copying everything to every region breaks down, run a complete cell in every region, choose a front door, feed each cell only the data it needs, put customers’ shards in their home region, and plan for losing a region.',
-    topics: ['Regional cells', 'DNS routing and anycast', 'Feeding regions with change data capture', 'Home regions for writes', 'Losing a region']
+    summary: 'Give every region its own complete cell, feed it only the catalogue, and keep each customer’s data and writes in their home region.',
+    topics: ['Every region depends on Mumbai', 'What replicas can’t do', 'Cells and home regions', 'Four regions']
   },
   {
     n: 14, slug: 'count-the-cost', title: 'Count the cost', users: 25000000, status: 'ready', minutes: 50,

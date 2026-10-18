@@ -866,11 +866,12 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .fa-box { display: flex; align-self: stretch; border-radius: 10px; }
 .fa-box .ar2-k { margin: 0.3rem 0.55rem; font-size: 0.66rem; }
 .fa-k8s { grid-area: 2 / 2 / 3 / 6; justify-content: flex-end; align-items: flex-start; margin: -1.5rem -0.45rem -0.45rem; border: 2px dashed #ed7100; }
-.fa-k8s-fra { grid-area: 2 / 2 / 3 / 5; }
+.fa-k8s-fra, .fa-k8s-cell { grid-area: 2 / 2 / 3 / 5; }
 .fa-fra > .ar2-k { justify-content: flex-end; }   /* wires from Mumbai come down on the left */
 .fa-db { grid-area: 3 / 2 / 6 / 3; align-items: flex-end; margin: -0.45rem -0.4rem -1.5rem; border: 2px solid #c925d1; }
 .fa-shards { grid-area: 6 / 2 / 7 / 6; align-items: flex-end; margin: -0.45rem -0.45rem -1.5rem; border: 2px solid #c925d1; }
 .fa-msk { grid-area: 4 / 4 / 5 / 6; align-items: flex-end; margin: -0.45rem -0.4rem -1.5rem; border: 2px solid #7aa116; }
+.fa-msk-cell { grid-area: 2 / 5 / 3 / 6; }
 
 /* 12.3: customers and logical shards, coloured by the primary that holds them */
 .sm-label { margin: 1rem 0 0.45rem; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }

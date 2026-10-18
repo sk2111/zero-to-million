@@ -2109,7 +2109,8 @@ window.ZTM = window.ZTM || {};
   /* Five columns: S3, then one per program, each above the store it uses most, so nearly every wire
      runs straight. Group boxes (the cluster, the database server, MSK) sit behind the nodes they hold.
      o.europe adds chapter 11's CloudFront edges in front, and the Frankfurt region below.
-     o.shards adds chapter 12's four order shards, in a row of their own under the database server. */
+     o.shards adds chapter 12's four order shards, in a row of their own under the database server.
+     o.cells turns Frankfurt into chapter 13's complete cell, fed from Mumbai's Kafka, with its own order shard. */
   function fullLayout(o) {
     var node = archNode;
     function at(cls, id, g, cat, title, sub) { return '<div class="' + cls + '">' + node(id, g, cat, title, sub) + '</div>'; }
@@ -2118,7 +2119,7 @@ window.ZTM = window.ZTM || {};
         node('shopIn', 'user', 'c-user', 'Shoppers in India', 'most of the 7 million') +
         node('edgeIn', 'edge', 'c-net', 'CloudFront edge', 'in India: pages, photos') +
         '<div class="fa-eu">' + node('shopFr', 'user', 'c-user', 'Shoppers in Europe', 'a tenth of the traffic') + '</div>' +
-        node('edgeFr', 'edge', 'c-net', 'CloudFront edge', 'in Frankfurt: pages, photos')
+        node('edgeFr', 'edge', 'c-net', 'CloudFront edge', o.cells ? 'in Frankfurt: everything' : 'in Frankfurt: pages, photos')
       : node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
         node('shop', 'user', 'c-user', 'Shoppers', '5 million of them') +
         node('edge', 'edge', 'c-net', 'CloudFront edge', 'photos, near the shopper');
@@ -2146,7 +2147,7 @@ window.ZTM = window.ZTM || {};
             at('fa-c2 fa-r5', 'disk', 'disk', 'c-sto', 'EBS disk', 'the data') +
             at('fa-c3 fa-r5', 'snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') +
             (o.shards
-              ? '<div class="fa-box fa-shards" data-p="shards"><p class="ar2-k">New: order shards, each a primary and a replica</p></div>' +
+              ? '<div class="fa-box fa-shards" data-p="shards"><p class="ar2-k">' + (o.cells ? 'Order shards for India’s customers, each with a standby in another region' : 'New: order shards, each a primary and a replica') + '</p></div>' +
                 at('fa-c2 fa-r6', 'o1', 'db', 'c-db', 'orders-1', 'logical shards 0–15') +
                 at('fa-c3 fa-r6', 'o2', 'db', 'c-db', 'orders-2', 'logical shards 16–31') +
                 at('fa-c4 fa-r6', 'o3', 'db', 'c-db', 'orders-3', 'logical shards 32–47') +
@@ -2154,7 +2155,25 @@ window.ZTM = window.ZTM || {};
               : '') +
           '</div>' +
         '</div>' +
-        (o.europe
+        (o.cells
+          ? '<div class="ar2-region fa-region fa-fra">' +
+              '<p class="ar2-k">New: a complete cell in Frankfurt, and the same in Singapore and Ohio</p>' +
+              '<div class="fa-grid">' +
+                '<div class="fa-box fa-k8s fa-k8s-cell"><p class="ar2-k">Amazon EKS cluster</p></div>' +
+                '<div class="fa-box fa-msk fa-msk-cell"><p class="ar2-k">Amazon MSK</p></div>' +
+                at('fa-alb', 'albF', 'proxy', 'c-net', 'Load balancer', 'an ALB, set up by Kubernetes') +
+                at('fa-c2 fa-r2', 'coreF', 'bolt', 'c-cpu', 'Core API', 'Europe’s customers') +
+                at('fa-c3 fa-r2', 'catF', 'bolt', 'c-cpu', 'Catalogue', 'pages, prices, search') +
+                at('fa-c4 fa-r2', 'appF', 'bolt', 'c-sw', 'Applier', 'writes catalogue changes') +
+                at('fa-c5 fa-r2', 'kafkaF', 'log', 'c-sto', 'Kafka', 'a copy of the catalogue topics') +
+                at('fa-c2 fa-r3', 'ordF', 'db', 'c-db', 'Order shard', 'Europe’s customers') +
+                at('fa-c3 fa-r3', 'redisF', 'cache', 'c-db', 'Redis', 'Frankfurt’s own') +
+                at('fa-c4 fa-r3', 'readF', 'db', 'c-db', 'Read database', 'the catalogue, for pages') +
+                at('fa-c5 fa-r3', 'osF', 'search', 'c-db', 'OpenSearch', 'the cell’s search index') +
+              '</div>' +
+            '</div>'
+          : '') +
+        (o.europe && !o.cells
           ? '<div class="ar2-region fa-region fa-fra">' +
               '<p class="ar2-k">New: AWS region Europe (Frankfurt), for reads</p>' +
               '<div class="fa-grid">' +
@@ -2192,14 +2211,24 @@ window.ZTM = window.ZTM || {};
       ['ia', 'edgeIn', 'alb', 'hl', ''],
       ['ip', 'edgeIn', 's3', 'hl', ''],
       ['fIn', 'shopFr', 'edgeFr', 'v', ''],
-      ['fw', 'edgeFr', 'alb', 'hl', ''],
       ['fp', 'edgeFr', 's3', 'hl', ''],
       ['fr', 'edgeFr', 'albF', 'h', ''],
-      ['af', 'albF', 'catF', 'v', ''],
+      ['af', 'albF', 'catF', 'v', '']
+    ].concat(o.cells ? [
+      ['af1', 'albF', 'coreF', 'v', ''],
+      ['shF', 'coreF', 'ordF', 'v', ''],
+      ['cf', 'catF', 'redisF', 'v', ''],
+      ['rf', 'catF', 'readF', 'h', ''],
+      ['apK', 'appF', 'kafkaF', 'h', ''],
+      ['apD', 'appF', 'readF', 'v', ''],
+      ['apS', 'appF', 'osF', 'h', ''],
+      ['mr', 'kafka', 'kafkaF', 'r', '']
+    ] : [
+      ['fw', 'edgeFr', 'alb', 'hl', ''],
       ['rf', 'catF', 'repF', 'v', ''],
       ['cf', 'catF', 'redisF', 'v', ''],
       ['walF', 'pg', 'repF', 'ld', 'WAL', true]
-    ].concat(o.shards ? [['sh', 'core', 'shards', 'lb', '']] : []) : [
+    ], o.shards ? [['sh', 'core', 'shards', 'lb', '']] : []) : [
       ['dns', 'dns', 'shop', 'v', 'DNS lookup'],
       ['in', 'shop', 'alb', 'hl', 'HTTPS'],
       ['ph', 'shop', 'edge', 'v', 'photos'],
@@ -2405,9 +2434,7 @@ window.ZTM = window.ZTM || {};
       start: 'Follow two orders',
       idle: 'Chapter 11’s architecture, with one new part: four order shards in Mumbai, under the database server. Press <strong>Follow two orders</strong> to go through it step by step.',
       steps: [
-        { on: ['shopIn', 'edgeIn'], run: [['iIn', 0]], t: 'at noon: a queue at the edge',
-          say: '<strong>The launch.</strong> 5 million shoppers arrive for 200,000 phones. A waiting room at the edge lets them into the sale at a pace the system can take, and the stock is counted in Redis, not in a database row.' },
-        { on: ['shopIn', 'edgeIn', 'alb', 'core', 'o3'], run: india, t: 'customer 48213: orders-3',
+        { on: ['shopIn', 'edgeIn', 'alb', 'core', 'o3'], run: [['iIn', 0]].concat(india), t: 'customer 48213: orders-3',
           say: '<strong>An order, routed by customer.</strong> The core API hashes customer 48213 to logical shard 37 of 64. Its shard map, cached in every pod, says shard 37 lives on orders-3, so the order is written there, and nowhere else.' },
         { on: ['shopFr', 'edgeFr', 'alb', 'core', 'o1'], run: europe, t: 'customer 1150: orders-1',
           say: '<strong>Another customer, another shard.</strong> Customer 1150, in Europe, hashes to logical shard 9, on orders-1. Each primary takes about a quarter of the writes, and holds about a quarter of the data.' },
@@ -2418,54 +2445,32 @@ window.ZTM = window.ZTM || {};
     });
   };
 
-  /* ---------- Chapter 13: a regional cell in Singapore, fed from the home region in Mumbai ---------- */
+  /* ---------- Chapter 13: chapter 12's architecture, with Frankfurt a complete cell (Singapore and Ohio the same) ---------- */
 
   W['global-arch'] = function (el) {
-    var node = archNode;
+    var o = { europe: true, shards: true, cells: true };
+    var page = [['fIn', 0], ['fr', 0], ['af', 0], ['cf', 0], ['cf', 1], ['rf', 0], ['rf', 1], ['af', 1], ['fr', 1], ['fIn', 1]];
+    var order = [['fIn', 0], ['fr', 0], ['af1', 0], ['shF', 0], ['shF', 1], ['af1', 1], ['fr', 1], ['fIn', 1]];
+    var change = [['cdc', 0], ['pub', 0], ['mr', 0], ['apK', 1], ['apD', 0], ['apS', 0]];
+    var india = [['iIn', 0], ['ia', 0], ['a1', 0], ['sh', 0], ['sh', 1], ['a1', 1], ['ia', 1], ['iIn', 1]];
     el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
     liveArch(el.querySelector('.arch-scroll > div'), {
-      wires: [
-        ['in', 'shop', 'door', 'v', ''],
-        ['w', 'door', 'core', 'h', ''],
-        ['r', 'door', 'cat', 'h', ''],
-        ['ws', 'core', 'prim', 'h', ''],
-        ['cdc', 'prim', 'kafka', 'h', 'CDC', true],
-        ['rd', 'cat', 'rdb', 'h', ''],
-        ['feed', 'kafka', 'apply', 'v', 'copied', true],
-        ['ap', 'rdb', 'apply', 'h', '']
-      ],
-      request: [['in', 0], ['r', 0], ['rd', 0], ['rd', 1], ['r', 1], ['in', 1], ['in', 0], ['w', 0], ['ws', 0], ['ws', 1], ['w', 1], ['in', 1], ['cdc', 0], ['feed', 0], ['ap', 1]],
-      start: 'Follow a shopper',
-      idle: 'A shopper in Singapore browses, then orders. Press <strong>Follow a shopper</strong> to go through it step by step.',
+      joints: true,
+      wires: fullWires(o),
+      request: page.concat(order, change, india),
+      start: 'Follow a shopper in Europe',
+      idle: 'Chapter 12’s architecture, with Frankfurt now a complete cell: it serves its shoppers’ pages, takes its own customers’ orders, and gets only the catalogue from Mumbai. Singapore and Ohio run the same cell. Press <strong>Follow a shopper in Europe</strong> to go through it step by step.',
       steps: [
-        { on: ['shop', 'door'], run: [['in', 0]], t: 'the nearest edge',
-          say: '<strong>The same front door everywhere.</strong> The shopper reaches CloudFront’s edge in Singapore, as anyone anywhere reaches their nearest one. The edge picks the region for each request.' },
-        { on: ['door', 'cat', 'rdb'], run: [['r', 0], ['rd', 0], ['rd', 1], ['r', 1], ['in', 1]], t: 'all within Singapore',
-          say: '<strong>Browsing stays in the cell.</strong> Product pages, prices and search are answered by the Singapore cell, from its own read database. Nothing crosses to Mumbai.' },
-        { on: ['shop', 'door', 'core', 'prim'], run: [['in', 0], ['w', 0], ['ws', 0], ['ws', 1], ['w', 1], ['in', 1]], t: 'one trip to the home region',
-          say: '<strong>Orders go home.</strong> Placing an order is a write, so it goes to the core API in Mumbai and to the shopper’s shard. One long round trip, at checkout.' },
-        { on: ['prim', 'kafka'], run: [['cdc', 0]], t: 'milliseconds',
-          say: '<strong>Every change is published.</strong> Debezium reads the primaries’ WAL into Kafka (page 8.3): price changes, stock levels, new products.' },
-        { on: ['kafka', 'apply', 'rdb'], run: [['feed', 0], ['ap', 1]], t: 'about a second, region to region',
-          say: '<strong>The cell feeds itself.</strong> MSK Replicator copies the catalogue topics into Singapore, and a small applier upserts each change into the read database. If the link breaks, the messages wait, and the cell keeps serving what it has.' }
+        { on: ['shopFr', 'edgeFr', 'albF', 'catF', 'redisF', 'readF'], run: page, t: 'served in Frankfurt',
+          say: '<strong>A page, served in Frankfurt.</strong> The cell has everything browsing needs: catalogue pods, Redis, a search index and its own read database. It never calls Mumbai to serve a page.' },
+        { on: ['shopFr', 'edgeFr', 'albF', 'coreF', 'ordF'], run: order, t: 'a write that stays in Europe',
+          say: '<strong>An order, at home.</strong> This customer’s home region is Frankfurt: the shard map puts their logical shard on a primary there. Their writes, and their personal data, stay in Europe.' },
+        { on: ['pg', 'dbz', 'kafka', 'kafkaF', 'appF', 'readF', 'osF'], run: change, t: 'only the catalogue travels',
+          say: '<strong>A price changes in Mumbai.</strong> Debezium publishes it to Kafka, MSK Replicator copies the topic to each region, and the applier writes it into the cell’s read database and search index. Nothing personal leaves home.' },
+        { on: ['shopIn', 'edgeIn', 'alb', 'core', 'o2'], run: india, t: 'India: as before',
+          say: '<strong>India, as before.</strong> Indian customers’ orders go to the shards in Mumbai. Every shard has a standby in another region: if a region is lost, browsing carries on everywhere, and only that region’s checkouts pause.' }
       ],
-      html:
-        '<div class="ar2-left c13-left">' +
-          node('shop', 'user', 'c-user', 'Shopper', 'in Singapore') +
-          node('door', 'edge', 'c-net', 'Front door', 'CloudFront, nearest edge') +
-        '</div>' +
-        '<div class="c13-regions">' +
-          '<div class="ar2-region"><p class="ar2-k">Home region: Mumbai, where every write goes</p><div class="c13-row">' +
-            node('core', 'bolt', 'c-cpu', 'Core API', 'carts, orders, payments') +
-            node('prim', 'db', 'c-db', 'Primaries', 'products, and orders-1 to orders-4') +
-            node('kafka', 'log', 'c-sto', 'Kafka', 'every committed change') +
-          '</div></div>' +
-          '<div class="ar2-region"><p class="ar2-k">Regional cell: Singapore</p><div class="c13-row">' +
-            node('cat', 'bolt', 'c-cpu', 'Catalogue and search', 'the cell’s own pods') +
-            node('rdb', 'db', 'c-db', 'Read database', 'catalogue data only') +
-            node('apply', 'bolt', 'c-sw', 'Applier', 'reads Kafka, upserts') +
-          '</div></div>' +
-        '</div>'
+      html: fullLayout(o)
     });
   };
 

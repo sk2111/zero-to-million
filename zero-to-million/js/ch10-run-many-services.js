@@ -68,7 +68,7 @@ ZTM.content[10] = {
         <h2>The new architecture</h2>
         <ol class="points">
           <li><strong>Amazon EKS</strong> is Kubernetes run by AWS. AWS runs the part that makes the decisions; Tomazon’s nodes, EC2 servers in three zones, run the pods. Karpenter adds and removes nodes as the pods need room.</li>
-          <li>All six programs move into the cluster. An Application Load Balancer, set up by Kubernetes, replaces the Nginx load balancer from chapters 4 and 7.</li>
+          <li>All the programs move into the cluster. An Application Load Balancer, set up by Kubernetes, replaces the Nginx load balancer from chapters 4 and 7.</li>
           <li><strong>The data stays outside:</strong> PostgreSQL and Redis on their own EC2 servers, Kafka on MSK, photos on S3 and CloudFront. A pod can be replaced at any moment; the data can’t.</li>
         </ol>
         <div class="widget" data-widget="eks-arch"></div>`

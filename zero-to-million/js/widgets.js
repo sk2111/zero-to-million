@@ -2105,28 +2105,28 @@ window.ZTM = window.ZTM || {};
       ],
       request: [['in', 0], ['a2', 0], ['d2', 0], ['d2', 1], ['a2', 1], ['in', 1], ['in', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['in', 1], ['d3', 1]],
       start: 'Follow the requests',
-      idle: 'Tomazon’s programs, now pods in one cluster. Press <strong>Follow the requests</strong> to go through it step by step.',
+      idle: 'Tomazon’s six programs, now pods in one EKS cluster, with the data outside it. Press <strong>Follow the requests</strong> to go through it step by step.',
       steps: [
-        { on: ['shop', 'alb'], run: [['in', 0]], t: 'made from a Gateway',
-          say: '<strong>The load balancer.</strong> An Application Load Balancer takes every request, and ends TLS. Nobody built it by hand: the AWS Load Balancer Controller read Tomazon’s Gateway and HTTPRoute, and set it up to match.' },
-        { on: ['alb', 'cat'], run: [['a2', 0]], t: 'straight to a ready pod',
-          say: '<strong>Straight to a pod.</strong> On EKS every pod has an address in the VPC, so the ALB sends a product page request straight to a catalogue pod that’s ready, on whichever node it runs. Kubernetes keeps that list of pods up to date as they come and go.' },
+        { on: ['shop', 'alb'], run: [['in', 0]], t: 'set up by Kubernetes',
+          say: '<strong>The load balancer.</strong> An Application Load Balancer takes every request. Nobody set it up by hand: Kubernetes asked AWS for it, from Tomazon’s manifests.' },
+        { on: ['alb', 'cat'], run: [['a2', 0]], t: 'only to pods that are ready',
+          say: '<strong>Straight to a pod.</strong> A product page goes to one of the catalogue pods, on whichever node it runs. Kubernetes keeps the load balancer’s list of pods up to date as pods come and go.' },
         { on: ['cat', 'redis'], run: [['d2', 0], ['d2', 1], ['a2', 1], ['in', 1]], t: 'outside the cluster',
-          say: '<strong>The data stays outside.</strong> The catalogue pod reads Redis, then the replicas, which still run on their own EC2 servers. Pods are disposable; the data isn’t.' },
-        { on: ['shop', 'alb', 'core', 'pg'], run: [['in', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['in', 1]], t: 'the HTTPRoute decides',
-          say: '<strong>Checkout goes to the core API.</strong> The HTTPRoute sends <code>/api/orders</code> and everything that isn’t browsing to the core API pods, which write to the primary.' },
+          say: '<strong>The data stays outside.</strong> The catalogue pod reads Redis, then the database replicas, which still run on their own EC2 servers. Pods can be replaced at any moment; the data can’t.' },
+        { on: ['shop', 'alb', 'core', 'pg'], run: [['in', 0], ['a1', 0], ['d1', 0], ['d1', 1], ['a1', 1], ['in', 1]], t: 'routed by path',
+          say: '<strong>Checkout goes to the core API.</strong> The load balancer sends <code>/api/orders</code>, and everything that isn’t browsing, to the core API pods, which write to the primary.' },
         { on: ['work', 'msk'], run: [['d3', 1]], t: 'no load balancer needed',
-          say: '<strong>Workers fetch their own work.</strong> The cache invalidators and the search indexer read Kafka; the resizer and the email sender read SQS. Nothing sends them requests, so they need no Service at all.' }
+          say: '<strong>Workers fetch their own work.</strong> The cache invalidators and the search indexer read Kafka; the resizer and the email sender read SQS. Nothing sends them requests, so they sit behind no load balancer.' }
       ],
       html:
         '<div class="ar2-left">' + node('shop', 'user', 'c-user', 'Shoppers', '5 million of them') + '</div>' +
         '<div class="ar2-region">' +
           '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), 3 zones</p>' +
           '<div class="c10-grid">' +
-            '<div class="c10-k8s"><p class="ar2-k">EKS cluster: nodes in 3 zones</p></div>' +
-            '<div class="c10-alb">' + node('alb', 'proxy', 'c-net', 'Load balancer', 'an ALB, made from the Gateway') + '</div>' +
+            '<div class="c10-k8s"><p class="ar2-k">Amazon EKS cluster</p></div>' +
+            '<div class="c10-alb">' + node('alb', 'proxy', 'c-net', 'Load balancer', 'an ALB, set up by Kubernetes') + '</div>' +
             '<div class="c10-core">' + node('core', 'bolt', 'c-cpu', 'Core API', '6 pods') + '</div>' +
-            '<div class="c10-cat">' + node('cat', 'bolt', 'c-cpu', 'Catalogue', '6 to 30 pods, by CPU') + '</div>' +
+            '<div class="c10-cat">' + node('cat', 'bolt', 'c-cpu', 'Catalogue', '6 to 30 pods, by load') + '</div>' +
             '<div class="c10-work">' + node('work', 'bolt', 'c-sw', 'Workers', 'invalidators, indexer, email, resizer') + '</div>' +
             '<div class="c10-pg">' + node('pg', 'db', 'c-db', 'PostgreSQL', 'primary and replicas, on EC2') + '</div>' +
             '<div class="c10-redis">' + node('redis', 'cache', 'c-db', 'Redis', 'on EC2') + '</div>' +

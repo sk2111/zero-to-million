@@ -59,10 +59,10 @@ ZTM.chapters = [
     topics: ['Distance and the speed of light', 'How a CDN works', 'Smaller images', 'What a CDN really saves']
   },
   {
-    n: 10, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'ready', minutes: 50,
+    n: 10, slug: 'run-many-services', title: 'Run many services', users: 5000000, status: 'ready', minutes: 15,
     question: 'Dozens of programs on dozens of servers: who starts, restarts and moves them?',
-    summary: 'Package each service as a container, and let Kubernetes run them, heal them, place them, roll out new versions and let services find each other.',
-    topics: ['Containers and images', 'Desired state', 'Pods, Deployments and Services', 'Probes, requests and rolling updates', 'Amazon EKS and the Gateway API']
+    summary: 'See why containers alone aren’t enough once there are many services, and let Kubernetes run, heal, place and scale them on Amazon EKS.',
+    topics: ['Running services by hand', 'What containers leave undone', 'What Kubernetes does', 'Tomazon on Amazon EKS']
   },
   {
     n: 11, slug: 'go-to-the-edge', title: 'Go to the edge', users: 7000000, status: 'ready', minutes: 45,

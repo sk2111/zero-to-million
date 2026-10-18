@@ -92,7 +92,7 @@ ZTM.content[14] = {
         <table class="data">
           <thead><tr><th>Lever</th><th>What Tomazon did</th><th>Saved a month</th></tr></thead>
           <tbody>
-            <tr><td>Right-size</td><td>Pod requests matched to measured use (page 10.4), so Karpenter packs nodes tighter: average node use rose from 35% to 60%</td><td>$18,000</td></tr>
+            <tr><td>Right-size</td><td>The CPU and memory each pod asks for matched to measured use (chapter 10), so Karpenter packs nodes tighter: average node use rose from 35% to 60%</td><td>$18,000</td></tr>
             <tr><td>Delete what’s idle</td><td>Old snapshots, unattached disks, and test clusters left running</td><td>$15,000</td></tr>
             <tr><td>Commit</td><td>Savings Plans on the steady base of compute. AWS discounts up to 66% for the flexible plan, up to 72% for one instance family</td><td>$14,000</td></tr>
             <tr><td>Stop paying to move bytes</td><td>S3 traffic through free gateway endpoints instead of NAT gateways; Kafka consumers reading from a replica in their own zone</td><td>$12,000</td></tr>

@@ -110,7 +110,8 @@
         return '<li><a href="#/' + ch.n + '/' + s.slug + '"><span class="sec-n">' + ch.n + '.' + (i + 1) + '</span>' +
           '<span><b>' + esc(s.title) + '</b><span>' + esc(s.sub) + '</span></span></a></li>';
       }).join('') + '</ol>';
-      html += '<p class="cover-time">About ' + ch.minutes + ' minutes, with a few things to try in the terminal and on the page.</p>';
+      var term = c.sections.some(function (s) { return s.html.indexOf('class="term"') >= 0; });
+      html += '<p class="cover-time">About ' + ch.minutes + ' minutes, with a few things to try ' + (term ? 'in the terminal and on the page' : 'on the page') + '.</p>';
     } else {
       html += '<p class="lede">' + esc(ch.summary) + '</p>' +
         '<div class="planned-box"><h2>What this chapter will cover</h2><ol class="points">' +

@@ -101,12 +101,9 @@ bill) · A CDN: copies near the shopper (edges, hits and misses, regional edge c
 diagram, what belongs on a CDN) · What the CDN changed (speed, why the bill fell mostly for
 other reasons, flat-rate pricing, the traps).
 
-Chapter 10 has 4 pages: The night a server died (programs placed by hand, a 2 a.m. rebuild, the jobs
-left to people) · Containers: one package that runs anywhere (what a container is and isn't, a
-Dockerfile, images tagged by commit, the rules) · Kubernetes: say what, not how (desired state, the
-parts, a Deployment and Service with probes and requests, a cluster you can break and watch heal) ·
-Tomazon on EKS (what moves and what stays, the Gateway API instead of the retired ingress-nginx, an
-HTTPRoute, settings, traps, whether it's worth it).
+Chapter 10 has 1 page: 5 million users, and too many programs to run by hand (the bottleneck is
+the people running the servers; containers package the services but don't run them; what Kubernetes
+does instead; Tomazon on Amazon EKS, with a live diagram and the data kept outside the cluster).
 
 Chapter 11 has 3 pages: Slow in Europe, fast at home (testing from two cities, processing vs network
 time, the round trips before the first byte, TTFB) · Do more at the edge (ending connections at the

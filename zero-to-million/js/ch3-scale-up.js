@@ -13,6 +13,7 @@ ZTM.content[3] = {
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
       <ul>
+        <li>Explain why one server stops coping as users grow, and diagnose it with chapter 1’s tools.</li>
         <li>Move the database to its own server without losing data.</li>
         <li>Explain what changes when the app and the database talk over the network.</li>
         <li>Keep the cost of that network hop small, with fewer queries and connection pooling.</li>
@@ -23,6 +24,119 @@ ZTM.content[3] = {
 
   sections: [
 
+    /* ================================================== The next bottleneck */
+    {
+      group: 'The next bottleneck',
+      slug: 'one-thousand-users',
+      title: '1,000 users, and one server runs out of room',
+      sub: 'More users arrive, and the single server starts to crack.',
+      html: `
+        <ol class="points lede">
+          <li>The pilot worked. About a hundred shoppers order from Tomazon every week, many of them come back, and word spreads across the city.</li>
+          <li>That’s the good news. The bad news: an architecture sized for 100 users won’t survive 1,000.</li>
+          <li>Be ready to change it. The pilot’s architecture was right for the pilot; holding on to it now is the mistake.</li>
+        </ol>
+
+        <h2>What starts to go wrong</h2>
+        <p>As usage grows, the problems arrive in roughly this order:</p>
+        <ol class="steps">
+          <li><strong>The busiest hour gets slow.</strong> p95 goes from 80 ms to 800 ms, while the average still looks fine (page 1.11).</li>
+          <li><strong>Checkout times out</strong> now and then, because every worker is busy, and some shoppers give up with a full cart.</li>
+          <li><strong>Nginx starts returning 502 and 504 errors:</strong> the app is too busy to answer it in time.</li>
+          <li><strong>One night the product stops answering.</strong> In the morning, <code>dmesg</code> shows the OOM killer stopped PostgreSQL (page 1.6).</li>
+        </ol>
+
+        <h2>Diagnose it with chapter 1’s tools</h2>
+        <figure class="term">
+          <figcaption>On the struggling server, at the busiest hour</figcaption>
+<pre><span class="p">$</span> uptime
+<span class="o"> 19:12:44 up 41 days,  2 users,  load average: 5.81, 4.92, 3.40</span>
+<span class="p">$</span> free -h
+<span class="o">               total        used        free      shared  buff/cache   available
+Mem:           459Mi       402Mi        11Mi       9.0Mi        46Mi        18Mi
+Swap:          1.0Gi       612Mi       412Mi</span>
+<span class="p">$</span> top -o %MEM                   <span class="c"># sorted by memory; some columns left out</span>
+<span class="o">    PID USER      %CPU %MEM COMMAND
+   1834 postgres  61.2 24.1 postgres: app tomazon 127.0.0.1(48812) SELECT
+   1207 app       48.7 19.8 gunicorn: worker [app.main:app]
+   1208 app       44.1 19.5 gunicorn: worker [app.main:app]
+    911 postgres  12.0  9.6 postgres: checkpointer
+    642 www-data   6.3  2.1 nginx: worker process</span></pre>
+          <ol class="points term-note">
+            <li>Load 5.81 on 2 vCPUs: almost 3 threads ready for every core, and rising (page 1.3).</li>
+            <li>Only 18 MB <code>available</code>, and 612 MB already swapped out to disk: the server has run out of memory (page 1.6).</li>
+            <li><code>top</code> shows who is competing: PostgreSQL and both FastAPI workers want the same 2 vCPUs and the same 459 MB, and Nginx needs a share too.</li>
+          </ol>
+        </figure>
+
+        <h2>The real problem: everything shares one machine</h2>
+        <ol class="points">
+          <li>Nginx, FastAPI and PostgreSQL all run on the same EC2 instance, so they share the same 2 vCPUs, the same 512 MB of RAM and the same disk.</li>
+          <li>At 1,000 users each part needs more: more FastAPI workers to serve more people at once, more database connections, and more RAM for PostgreSQL to cache its data. Together they need more than the server has:</li>
+        </ol>
+        <div class="over-wrap">
+          <div class="budget over" role="img" aria-label="At 1,000 users the server needs about 670 MB: 150 MB for Ubuntu, 220 MB for PostgreSQL, 280 MB for four FastAPI workers and 20 MB for Nginx. It has 512 MB, so about 158 MB is swapped to disk.">
+            <span class="b-os" style="flex-grow:150"><b>150 MB</b></span>
+            <span class="b-db" style="flex-grow:220"><b>220 MB</b></span>
+            <span class="b-app" style="flex-grow:280"><b>280 MB</b></span>
+            <span class="b-ng" style="flex-grow:20"></span>
+          </div>
+          <span class="over-zone" style="left:76.4%"></span>
+          <span class="over-mark" style="left:76.4%"><b>The server has 512 MB</b><span>158 MB too much: swapped to disk</span></span>
+        </div>
+        <div class="legend budget-legend"><span><i class="sw b-os"></i>Ubuntu and system services</span><span><i class="sw b-db"></i>PostgreSQL, more connections and cache</span><span><i class="sw b-app"></i>FastAPI, 4 workers</span><span><i class="sw b-ng"></i>Nginx</span></div>
+        <ol class="points" start="3">
+          <li>And it’s still a single point of failure. When the OOM killer stops PostgreSQL, the whole product is down, for everyone.</li>
+          <li>This is a time bomb. Nothing is wrong with the code, but every new user brings the explosion a little closer.</li>
+        </ol>
+
+        <h2>Two kinds of work, one machine</h2>
+        <ol class="points">
+          <li>A web API pilot like this one puts the two kinds of work from page 1.3 on the same server.</li>
+          <li>From the server’s point of view, the <strong>app</strong> (FastAPI) is the part that burns CPU: parsing requests, running the business logic, building JSON responses.</li>
+          <li>The <strong>database</strong> (PostgreSQL) is the part that needs memory and disk: plenty of RAM to cache its data, and fast reads and writes for everything else. It’s I/O-bound.</li>
+          <li>On one machine you can’t tune for both. More app workers take memory away from the database’s cache, and a heavy query takes CPU away from the app. The more users, the harder they fight.</li>
+        </ol>
+
+        <h2>Two ways forward</h2>
+        <table class="data">
+          <thead><tr><th>Option</th><th>What you do</th><th>Good</th><th>Limits</th></tr></thead>
+          <tbody>
+            <tr><td>Scale up</td><td>Move to a bigger EC2 instance, with more vCPUs and RAM</td><td>Quick: no code change, done in minutes</td><td>It has a ceiling, the price roughly doubles with each size, resizing means a few minutes of downtime, and it’s still one machine doing everything</td></tr>
+            <tr><td>Split out</td><td>Give the app and the database a server each</td><td>Each one is sized and tuned for its own kind of work, and grows on its own</td><td>One more server to run, and every query now crosses the network</td></tr>
+          </tbody>
+        </table>
+        <ol class="points">
+          <li>Scaling up buys time, and it’s often the right first move. But it has a ceiling, and the app and the database still fight over one machine.</li>
+          <li>The longer-term step is to split them:</li>
+        </ol>
+        <div class="widget" data-widget="split-arch"></div>
+        <ol class="points" start="3">
+          <li><strong>The app server</strong> is tuned for CPU-bound work: a compute-optimised instance (AWS c family), sized by how many requests it has to serve.</li>
+          <li><strong>The database server</strong> is tuned for I/O-bound work: a memory-optimised instance (AWS r family), so the working set fits in RAM, with a disk whose IOPS match the load (page 1.7). It can be your own EC2 instance, or Amazon RDS, a managed PostgreSQL that handles backups, updates and failover for you.</li>
+          <li>Keep both in the same zone and the same private network, so a query crosses the network in well under a millisecond. Put the database in a private subnet that the internet can’t reach at all.</li>
+          <li>The new cost is that network hop. A page that runs 30 queries now pays 30 round trips, so it pays to make fewer, better queries (page 1.8).</li>
+          <li>The rest of this chapter makes that split, then keeps its new cost small.</li>
+        </ol>
+
+        <aside class="note design">
+          <h3>For system design</h3>
+          <ol class="points">
+            <li><strong>Measure before you change anything.</strong> Chapter 1’s tools turn “the app is slow” into “the server
+            is out of memory and swapping”, and that tells you what to fix first.</li>
+            <li><strong>Scale before it explodes.</strong> The alarms from page 2.6 (available memory, load, CPU credits) warn
+            you weeks ahead. Plan the next step when they trend up, not when the server falls over.</li>
+            <li><strong>Expect the architecture to change.</strong> Each stage of growth needs a different design. The one that
+            was right for 100 users is now the bottleneck, and that’s normal.</li>
+          </ol>
+        </aside>
+
+        <aside class="note rule">
+          <h3>Rule of thumb</h3>
+          <p>When one server runs everything, every part competes for the same CPU, memory and disk. Growth turns that competition into failure.</p>
+        </aside>`
+    },
+
     /* =========================================================== Split out */
     {
       group: 'Split out',
@@ -31,7 +145,7 @@ ZTM.content[3] = {
       sub: 'The first big step for a growing web app: the app and the database on separate machines.',
       html: `
         <ol class="points lede">
-          <li>Chapter 2 ended with one overloaded server, where the app and the database fought over the same CPU, memory and disk.</li>
+          <li>Page 3.1 found one overloaded server, where the app and the database fought over the same CPU, memory and disk.</li>
           <li>The fix most web apps reach for first: move the database to a server of its own. The app stays the same monolith; only where things run changes.</li>
         </ol>
 
@@ -42,9 +156,9 @@ ZTM.content[3] = {
         <ol class="points">
           <li><strong>Each part gets its own machine.</strong> The app server’s CPU and RAM go to FastAPI, and the database server’s RAM goes to PostgreSQL’s cache.</li>
           <li><strong>The database is off the internet.</strong> It lives in a private subnet with no public address, and its security group accepts port 5432 only from the app server’s security group.</li>
-          <li><strong>Every query crosses the network.</strong> A round trip inside one zone takes about 0.2–0.5 ms, instead of microseconds over <code>localhost</code>. Page 3.2 shows what that adds up to, and how to keep it small.</li>
-          <li><strong>Connections cost more.</strong> Opening a PostgreSQL connection now means a TCP handshake across the network, plus a new process on the database server. Page 3.2 covers keeping them open with pooling.</li>
-          <li><strong>Each side can grow on its own:</strong> a bigger app server when CPU runs out, a bigger database server when memory or disk does. Page 3.3 picks the right kind of server for each.</li>
+          <li><strong>Every query crosses the network.</strong> A round trip inside one zone takes about 0.2–0.5 ms, instead of microseconds over <code>localhost</code>. Page 3.3 shows what that adds up to, and how to keep it small.</li>
+          <li><strong>Connections cost more.</strong> Opening a PostgreSQL connection now means a TCP handshake across the network, plus a new process on the database server. Page 3.3 covers keeping them open with pooling.</li>
+          <li><strong>Each side can grow on its own:</strong> a bigger app server when CPU runs out, a bigger database server when memory or disk does. Page 3.4 picks the right kind of server for each.</li>
         </ol>
 
         <h2>Moving the database without losing data</h2>
@@ -208,7 +322,7 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
 
         <h2>The app server: tuned for CPU</h2>
         <ol class="points">
-          <li>From the server’s point of view, the app is the part that burns CPU (page 2.7), so start compute-optimised: a c7g.large has 2 vCPUs and 4 GB.</li>
+          <li>From the server’s point of view, the app is the part that burns CPU (page 3.1), so start compute-optimised: a c7g.large has 2 vCPUs and 4 GB.</li>
           <li>Run one FastAPI worker per vCPU with <code>async</code> endpoints, and watch CPU at the busiest hour.</li>
           <li>When CPU runs short, move up a size: a c7g.xlarge has 4 vCPUs. Later, run several app servers behind a load balancer (chapter 4).</li>
           <li>Keep optimising the code too, starting with the slowest endpoints. Cutting 10 ms of CPU from every request can be worth a whole server.</li>

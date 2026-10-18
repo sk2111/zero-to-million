@@ -26,7 +26,7 @@ ZTM.content[14] = {
 
     /* ============================================================= The cost */
     {
-      group: 'The cost',
+      group: 'The next bottleneck',
       slug: 'the-bill',
       title: 'The bill that outgrew the business',
       sub: 'Before cutting anything, find out where every dollar goes.',

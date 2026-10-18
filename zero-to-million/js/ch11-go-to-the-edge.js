@@ -26,7 +26,7 @@ ZTM.content[11] = {
 
     /* ========================================================== The problem */
     {
-      group: 'The problem',
+      group: 'The next bottleneck',
       slug: 'slow-in-europe',
       title: 'Slow in Europe, fast at home',
       sub: 'Every server is healthy, yet the same page is twice as slow in Frankfurt. Where does the time go?',

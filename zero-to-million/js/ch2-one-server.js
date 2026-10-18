@@ -29,7 +29,6 @@ ZTM.content[2] = {
         <li>Explain why a monolith is usually the right first architecture.</li>
         <li>Draw the first architecture, one server on AWS, and the path one request takes through it.</li>
         <li>Say what to measure while the pilot runs, and what will run out first.</li>
-        <li>Explain why one server stops coping as users grow, and diagnose it with chapter 1’s tools.</li>
       </ul>
     </div>`,
 
@@ -135,7 +134,7 @@ ZTM.content[2] = {
         <ol class="points">
           <li><strong>The pilot is small on every count.</strong> 5 requests a second, 20 MB of data and 1 MB/s of traffic fit on one small server (page 2.5).</li>
           <li><strong>Photos are the heaviest part by far.</strong> They’re 100 times bigger than the database, and almost all of the network traffic. For the pilot, Nginx can serve them from the server’s disk. Before the traffic grows, move them to object storage behind a CDN (page 1.8).</li>
-          <li><strong>Memory runs out first.</strong> From the pilot to 1,000 shoppers, CPU only grows to half a core, but the app and the database need more memory than a 512 MB server has. That’s where the pilot’s server cracks (page 2.7).</li>
+          <li><strong>Memory runs out first.</strong> From the pilot to 1,000 shoppers, CPU only grows to half a core, but the app and the database need more memory than a 512 MB server has. That’s where the pilot’s server cracks (page 3.1).</li>
           <li><strong>Keep the estimates.</strong> Once the pilot runs, compare them with what you measure (page 2.6). Where they differ, you’ve learned how people really use the store.</li>
         </ol>
 
@@ -422,6 +421,12 @@ ZTM.content[2] = {
           </ol>
         </figure>
 
+        <h2>Where this leads</h2>
+        <ol class="points">
+          <li>The pilot does its job: it proves people want the product, and the numbers show what’s running low.</li>
+          <li>Word spreads, and 1,000 shoppers are on their way. Chapter 3 starts with what breaks first, then gives the app and the database room to grow.</li>
+        </ol>
+
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
@@ -436,124 +441,6 @@ ZTM.content[2] = {
         <aside class="note rule">
           <h3>Rule of thumb</h3>
           <p>If you can’t tell how people are using the pilot, it isn’t teaching you anything.</p>
-        </aside>`
-    },
-
-    /* ====================================================== After the pilot */
-    {
-      group: 'After the pilot',
-      slug: 'pilot-succeeds',
-      title: 'When the pilot succeeds',
-      sub: 'More users arrive, and the single server starts to crack.',
-      html: `
-        <ol class="points lede">
-          <li>The pilot worked. About a hundred shoppers order from Tomazon every week, many of them come back, and word spreads across the city.</li>
-          <li>That’s the good news. The bad news: an architecture sized for 100 users won’t survive 1,000.</li>
-          <li>Be ready to change it. The pilot’s architecture was right for the pilot; holding on to it now is the mistake.</li>
-        </ol>
-
-        <h2>What starts to go wrong</h2>
-        <p>As usage grows, the problems arrive in roughly this order:</p>
-        <ol class="steps">
-          <li><strong>The busiest hour gets slow.</strong> p95 goes from 80 ms to 800 ms, while the average still looks fine (page 1.11).</li>
-          <li><strong>Checkout times out</strong> now and then, because every worker is busy, and some shoppers give up with a full cart.</li>
-          <li><strong>Nginx starts returning 502 and 504 errors:</strong> the app is too busy to answer it in time.</li>
-          <li><strong>One night the product stops answering.</strong> In the morning, <code>dmesg</code> shows the OOM killer stopped PostgreSQL (page 1.6).</li>
-        </ol>
-
-        <h2>Diagnose it with chapter 1’s tools</h2>
-        <figure class="term">
-          <figcaption>On the struggling server, at the busiest hour</figcaption>
-<pre><span class="p">$</span> uptime
-<span class="o"> 19:12:44 up 41 days,  2 users,  load average: 5.81, 4.92, 3.40</span>
-<span class="p">$</span> free -h
-<span class="o">               total        used        free      shared  buff/cache   available
-Mem:           459Mi       402Mi        11Mi       9.0Mi        46Mi        18Mi
-Swap:          1.0Gi       612Mi       412Mi</span>
-<span class="p">$</span> top -o %MEM                   <span class="c"># sorted by memory; some columns left out</span>
-<span class="o">    PID USER      %CPU %MEM COMMAND
-   1834 postgres  61.2 24.1 postgres: app tomazon 127.0.0.1(48812) SELECT
-   1207 app       48.7 19.8 gunicorn: worker [app.main:app]
-   1208 app       44.1 19.5 gunicorn: worker [app.main:app]
-    911 postgres  12.0  9.6 postgres: checkpointer
-    642 www-data   6.3  2.1 nginx: worker process</span></pre>
-          <ol class="points term-note">
-            <li>Load 5.81 on 2 vCPUs: almost 3 threads ready for every core, and rising (page 1.3).</li>
-            <li>Only 18 MB <code>available</code>, and 612 MB already swapped out to disk: the server has run out of memory (page 1.6).</li>
-            <li><code>top</code> shows who is competing: PostgreSQL and both FastAPI workers want the same 2 vCPUs and the same 459 MB, and Nginx needs a share too.</li>
-          </ol>
-        </figure>
-
-        <h2>The real problem: everything shares one machine</h2>
-        <ol class="points">
-          <li>Nginx, FastAPI and PostgreSQL all run on the same EC2 instance, so they share the same 2 vCPUs, the same 512 MB of RAM and the same disk.</li>
-          <li>At 1,000 users each part needs more: more FastAPI workers to serve more people at once, more database connections, and more RAM for PostgreSQL to cache its data. Together they need more than the server has:</li>
-        </ol>
-        <div class="over-wrap">
-          <div class="budget over" role="img" aria-label="At 1,000 users the server needs about 670 MB: 150 MB for Ubuntu, 220 MB for PostgreSQL, 280 MB for four FastAPI workers and 20 MB for Nginx. It has 512 MB, so about 158 MB is swapped to disk.">
-            <span class="b-os" style="flex-grow:150"><b>150 MB</b></span>
-            <span class="b-db" style="flex-grow:220"><b>220 MB</b></span>
-            <span class="b-app" style="flex-grow:280"><b>280 MB</b></span>
-            <span class="b-ng" style="flex-grow:20"></span>
-          </div>
-          <span class="over-zone" style="left:76.4%"></span>
-          <span class="over-mark" style="left:76.4%"><b>The server has 512 MB</b><span>158 MB too much: swapped to disk</span></span>
-        </div>
-        <div class="legend budget-legend"><span><i class="sw b-os"></i>Ubuntu and system services</span><span><i class="sw b-db"></i>PostgreSQL, more connections and cache</span><span><i class="sw b-app"></i>FastAPI, 4 workers</span><span><i class="sw b-ng"></i>Nginx</span></div>
-        <ol class="points" start="3">
-          <li>And it’s still a single point of failure. When the OOM killer stops PostgreSQL, the whole product is down, for everyone.</li>
-          <li>This is a time bomb. Nothing is wrong with the code, but every new user brings the explosion a little closer.</li>
-        </ol>
-
-        <h2>Two kinds of work, one machine</h2>
-        <ol class="points">
-          <li>A web API pilot like this one puts the two kinds of work from page 1.3 on the same server.</li>
-          <li>From the server’s point of view, the <strong>app</strong> (FastAPI) is the part that burns CPU: parsing requests, running the business logic, building JSON responses.</li>
-          <li>The <strong>database</strong> (PostgreSQL) is the part that needs memory and disk: plenty of RAM to cache its data, and fast reads and writes for everything else. It’s I/O-bound.</li>
-          <li>On one machine you can’t tune for both. More app workers take memory away from the database’s cache, and a heavy query takes CPU away from the app. The more users, the harder they fight.</li>
-        </ol>
-
-        <h2>Two ways forward</h2>
-        <table class="data">
-          <thead><tr><th>Option</th><th>What you do</th><th>Good</th><th>Limits</th></tr></thead>
-          <tbody>
-            <tr><td>Scale up</td><td>Move to a bigger EC2 instance, with more vCPUs and RAM</td><td>Quick: no code change, done in minutes</td><td>It has a ceiling, the price roughly doubles with each size, resizing means a few minutes of downtime, and it’s still one machine doing everything</td></tr>
-            <tr><td>Split out</td><td>Give the app and the database a server each</td><td>Each one is sized and tuned for its own kind of work, and grows on its own</td><td>One more server to run, and every query now crosses the network</td></tr>
-          </tbody>
-        </table>
-        <ol class="points">
-          <li>Scaling up buys time, and it’s often the right first move. But it has a ceiling, and the app and the database still fight over one machine.</li>
-          <li>The longer-term step is to split them:</li>
-        </ol>
-        <div class="widget" data-widget="split-arch"></div>
-        <ol class="points" start="3">
-          <li><strong>The app server</strong> is tuned for CPU-bound work: a compute-optimised instance (AWS c family), sized by how many requests it has to serve.</li>
-          <li><strong>The database server</strong> is tuned for I/O-bound work: a memory-optimised instance (AWS r family), so the working set fits in RAM, with a disk whose IOPS match the load (page 1.7). It can be your own EC2 instance, or Amazon RDS, a managed PostgreSQL that handles backups, updates and failover for you.</li>
-          <li>Keep both in the same zone and the same private network, so a query crosses the network in well under a millisecond. Put the database in a private subnet that the internet can’t reach at all.</li>
-          <li>The new cost is that network hop. A page that runs 30 queries now pays 30 round trips, so it pays to make fewer, better queries (page 1.8).</li>
-        </ol>
-
-        <h2>Where this leads</h2>
-        <ol class="points">
-          <li>The pilot did its job. It proved people want the product, and it showed exactly what breaks first.</li>
-          <li>Your 100 users are happy, and 1,000 more are coming. Chapter 3 takes the next steps one at a time: scale up, split the app and the database onto their own servers, then remove the single point of failure.</li>
-        </ol>
-
-        <aside class="note design">
-          <h3>For system design</h3>
-          <ol class="points">
-            <li><strong>Measure before you change anything.</strong> Chapter 1’s tools turn “the app is slow” into “the server
-            is out of memory and swapping”, and that tells you what to fix first.</li>
-            <li><strong>Scale before it explodes.</strong> The alarms from page 2.6 (available memory, load, CPU credits) warn
-            you weeks ahead. Plan the next step when they trend up, not when the server falls over.</li>
-            <li><strong>Expect the architecture to change.</strong> Each stage of growth needs a different design. The one that
-            was right for 100 users is now the bottleneck, and that’s normal.</li>
-          </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>When one server runs everything, every part competes for the same CPU, memory and disk. Growth turns that competition into failure.</p>
         </aside>`
     }
   ]

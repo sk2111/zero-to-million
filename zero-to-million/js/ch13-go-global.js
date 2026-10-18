@@ -24,6 +24,56 @@ ZTM.content[13] = {
 
   sections: [
 
+    /* ================================================== The next bottleneck */
+    {
+      group: 'The next bottleneck',
+      slug: 'four-regions',
+      title: '20 million users, and four regions with one home',
+      sub: 'Chapter 11’s recipe, repeated for every region, copies everything and depends on Mumbai for all of it.',
+      html: `
+        <ol class="points lede">
+          <li>Tomazon opens in Singapore and Ohio. The quickest way there is chapter 11’s recipe, twice more: a cluster in each region, and a streaming replica of each database.</li>
+          <li>Within three months, that recipe shows its limits.</li>
+        </ol>
+
+        <h2>What the recipe costs at four regions</h2>
+        <ol class="points">
+          <li><strong>Every region holds everything.</strong> Five primaries, the catalogue’s and four order shards, each streamed to three other regions: 15 full copies, with every shopper’s orders and addresses on every continent. Privacy law cares where that data goes (page 11.3).</li>
+          <li><strong>Every region replays every write.</strong> A replica in Ohio applies every order placed in India, though Ohio’s pages never read them, and Mumbai sends its whole write stream across the oceans three times.</li>
+          <li><strong>Every region depends on Mumbai.</strong> Last month a network problem between Mumbai and Singapore lasted 40 minutes. Singapore’s replica fell 40 minutes behind, and its shoppers saw old prices and stock the whole time.</li>
+          <li><strong>Writes cross the world.</strong> A shopper in Ohio adding to their cart waits for a round trip to Mumbai, about 200 ms, on every write.</li>
+          <li><strong>One deploy reaches every region at once.</strong> A bad configuration change broke the catalogue in all four regions for 20 minutes.</li>
+        </ol>
+
+        <h2>What each region needs</h2>
+        <table class="data">
+          <thead><tr><th>Need</th><th>Today</th><th>Where this chapter fixes it</th></tr></thead>
+          <tbody>
+            <tr><td>Serve its shoppers on its own</td><td>Needs fresh data from Mumbai, and stalls with it</td><td>Regional cells (page 13.2)</td></tr>
+            <tr><td>Hold only the data it needs</td><td>Holds a copy of everything, personal data included</td><td>Selective feeds through Kafka (page 13.3)</td></tr>
+            <tr><td>Take its own customers’ writes</td><td>Sends every write to Mumbai</td><td>Home regions (page 13.4)</td></tr>
+            <tr><td>Fail on its own</td><td>A Mumbai problem or a bad deploy reaches every region</td><td>Cells, one-at-a-time deploys, and failover (pages 13.2 and 13.4)</td></tr>
+          </tbody>
+        </table>
+
+        <aside class="note design">
+          <h3>For system design</h3>
+          <ol class="points">
+            <li><strong>Repeating a design multiplies its weaknesses.</strong> What was fine for two regions isn’t for four: every
+            copy, dependency and cost grows with each one added.</li>
+            <li><strong>Dependencies decide how failures spread.</strong> If every region needs Mumbai, Mumbai’s problem is
+            everyone’s.</li>
+            <li><strong>Decide what each region holds before copying it.</strong> Where data lives is a requirement, not a detail.</li>
+          </ol>
+        </aside>
+
+        <aside class="note rule">
+          <h3>Rule of thumb</h3>
+          <p>Before adding a region, decide what it must do on its own, and what it must never hold.</p>
+        </aside>`
+    },
+
+
     /* ======================================================= Many regions */
     {
       group: 'Many regions',

@@ -26,7 +26,7 @@ ZTM.content[9] = {
 
     /* ========================================================== The problem */
     {
-      group: 'The problem',
+      group: 'The next bottleneck',
       slug: 'far-away',
       title: 'Slow abroad, expensive at home',
       sub: 'Photos sent from Mumbai take seconds to reach New York, and every gigabyte is billed.',

@@ -40,6 +40,9 @@ without internet the fonts fall back to Segoe UI.
 | 13 | Go global | 20M | Written |
 | 14 | Count the cost | 25M | Written |
 
+Every chapter after the first two opens with a page grouped under "The next bottleneck": the
+measured problem that the rest of the chapter solves.
+
 Chapter 1 has 14 pages in five parts. Each resource goes from how it works, to how it behaves
 in practice, to what it means for system design.
 
@@ -54,14 +57,14 @@ in practice, to what it means for system design.
 From chapter 2 on, the running example is **Tomazon**, an online store like Amazon: the requirements
 and estimates in chapter 2 set the numbers the later chapters build on.
 
-Chapter 2 has 7 pages: Clarify the requirements (functional and non-functional, with Tomazon's
+Chapter 2 has 6 pages: Clarify the requirements (functional and non-functional, with Tomazon's
 answers) · Estimate the capacity (users, traffic, CPU, storage, photos, memory and network, for the
 pilot and for 1,000 shoppers) · Start with a pilot · Start with a monolith · The first architecture
 (one t4g.nano server in AWS Mumbai running Nginx, FastAPI and PostgreSQL, with a step-through of
-one request and a 512 MB memory budget) · Watching the pilot · When the pilot succeeds (growth to
-1,000 users, diagnosing the overloaded server, why everything on one machine is a time bomb).
+one request and a 512 MB memory budget) · Watching the pilot.
 
-Chapter 3 has 3 pages: Give the database its own server (a live two-server diagram, what
+Chapter 3 has 4 pages: 1,000 users, and one server runs out of room (diagnosing the overloaded
+server, why everything on one machine is a time bomb, scale up or split out) · Give the database its own server (a live two-server diagram, what
 changes, how to move the data) · The new cost: network round trips (N+1 queries, query structure,
 pooling with PgBouncer) · The right instance for each job (instance families, the app tuned
 for CPU, the database on r + EBS, storage-optimised NVMe or RDS, and sizing for 1,000 users).
@@ -121,7 +124,8 @@ keys, logical shards and a shard map with a rebalancing widget, the router, a li
 to shards, and living with them (one logical shard at a time, own router vs Citus vs Aurora
 Limitless, traps).
 
-Chapter 13 has 3 pages: A shop in every region (regional cells, DNS routing vs anycast) · Feeding
+Chapter 13 has 4 pages: 20 million users, and four regions with one home (what copying everything
+to every region costs) · A shop in every region (regional cells, DNS routing vs anycast) · Feeding
 each region its data (CDC through Kafka and MSK Replicator into regional read databases, an
 idempotent upsert, reconciliation, a live diagram) · Writes near home, and losing a region (home
 regions through the shard map, what keeps working when a region is lost, traps).

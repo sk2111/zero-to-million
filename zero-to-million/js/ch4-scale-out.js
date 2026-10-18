@@ -216,7 +216,7 @@ server {
             <li><code>least_conn</code> sends each request to the app server with the fewest requests in progress.</li>
             <li><code>max_fails=3 fail_timeout=10s</code>: after 3 failed attempts within 10 seconds, Nginx stops sending that server traffic for 10 seconds. This is a passive health check.</li>
             <li><code>proxy_next_upstream</code>: if a server fails or times out, Nginx retries the request on the other one. It doesn’t retry POSTs by default, because repeating one could, say, place an order twice.</li>
-            <li><code>keepalive 32</code>, with HTTP/1.1 and an empty <code>Connection</code> header, keeps connections to the app servers open instead of opening one per request (page 3.2).</li>
+            <li><code>keepalive 32</code>, with HTTP/1.1 and an empty <code>Connection</code> header, keeps connections to the app servers open instead of opening one per request (page 3.3).</li>
           </ol>
         </figure>
 
@@ -264,13 +264,13 @@ server {
 
         <h2>Move PgBouncer next to the database</h2>
         <ol class="points">
-          <li>In chapter 3, PgBouncer ran on the app server, and PostgreSQL saw its 20 connections (page 3.2).</li>
+          <li>In chapter 3, PgBouncer ran on the app server, and PostgreSQL saw its 20 connections (page 3.3).</li>
           <li>Scaling out copies the app server, and its PgBouncer with it. Each copy opens its own 20 connections: two app servers mean 40, and ten would mean 200. Every one of them is a PostgreSQL process with its own memory (page 1.2).</li>
           <li>So PgBouncer moves onto the database server. Every app server connects to it on port 6432, and PostgreSQL sees one pool of 20, however many app servers there are.</li>
           <li>Each query still crosses the network once. Before, it crossed after PgBouncer; now it crosses before it.</li>
         </ol>
         <table class="data">
-          <thead><tr><th>What changes</th><th>Before (page 3.2)</th><th>Now</th></tr></thead>
+          <thead><tr><th>What changes</th><th>Before (page 3.3)</th><th>Now</th></tr></thead>
           <tbody>
             <tr><td>Where PgBouncer runs</td><td>On the app server</td><td>On the database server</td></tr>
             <tr><td>The app connects to</td><td><code>localhost:6432</code></td><td><code>10.0.2.14:6432</code></td></tr>

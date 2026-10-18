@@ -26,7 +26,7 @@ ZTM.content[8] = {
 
     /* =========================================================== Why events */
     {
-      group: 'Why events',
+      group: 'The next bottleneck',
       slug: 'listener-died',
       title: 'The listener that went deaf',
       sub: 'The cache invalidator stopped working at 7:35, and nothing noticed until shoppers did.',

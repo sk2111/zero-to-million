@@ -26,7 +26,7 @@ ZTM.content[10] = {
 
     /* ========================================================== The problem */
     {
-      group: 'The problem',
+      group: 'The next bottleneck',
       slug: 'server-died',
       title: 'The night a server died',
       sub: 'One worker server failed at 2 a.m., and putting it back depended on one person’s memory.',

@@ -26,7 +26,7 @@ ZTM.content[12] = {
 
     /* ========================================================== The problem */
     {
-      group: 'The problem',
+      group: 'The next bottleneck',
       slug: 'the-launch',
       title: 'The launch that could sink checkout',
       sub: 'One sale, one product, five million shoppers, and one database that takes every write.',

@@ -11,15 +11,15 @@ ZTM.chapters = [
     summary: 'CPU, processes and threads, memory, disk and network: how each one works, how it behaves under load, and what that means for system design.'
   },
   {
-    n: 2, slug: 'one-server', title: 'One server', users: 100, status: 'ready', minutes: 60,
+    n: 2, slug: 'one-server', title: 'One server', users: 100, status: 'ready', minutes: 50,
     question: 'A new project: where do you start, and how do you ship it fast?',
     summary: 'Turn the request into requirements and estimates, start with a pilot built as one app, and run it on one small server.',
     topics: ['DNS and domain names', 'HTTP and HTTPS', 'Web server, app server, database on one box', 'The life of a request', 'Deploying and restarting safely']
   },
   {
-    n: 3, slug: 'scale-up', title: 'Scale up, split out', users: 1000, status: 'ready', minutes: 30,
+    n: 3, slug: 'scale-up', title: 'Scale up, split out', users: 1000, status: 'ready', minutes: 40,
     question: 'How do you give the app and the database room to grow?',
-    summary: 'Move the database to its own server, then choose the right kind of instance for the app and for the database.',
+    summary: 'Find what breaks first as users grow, move the database to its own server, then choose the right kind of instance for the app and for the database.',
     topics: ['Scaling up, and its ceiling', 'Splitting the app and the database onto their own servers', 'Choosing instance types for CPU-bound and I/O-bound work', 'Your own PostgreSQL, or Amazon RDS', 'Connection pooling', 'Removing the single point of failure']
   },
   {
@@ -77,9 +77,9 @@ ZTM.chapters = [
     topics: ['Noisy neighbours and hot spots', 'Flash sales: waiting rooms, Redis and queues', 'Choosing a shard key', 'Logical shards and the shard map', 'Moving to shards without stopping']
   },
   {
-    n: 13, slug: 'go-global', title: 'Go global', users: 20000000, status: 'ready', minutes: 45,
+    n: 13, slug: 'go-global', title: 'Go global', users: 20000000, status: 'ready', minutes: 50,
     question: 'How does Tomazon serve every continent, and survive losing one?',
-    summary: 'Run a complete cell in every region, choose a front door, feed each cell only the data it needs, put customers’ shards in their home region, and plan for losing a region.',
+    summary: 'See why copying everything to every region breaks down, run a complete cell in every region, choose a front door, feed each cell only the data it needs, put customers’ shards in their home region, and plan for losing a region.',
     topics: ['Regional cells', 'DNS routing and anycast', 'Feeding regions with change data capture', 'Home regions for writes', 'Losing a region']
   },
   {

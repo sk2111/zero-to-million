@@ -580,7 +580,7 @@ window.ZTM = window.ZTM || {};
       request: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0], ['pool', 0], ['net', 0], ['sql', 0],
                 ['sql', 1], ['net', 1], ['pool', 1], ['app', 1], ['ng', 1], ['fw', 1], ['in', 1]],
       steps: [
-        { on: ['users', 'eip', 'sga', 'nginx', 'app'], run: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0]], t: 'as on page 3.1',
+        { on: ['users', 'eip', 'sga', 'nginx', 'app'], run: [['in', 0], ['fw', 0], ['ng', 0], ['app', 0]], t: 'as on page 3.2',
           say: '<strong>A request arrives.</strong> It reaches a FastAPI worker through the Elastic IP, the security group and Nginx, as before.' },
         { on: ['app', 'pgb'], run: [['pool', 0]], t: 'microseconds, over localhost',
           say: '<strong>Borrow a connection.</strong> FastAPI’s own pool hands the request a connection to PgBouncer on <code>localhost:6432</code>. It’s already open, so there’s no handshake and no login.' },
@@ -1310,7 +1310,7 @@ window.ZTM = window.ZTM || {};
           '<div class="hq-total"><b class="hq-num"></b><span>queries for one home page</span></div>' +
           '<div class="hq-bar"><i class="lst"></i><i class="look"></i></div>' +
           '<p class="kl-key hq-key"><span><i class="hq-k-list"></i>lists and page parts</span><span><i class="hq-k-look"></i>price, stock and rating, per product</span></p>' +
-          '<label class="ql-check"><input type="checkbox" class="hq-batch"> Batch the per-product lookups (page 3.2)</label>' +
+          '<label class="ql-check"><input type="checkbox" class="hq-batch"> Batch the per-product lookups (page 3.3)</label>' +
           '<ol class="hq-list"></ol>' +
           '<figure class="hq-q"><figcaption></figcaption><pre></pre></figure>' +
         '</div>' +
@@ -1353,7 +1353,7 @@ window.ZTM = window.ZTM || {};
       el.querySelector('.readout').innerHTML = st.batch
         ? '<strong>Batched, it’s ' + total + ' queries,</strong> about a quarter of a second. Better, but during the sale that’s still 500 × ' + total + ' = ' + fmtInt(500 * total) +
           ' queries a second, for a page that’s the same for every shopper.'
-        : '<strong>' + (total - listed) + ' of the ' + total + ' queries</strong> are the same three lookups, a price, a stock level and a rating, asked one product at a time for the 30 products on the page: the N+1 pattern from page 3.2. At about 10 ms each, in a row, they add up to about a second.';
+        : '<strong>' + (total - listed) + ' of the ' + total + ' queries</strong> are the same three lookups, a price, a stock level and a rating, asked one product at a time for the 30 products on the page: the N+1 pattern from page 3.3. At about 10 ms each, in a row, they add up to about a second.';
     }
 
     function pick(e) {

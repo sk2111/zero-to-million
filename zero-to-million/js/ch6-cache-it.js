@@ -49,7 +49,7 @@ GET /api/products/TZ-10442 200  queries=9    db=31ms    total=38ms
 GET /api/home              200  queries=100  db=1288ms  total=1370ms</span></pre>
           <ol class="points term-note">
             <li>The home page runs 100 queries every time.</li>
-            <li>Each query is quick, about 10 ms with the network round trip and the ORM, but 100 of them in a row add up to about a second (page 3.2).</li>
+            <li>Each query is quick, about 10 ms with the network round trip and the ORM, but 100 of them in a row add up to about a second (page 3.3).</li>
             <li>A product page runs 9 and takes 38 ms. The home page is the problem.</li>
           </ol>
         </figure>
@@ -60,7 +60,7 @@ GET /api/home              200  queries=100  db=1288ms  total=1370ms</span></pre
         <ol class="points">
           <li>The home page changes a few times a day: when the team edits a banner, or a deal starts or ends.</li>
           <li>Yet Tomazon rebuilds it from 100 queries on every visit. During the sale that’s about 500 home page views a second, or 50,000 queries a second, all to produce the same answer.</li>
-          <li>Fewer, better queries (page 3.2) make each build cheaper. Not building it at all is cheaper still.</li>
+          <li>Fewer, better queries (page 3.3) make each build cheaper. Not building it at all is cheaper still.</li>
         </ol>
 
         <h2>What’s worth caching</h2>
@@ -86,7 +86,7 @@ GET /api/home              200  queries=100  db=1288ms  total=1370ms</span></pre
             usually in one or two endpoints, not spread evenly.</li>
             <li><strong>Cache finished answers, not tables.</strong> Store the home page’s whole JSON, not raw rows that still
             need 99 more lookups to become a page.</li>
-            <li><strong>A cache hides slow code; it doesn’t fix it.</strong> Fix N+1 queries first (page 3.2), then cache
+            <li><strong>A cache hides slow code; it doesn’t fix it.</strong> Fix N+1 queries first (page 3.3), then cache
             what’s still expensive.</li>
           </ol>
         </aside>

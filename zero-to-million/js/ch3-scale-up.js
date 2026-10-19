@@ -7,8 +7,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[3] = {
   intro: `
     <ol class="points lede">
-      <li>The pilot is a success, and 1,000 users are on their way. The single server from chapter 2 is out of room.</li>
-      <li>Most web apps take the same first step here: give the database a server of its own, then pick the right kind of server for each job.</li>
+      <li>The pilot is a success, and 1,000 users are on their way.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
@@ -115,8 +114,6 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <li><strong>The app server</strong> is tuned for CPU-bound work: a compute-optimised instance (AWS c family), sized by how many requests it has to serve.</li>
           <li><strong>The database server</strong> is tuned for I/O-bound work: a memory-optimised instance (AWS r family), so the working set fits in RAM, with a disk whose IOPS match the load (page 1.7). It can be your own EC2 instance, or Amazon RDS, a managed PostgreSQL that handles backups, updates and failover for you.</li>
           <li>Keep both in the same zone and the same private network, so a query crosses the network in well under a millisecond. Put the database in a private subnet that the internet can’t reach at all.</li>
-          <li>The new cost is that network hop. A page that runs 30 queries now pays 30 round trips, so it pays to make fewer, better queries (page 1.8).</li>
-          <li>The rest of this chapter makes that split, then keeps its new cost small.</li>
         </ol>
 
         <aside class="note design">
@@ -159,7 +156,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <li><strong>Every query crosses the network.</strong> A round trip inside one zone takes about 0.2–0.5 ms, instead of microseconds over <code>localhost</code>. Page 3.3 shows what that adds up to, and how to keep it small.</li>
           <li><strong>Connections cost more.</strong> Opening a PostgreSQL connection now means a TCP handshake across the network, plus a new process on the database server. Page 3.3 covers keeping them open with pooling.</li>
           <li><strong>Each side can grow on its own:</strong> a bigger app server when CPU runs out, a bigger database server when memory or disk does. Page 3.4 picks the right kind of server for each.</li>
-          <li><strong>The photos stay with the app, for now.</strong> They’re still on the app server’s disk, and Nginx still serves them. Chapter 4 moves them to S3, once there’s more than one app server.</li>
+          <li><strong>The photos stay with the app, for now.</strong> They’re still on the app server’s disk, and Nginx still serves them.</li>
         </ol>
 
         <h2>Moving the database without losing data</h2>
@@ -194,8 +191,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
             machine. The code is still one monolith (page 2.4).</li>
             <li><strong>The database is now your most important server.</strong> It holds the only copy of the data, so
             backups, monitoring and alarms matter most here.</li>
-            <li><strong>Same zone, private network.</strong> Keep the hop short and the database unreachable from outside.
-            Surviving the loss of a whole zone comes later.</li>
+            <li><strong>Same zone, private network.</strong> Keep the hop short and the database unreachable from outside.</li>
           </ol>
         </aside>
 

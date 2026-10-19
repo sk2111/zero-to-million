@@ -9,7 +9,6 @@ ZTM.content[7] = {
     <ol class="points lede">
       <li>Tomazon passes a million users. The servers cope, the database copes, and the cache keeps pages fast.</li>
       <li>The team has grown too: about 12 engineers, all changing one codebase every day. The monolith that let a small team move fast now makes a bigger team trip over itself.</li>
-      <li>This is the moment page 2.4 warned about: a reason you can name to split the app. This chapter splits off one service, safely, while everything keeps running.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

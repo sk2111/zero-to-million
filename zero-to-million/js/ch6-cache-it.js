@@ -282,7 +282,7 @@ async def forget(product_id):
         <h2>Where this leads</h2>
         <ol class="points">
           <li>Reads are now fast: Redis answers the popular pages, and the replicas take the rest.</li>
-          <li>Every server now has room to spare at a million users.</li>
+          <li><strong>Congratulations!</strong> You’ve taken Tomazon to a million users.</li>
         </ol>
 
         <aside class="note design">

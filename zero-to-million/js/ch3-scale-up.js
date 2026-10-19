@@ -277,6 +277,33 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
           <li><strong>Count the queries per request.</strong> Log them in development (SQLAlchemy’s <code>echo=True</code>), and treat any endpoint that runs dozens as a bug.</li>
           <li><strong>Turn on <code>pg_stat_statements</code></strong> on the database. It shows which queries run most often and take the most total time, which is where to start.</li>
         </ol>
+        <figure class="term">
+          <figcaption>Try it on the database server</figcaption>
+<pre><span class="p">$</span> sudo -u postgres psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements';"
+<span class="o">ALTER SYSTEM</span>
+<span class="p">$</span> sudo systemctl restart postgresql             <span class="c"># the library only loads at startup</span>
+<span class="p">$</span> sudo -u postgres psql -d tomazon -c "CREATE EXTENSION pg_stat_statements;"
+<span class="o">CREATE EXTENSION</span>
+<span class="p">$</span> psql -d tomazon                               <span class="c"># a day later</span>
+<span class="o">tomazon=> SELECT calls, round(mean_exec_time, 2) AS mean_ms,
+                  round(total_exec_time) AS total_ms, left(query, 50) AS query
+             FROM pg_stat_statements ORDER BY calls DESC LIMIT 5;
+
+  calls  | mean_ms | total_ms |                       query
+---------+---------+----------+----------------------------------------------------
+ 2400360 |    0.05 |   120018 | SELECT * FROM reviews WHERE product_id = $1
+ 1003127 |    0.03 |    30094 | SELECT * FROM sessions WHERE token = $1
+ 1001894 |    0.04 |    40076 | SELECT * FROM users WHERE id = $1
+  200413 |    0.06 |    12025 | SELECT * FROM products WHERE id = $1
+  120018 |    0.82 |    98415 | SELECT id, name, price FROM products WHERE categor</span></pre>
+          <ol class="points term-note">
+            <li>Turning it on takes three steps: load the library, restart PostgreSQL, and create the extension in the database. On Amazon RDS the library is already loaded, so only the last step is needed.</li>
+            <li>It groups queries by shape, with each value replaced by <code>$1</code>, and counts how many times each one ran (<code>calls</code>) and how long it spent inside the database (<code>mean_ms</code>, <code>total_ms</code>).</li>
+            <li>The reviews lookup ran 2.4 million times: exactly 20 times as often as the category listing. That’s the N+1 from above, one extra query for each product on every 20-product page.</li>
+            <li>Each one takes just 0.05 ms in the database, so it looks harmless. But these times don’t include the network. Each call is also a round trip of 0.2–0.5 ms, so a category page spends about 1 ms on its reviews in the database, and 4–10 ms crossing the network.</li>
+            <li>After the <code>selectinload</code> fix, reset the counts with <code>SELECT pg_stat_statements_reset();</code> and check again: the reviews query should drop to one per category page.</li>
+          </ol>
+        </figure>
 
         <aside class="note design">
           <h3>For system design</h3>
@@ -321,7 +348,7 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
         <ol class="points">
           <li>From the server’s point of view, the app is the part that burns CPU (page 3.1), so start compute-optimised: a c7g.large has 2 vCPUs and 4 GB.</li>
           <li>Run one FastAPI worker per vCPU with <code>async</code> endpoints, and watch CPU at the busiest hour.</li>
-          <li>When CPU runs short, move up a size: a c7g.xlarge has 4 vCPUs. Later, run several app servers behind a load balancer (chapter 4).</li>
+          <li>When CPU runs short, move up a size: a c7g.xlarge has 4 vCPUs.</li>
           <li>Keep optimising the code too, starting with the slowest endpoints. Cutting 10 ms of CPU from every request can be worth a whole server.</li>
         </ol>
 
@@ -338,7 +365,6 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
           </tbody>
         </table>
         <ol class="points" start="2">
-          <li>Storage-optimised instances suit databases whose disk is still the bottleneck once the working set is in RAM: heavy writes, or data far bigger than memory.</li>
           <li>For most teams at this stage, memory-optimised with EBS, or RDS, is the safer start. Move to local NVMe once you’ve measured that the EBS volume is the limit, and replication is in place.</li>
         </ol>
 

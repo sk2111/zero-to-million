@@ -342,7 +342,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
       sub: 'How work really behaves on a CPU, and why most servers are waiting, not computing.',
       html: `
         <ol class="points lede">
-          <li>Every request is a mix of computing and waiting.</li>
+          <li>Every request is a mix of computing and waiting for data.</li>
           <li>Which one dominates decides how to scale it: more cores, or more requests in flight at once.</li>
         </ol>
 
@@ -608,7 +608,7 @@ CPU(s):                  8
       html: `
         <ol class="points lede">
           <li>Memory holds everything a running program is using: its code, its variables, the request it’s handling, the rows it just read.</li>
-          <li>It’s fast compared with disk, but slow compared with the CPU.</li>
+          <li>It’s fast compared with disk, but slow compared with the CPU cache.</li>
           <li>That gap shapes how fast code really runs.</li>
         </ol>
 
@@ -848,7 +848,7 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
             <li><code>rkB/s</code> and <code>wkB/s</code>: KB read and written per second, its throughput. About 17 MB/s here.</li>
             <li><code>r_await</code> and <code>w_await</code>: average milliseconds per read and per write, including time spent waiting in line. Reads take 8 ms.</li>
             <li><code>aqu-sz</code>: how many operations are waiting in line on average. 23 here.</li>
-            <li><code>%util</code>: how much of the time the disk was busy. On SSDs, trust <code>await</code> more: an SSD can show 100% and still have room.</li>
+            <li><code>%util</code>: how much of the time the disk was busy.</li>
             <li>Put together: exactly 3,000 operations a second, a long queue and slow reads. This is a default cloud SSD (AWS gp3) at its IOPS limit.</li>
           </ol>
         </figure>
@@ -947,14 +947,26 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
         </div>
 
         <figure class="term">
-          <figcaption>Try it on a Linux server</figcaption>
-<pre><span class="p">$</span> ping -c 3 10.0.2.14             <span class="c"># the database server, same datacenter</span>
+          <figcaption>Try it: a server next door, then one across the world</figcaption>
+<pre><span class="p">$</span> ping -c 3 10.0.2.14             <span class="c"># on a Linux server: the database server, same datacenter</span>
 <span class="o">64 bytes from 10.0.2.14: icmp_seq=1 ttl=64 time=0.214 ms
 64 bytes from 10.0.2.14: icmp_seq=2 ttl=64 time=0.198 ms
-64 bytes from 10.0.2.14: icmp_seq=3 ttl=64 time=0.221 ms</span></pre>
+64 bytes from 10.0.2.14: icmp_seq=3 ttl=64 time=0.221 ms</span>
+<span class="p">&gt;</span> ping 69.171.249.8               <span class="c"># on a Windows laptop in India: Facebook’s server in Ashburn, US east coast</span>
+<span class="o">Reply from 69.171.249.8: bytes=32 time=338ms TTL=74
+Reply from 69.171.249.8: bytes=32 time=440ms TTL=74
+Reply from 69.171.249.8: bytes=32 time=283ms TTL=74
+Reply from 69.171.249.8: bytes=32 time=283ms TTL=74
+
+Ping statistics for 69.171.249.8:
+    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
+Approximate round trip times in milli-seconds:
+    Minimum = 283ms, Maximum = 440ms, Average = 336ms</span></pre>
           <ol class="points term-note">
             <li><code>ping</code> measures the round trip. The database server is about 0.2 ms away: two servers in the same datacenter.</li>
-            <li>From your laptop, ping a server in another city or country to see how distance adds milliseconds.</li>
+            <li>From a laptop in India, Facebook’s server in Ashburn is at least 283 ms away: over 1,000 times longer than the trip to the database server.</li>
+            <li>Most of that is distance. Ashburn is about 13,000 km away in a straight line, so 130 ms there and back is the floor (5 µs per km, above). The cables take a longer route, and home broadband and Wi-Fi add their own delay, which is why it’s above the ~200 ms between datacenters.</li>
+            <li>The same trip took anywhere from 283 to 440 ms: the slower packets waited in queues at busy routers along the way. Use the minimum to judge distance; the spread shows how busy the path is.</li>
           </ol>
         </figure>
 
@@ -1158,7 +1170,6 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
         <h3 class="read-head">How an event loop works</h3>
         <ol class="points">
           <li>Every network connection is a <strong>socket</strong>. Think of it as an open phone line between two programs: when a user’s browser connects to your server, the OS sets up a socket for that connection. Your code reads the request from it and writes the response into it.</li>
-          <li>A server talking to 1,000 users and a database has over 1,000 sockets open at once: one per user, plus one for each connection to the database.</li>
           <li>A normal thread reads from one socket and waits until data arrives. An event-loop thread never does that. Instead it hands the kernel its whole list of sockets and says: “wake me when any of these has data”.</li>
           <li>On Linux that request is a system call named <code>epoll_wait</code> (<code>kqueue</code> on macOS and BSD). The kernel already handles every packet that arrives, so it knows which sockets have data and simply hands back that short list.</li>
           <li>The thread then works through the list: read a request here, send a response there, start a database query and move on without waiting for the answer. Then it asks the kernel again. That cycle is the event loop.</li>
@@ -1166,7 +1177,7 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
         </ol>
         <p>Step through one turn of the loop, with one thread and 8 connections:</p>
         <div class="widget" data-widget="event-loop"></div>
-        <ol class="points" start="7">
+        <ol class="points" start="6">
           <li>Think of a waiter with 20 tables. They don’t stand at one table while the kitchen cooks; they take an order, pass it to the kitchen, and go to whichever table is waving. A thread per connection is one waiter per table, mostly standing still.</li>
           <li>Nginx, Node.js, Redis and Python’s asyncio (which FastAPI uses) all work this way.</li>
         </ol>

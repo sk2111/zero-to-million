@@ -133,8 +133,7 @@ ZTM.content[2] = {
         <h2>What the numbers say</h2>
         <ol class="points">
           <li><strong>The pilot is small on every count.</strong> 5 requests a second, 20 MB of data and 1 MB/s of traffic fit on one small server (page 2.5).</li>
-          <li><strong>Photos are the heaviest part by far.</strong> They’re 100 times bigger than the database, and almost all of the network traffic. For the pilot, Nginx can serve them from the server’s disk. Before the traffic grows, move them to object storage behind a CDN (page 1.8).</li>
-          <li><strong>Memory runs out first.</strong> From the pilot to 1,000 shoppers, CPU only grows to half a core, but the app and the database need more memory than a 512 MB server has. That’s where the pilot’s server cracks (page 3.1).</li>
+          <li><strong>Photos are the heaviest part by far.</strong> They’re 100 times bigger than the database, and almost all of the network traffic. For the pilot, Nginx can serve them from the server’s disk.</li>
           <li><strong>Keep the estimates.</strong> Once the pilot runs, compare them with what you measure (page 2.6). Where they differ, you’ve learned how people really use the store.</li>
         </ol>
 
@@ -143,8 +142,6 @@ ZTM.content[2] = {
           <ol class="points">
             <li><strong>Estimate the busiest hour, not the day.</strong> 100 shoppers spread over a day is almost nothing; the
             same shoppers all browsing at 9 p.m. are your real load.</li>
-            <li><strong>Look for what grows fastest.</strong> Whatever grows fastest with users runs out first. For Tomazon it’s
-            memory and photos, not CPU.</li>
             <li><strong>Keep big files apart from everything else.</strong> Photos and the database grow at very different rates,
             and want very different storage.</li>
           </ol>
@@ -424,7 +421,7 @@ ZTM.content[2] = {
         <h2>Where this leads</h2>
         <ol class="points">
           <li>The pilot does its job: it proves people want the product, and the numbers show what’s running low.</li>
-          <li>Word spreads, and 1,000 shoppers are on their way. Chapter 3 starts with what breaks first, then gives the app and the database room to grow.</li>
+          <li>Word spreads, and 1,000 shoppers are on their way.</li>
         </ol>
 
         <aside class="note design">

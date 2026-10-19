@@ -8,8 +8,8 @@ ZTM.content[6] = {
   intro: `
     <ol class="points lede">
       <li>Tomazon passes 500,000 users. The replicas from chapter 5 keep the database calm, and nothing crashes.</li>
-      <li>But during sales, shoppers say the home page is slow, and some leave before they see a single deal. The dashboards say every server is fine.</li>
-      <li>The problem isn’t one busy server. It’s that every visit does the same work again, for every shopper. The fix is to do it once and remember the answer: a cache.</li>
+      <li>But during sales, shoppers say the home page is slow, and some leave before they see a single deal.</li>
+      <li>Let’s see what it is.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

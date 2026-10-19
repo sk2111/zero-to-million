@@ -8,8 +8,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[4] = {
   intro: `
     <ol class="points lede">
-      <li>V1 is a success, and marketing brings in 10,000 users. This time the database copes, but the app server’s CPU is full.</li>
-      <li>This chapter covers the step every growing web app takes next: from one app server to several, with a load balancer in front.</li>
+      <li>V1 is a success, and marketing brings in 10,000 users.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
@@ -75,7 +74,6 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
           <ol class="points term-note">
             <li>A load of 7.92 on 2 vCPUs: about 4 threads for every core, and rising through the morning.</li>
             <li>96% <code>us</code> and no <code>wa</code>: the CPU is busy running our own code, not waiting for anything.</li>
-            <li>This is Server 1 from page 1.3: the app server is CPU-bound, and full.</li>
           </ol>
         </figure>
 
@@ -267,9 +265,8 @@ server {
           <li><strong>They can’t stay on an app server’s disk.</strong> A photo uploaded to app server 1 isn’t on app server 2, so half the shoppers would see a broken image.</li>
           <li><strong>They’d swamp the load balancer too.</strong> At 10,000 shoppers, the busiest hour needs about 100 MB/s of photos, about 800 Mbps: page 2.2’s numbers, ten times over. A c7g.medium’s steady network bandwidth is about 0.5 Gbps.</li>
           <li><strong>So they move to Amazon S3,</strong> AWS’s object storage. A bucket, <code>tomazon-photos</code>, keeps each file on many disks across zones, grows without limit, and costs about $0.025 per GB a month: Tomazon’s 10 GB of photos cost about 25 cents.</li>
-          <li><strong>Browsers fetch the photos straight from S3.</strong> Each photo’s link on the page points at the bucket, and a bucket policy lets anyone read the photos, and nothing else. Photo traffic never touches the load balancer or the app servers.</li>
+          <li><strong>Browsers fetch the photos straight from S3.</strong> Each photo’s link on the page points at the bucket, and a bucket policy lets Tomazon users read the photos, and nothing else. Photo traffic never touches the load balancer or the app servers.</li>
           <li><strong>The app uploads new photos to the bucket</strong> when staff add a product, so every app server sees the same files.</li>
-          <li>A CDN in front of the bucket would make photos faster still for shoppers far from Mumbai. That comes in chapter 9.</li>
         </ol>
 
         <h2>Move PgBouncer next to the database</h2>
@@ -290,22 +287,18 @@ server {
           </tbody>
         </table>
         <ol class="points" start="5">
-          <li><strong>The trade-off:</strong> one PgBouncer now serves every app server, so if it stops, the whole app loses the database. Because it runs on the database server, that’s the same failure as losing the database itself. Chapter 5’s replicas will need a pooler address that can follow the primary when it moves. On Amazon RDS, RDS Proxy does this job as a managed service.</li>
+          <li><strong>The trade-off:</strong> one PgBouncer now serves every app server, so if it stops, the whole app loses the database. Because it runs on the database server, that’s the same failure as losing the database itself.</li>
         </ol>
 
         <h2>The new weak spots</h2>
         <ol class="points">
           <li><strong>The load balancer is now a single point of failure.</strong> If its server stops, nothing gets through. The usual fixes are an AWS Application Load Balancer, which runs across zones for you, or two Nginx servers sharing an Elastic IP that moves to the healthy one.</li>
-          <li><strong>Everything is still in one zone.</strong> If that zone has an outage, all of it goes down. Spreading the app servers across two zones is the next step.</li>
-          <li><strong>The database is still one server.</strong> It was fine at 10,000 users, but it’s the next thing to watch. Read replicas come in chapter 5, and caching in chapter 6.</li>
         </ol>
 
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>Make the app stateless before you scale out.</strong> It’s the one thing horizontal scaling can’t work without.</li>
-            <li><strong>Check each tier for one missing server.</strong> The app tier survives losing a server now (with N+1).
-            The load balancer and the database don’t yet.</li>
             <li><strong>Scaling out multiplies everything:</strong> servers, logs, deploys and connections. Automate the
             setup so a new server is one command away (page 2.5).</li>
           </ol>

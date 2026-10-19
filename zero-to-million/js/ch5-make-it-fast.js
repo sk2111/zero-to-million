@@ -8,8 +8,6 @@ ZTM.content[5] = {
   intro: `
     <ol class="points lede">
       <li>10,000 users became a success, and over the next year the product grows towards 100,000.</li>
-      <li>The app tier copes, but the database starts to run hot, and almost all of its work turns out to be reading.</li>
-      <li>The answer is read replicas: copies of the database that take the reads. They work, and they bring a new problem with them: copies that are slightly behind.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

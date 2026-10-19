@@ -8,8 +8,6 @@ ZTM.content[9] = {
   intro: `
     <ol class="points lede">
       <li>Tomazon passes 3 million users, and starts delivering abroad: to the UAE, Singapore, the UK and the US.</li>
-      <li>Its first shoppers abroad say product pages crawl. At the same time, sending data to the internet has become one of the biggest lines on the AWS bill.</li>
-      <li>Both have the same cause: every photo travels from Mumbai, to every shopper, every time. This chapter moves the photos close to the shoppers, and sends fewer bytes.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

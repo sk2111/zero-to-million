@@ -128,11 +128,6 @@ ZTM.content[8] = {
             enough partitions at the start: adding more later moves some products to a different partition, and for a
             while their changes can arrive out of order.</li>
           </ol>
-        </aside>
-
-        <aside class="note rule">
-          <h3>Rule of thumb</h3>
-          <p>Use a queue when one worker must do a job. Use a log when many readers need the same facts.</p>
         </aside>`
     },
 
@@ -311,7 +306,6 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>A log is a database.</strong> Keep copies, watch its disk, and test what happens when a broker dies.</li>
             <li><strong>Alert on lag, not just on “up”.</strong> When readers fail quietly, everything looks up, and nothing moves.</li>
           </ol>
         </aside>

@@ -8,8 +8,6 @@ ZTM.content[8] = {
   intro: `
     <ol class="points lede">
       <li>Chapter 7 left Tomazon with services that need to hear about each other’s changes. One piece of Tomazon already does that: the cache invalidator from page 6.3.</li>
-      <li>At 2 million users, it fails quietly in the middle of a sale, and shows that a message that can be lost, eventually will be.</li>
-      <li>This chapter replaces it with a log that keeps every change until every reader has it: Apache Kafka, fed straight from the database’s WAL.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

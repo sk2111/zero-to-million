@@ -69,8 +69,6 @@ ZTM.content[7] = {
           <ol class="points">
             <li><strong>The bottleneck moves, and not always to a server.</strong> Once the machines are sorted, the limit is
             often how fast people can change the system safely.</li>
-            <li><strong>Test changes together before they ship.</strong> A merge queue tests each change on top of everything
-            that’s about to ship, so two changes that only break together are caught before production.</li>
           </ol>
         </aside>
 

@@ -93,7 +93,7 @@ diagram from staff to everyone, and the new problems a network between services 
 Chapter 8 has 4 pages: The listener that went deaf (the cache invalidator fails quietly in a sale;
 why LISTEN/NOTIFY can't be fixed) · A queue or a log (RabbitMQ and SQS vs Kafka, Kafka's parts, a
 widget that sends the same changes through NOTIFY and through a topic) · Capture changes from the
-WAL (the dual-write problem, Debezium, the new cache invalidator as a Kafka consumer) · The price of a log (Amazon MSK or your own, safe settings, consumer lag, the traps).
+WAL (the dual-write problem, Debezium, the new cache invalidator as a Kafka consumer) · The price of a log (Amazon MSK or your own, safe settings, consumer lag, the traps, and a live diagram of the whole architecture so far).
 
 Chapter 9 has 3 pages: Slow abroad, expensive at home (distance and the speed of light, the egress
 bill) · A CDN: copies near the shopper (edges, hits and misses, regional edge caches, a live

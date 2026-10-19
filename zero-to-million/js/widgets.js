@@ -311,12 +311,13 @@ window.ZTM = window.ZTM || {};
       '</div>';
 
     /* On a tall diagram, the controls and the explanation move into the left column, and stay
-       mid-screen while the reader scrolls through it. Below the diagram otherwise, and on phones. */
+       mid-screen while the reader scrolls through it. Below the diagram otherwise, and on phones.
+       spec.dock 'side' keeps them in the left column whatever the height, for a wide, short diagram. */
     var dock = el.querySelector('.pt-dock'), left = el.querySelector('.ar2 > .ar2-left');
     var wide = window.matchMedia ? window.matchMedia('(min-width: 721px)') : null;
     function placeDock() {
       var region = left && left.nextElementSibling;
-      var side = !!region && region.getBoundingClientRect().height > 700 && (!wide || wide.matches);
+      var side = !!region && (spec.dock === 'side' || region.getBoundingClientRect().height > 700) && (!wide || wide.matches);
       if (side && dock.parentNode !== left) left.appendChild(dock);
       if (!side && dock.parentNode !== el) el.appendChild(dock);
       dock.classList.toggle('docked', side);
@@ -330,12 +331,16 @@ window.ZTM = window.ZTM || {};
 
     /* Draw each wire from the edge of one part to the edge of the next. */
     function layout() {
-      var b = box.getBoundingClientRect();
-      svg.setAttribute('width', b.width); svg.setAttribute('height', b.height);
-      svg.setAttribute('viewBox', '0 0 ' + b.width + ' ' + b.height);
+      /* Measured in the diagram's own pixels (k is its scale), so a diagram scaled down to fit still lines up. */
+      var b = box.getBoundingClientRect(), k = box.offsetWidth ? b.width / box.offsetWidth : 1;
+      if (Math.abs(k - 1) < 0.01) k = 1;
+      var bw = b.width / k, bh = b.height / k;
+      svg.setAttribute('width', bw); svg.setAttribute('height', bh);
+      svg.setAttribute('viewBox', '0 0 ' + bw + ' ' + bh);
       function r(id) {
         var q = box.querySelector('[data-p="' + id + '"]').getBoundingClientRect();
-        return { l: q.left - b.left, r: q.right - b.left, t: q.top - b.top, b: q.bottom - b.top, cx: (q.left + q.right) / 2 - b.left, cy: (q.top + q.bottom) / 2 - b.top };
+        return { l: (q.left - b.left) / k, r: (q.right - b.left) / k, t: (q.top - b.top) / k, b: (q.bottom - b.top) / k,
+                 cx: ((q.left + q.right) / 2 - b.left) / k, cy: ((q.top + q.bottom) / 2 - b.top) / k };
       }
       var w = '', lab = '', segs = [], bends = [];
       WIRES.forEach(function (x) {
@@ -1836,6 +1841,137 @@ window.ZTM = window.ZTM || {};
           '</div>' +
         '</div>'
     });
+  };
+
+  /* ---------- 8.4: the whole of Tomazon at 2 million users, on one screen ---------- */
+
+  /* Every part from chapters 2 to 8, drawn the way 6.2 draws AWS (region, VPC, subnets, EC2 boxes), but
+     laid out sideways so it fits on one screen. Five columns: the public subnet; the app servers; cache and
+     search, then the database server; the workers, then the database server; Kafka. Rows 1 and 2 are the
+     same height, so the catalogue and Kafka, which span both, sit on the line between them, and one
+     straight wire joins them. Each box centres what it holds, so the parts in a row line up and their wires
+     run straight, and the database box's two columns line up with the grid's, over the replicas and the disk. */
+  W['kafka-full'] = function (el) {
+    var node = archNode;
+    function at(cls, html) { return '<div class="' + cls + '">' + html + '</div>'; }
+    /* A server box around parts, with its caption in the top padding (or the bottom one, with k8-low). */
+    function box(cls, cap, html) { return '<div class="k8-box ' + cls + '"><p class="k8-cap">' + cap + '</p>' + html + '</div>'; }
+    /* A request's way in, through the Elastic IP, the security group and the load balancer, to an app and back. */
+    function via(app, mid) { return [['in', 0], ['fw', 0], ['sgl', 0], [app, 0]].concat(mid, [[app, 1], ['sgl', 1], ['fw', 1], ['in', 1]]); }
+    var page = via('a2', [['c', 0], ['c', 1]]);
+    var photo = [['ph', 0], ['ph', 1]];
+    var search = via('a2', [['q', 0], ['q', 1]]);
+    var order = via('a1', [['w', 0], ['pool', 0], ['io', 0], ['io', 1], ['pool', 1], ['w', 1]]);
+    var write = via('a1', [['w', 0], ['pool', 0], ['pool', 1], ['w', 1]]);
+    var change = [['cdc', 0], ['pub', 0]];
+    var readers = [['sub', 1], ['del', 1], ['ix', 1], ['put', 1], ['ks', 1]];
+    var IN = ['users', 'eip', 'sg', 'lb'];
+    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
+    liveArch(el.querySelector('.arch-scroll > div'), {
+      joints: true,
+      dock: 'side',
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'eip', 'hl', 'HTTPS'],
+        ['ph', 'users', 's3', 'hl', ''],
+        ['fw', 'eip', 'sg', 'v', ''],
+        ['sgl', 'sg', 'lb', 'v', ''],
+        ['a1', 'lb', 'core', 'h', ''],
+        ['a2', 'lb', 'cat', 'h', ''],
+        ['c', 'cat', 'redis', 'h', ''],
+        ['q', 'cat', 'os', 'h', ''],
+        ['ks', 'cat', 'kafka', 'h', ''],
+        ['w', 'core', 'pgb', 'h', ''],
+        ['r', 'core', 'reps', 'h', ''],
+        ['pool', 'pgb', 'pg', 'h', ''],
+        ['io', 'pg', 'disk', 'v', ''],
+        ['wal', 'pg', 'reps', 'vt', 'WAL', true],
+        ['bak', 'disk', 'snap', 'v', 'daily', true],
+        ['cdc', 'pg', 'dbz', 'h', '', true],
+        ['pub', 'dbz', 'kafka', 'vu', ''],
+        ['sub', 'inv', 'kafka', 'h', ''],
+        ['ix', 'idx', 'kafka', 'h', ''],
+        ['del', 'redis', 'inv', 'h', 'DEL', 'rev'],
+        ['put', 'os', 'idx', 'h', '', 'rev']
+      ],
+      request: page.concat(photo, order, change, readers),
+      start: 'Step through it',
+      idle: 'Every part of Tomazon at 2 million users. Press <strong>Step through it</strong> to follow a product page, a search, an order and a price change.',
+      steps: [
+        { on: IN.concat(['dns']), run: [['dns', 0], ['dns', 1], ['in', 0], ['fw', 0], ['sgl', 0]], t: 'the only public address',
+          say: '<strong>The way in.</strong> Route 53 answers for <code>tomazon.com</code> with the load balancer’s Elastic IP, and its security group lets in HTTPS on port 443. The load balancer is the only part in the public subnet. Every other server has only a private address, and a security group that lets in only the parts that need it (page 3.2).' },
+        { on: IN.concat(['cat', 'redis', 's3']), run: page.concat(photo), t: 'usually straight from Redis',
+          say: '<strong>A product page.</strong> Nginx sends <code>/api/products</code> to the catalogue service (page 7.4), which answers from Redis without touching the database. The photos come straight from S3: their links point at the bucket, so photo traffic never reaches the load balancer.' },
+        { on: IN.concat(['cat', 'os']), run: search, t: 'from the search index',
+          say: '<strong>A search.</strong> <code>/api/search</code> goes to the catalogue too, which asks OpenSearch for the matching products.' },
+        { on: IN.concat(['core', 'pgb', 'pg', 'disk']), run: order, t: 'every write goes to the primary',
+          say: '<strong>Checkout.</strong> Carts, orders and payments go to the core API. Every write goes to the primary through PgBouncer’s one pool of 20 real connections, and PostgreSQL saves it to its EBS disk.' },
+        { on: ['core', 'reps', 'pg', 'disk', 'snap'], run: [['r', 0], ['r', 1], ['wal', 0], ['bak', 0]], t: 'copies of the data',
+          say: '<strong>Reads and copies.</strong> When the core API only reads, it asks <code>db-read.internal</code>, and one of the two replicas answers. The primary streams its WAL to both, so they stay a few milliseconds behind (page 5.3), and its disk is backed up every day.' },
+        { on: IN.concat(['core', 'pgb', 'pg']), run: write, t: 'one write, nothing else',
+          say: '<strong>Staff change a price.</strong> It’s an ordinary write: the core API updates the products table on the primary, and commits. It doesn’t send a message, and doesn’t know Kafka exists.' },
+        { on: ['pg', 'dbz', 'kafka'], run: change, t: 'kept on 3 brokers',
+          say: '<strong>Debezium reads the WAL.</strong> Through its replication slot, it reads the committed change and publishes it to <code>tomazon.public.products</code>, keyed by the product’s id. Kafka confirms it once at least 2 of its 3 brokers, each in a different zone, have it.' },
+        { on: ['kafka', 'inv', 'redis', 'idx', 'os', 'cat'], run: readers, t: '3 consumer groups, 1 topic',
+          say: '<strong>Three readers act on it.</strong> The cache invalidator deletes the stale pages in Redis. The search indexer updates OpenSearch. The catalogue service updates its own copy of the products (page 7.3). Each is a consumer group with its own offset, and reads at its own pace.' },
+        { on: ['inv', 'kafka'], run: [['sub', 1]], t: 'watch the lag',
+          say: '<strong>If a reader stops,</strong> its messages wait in Kafka for up to 7 days, and it carries on from its committed offset when it’s back. Until then its lag keeps growing: that’s the number the alarm watches.' },
+        { on: ['kafka', 'dbz', 'pg', 'disk'], run: change, t: 'what keeps it safe',
+          say: '<strong>If a broker, or its whole zone, fails,</strong> every message is still on the other two brokers, and writes carry on. <strong>If Debezium stops,</strong> the primary keeps the WAL it hasn’t read, up to 50 GB, so a stopped reader can’t fill the primary’s disk.' }
+      ],
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Shoppers and staff', '2 million shoppers') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+          '<div class="k8-grid">' +
+            '<div class="k8-bg k8-vpc"><p class="ar2-k">VPC</p></div>' +
+            '<div class="k8-bg k8-sub k8-pub"><p class="ar2-k">Public subnet</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k8-foot k8-apps"><p class="ar2-k">Private subnet: app servers</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k8-mid"><p class="ar2-k">Private subnets: cache, search and workers</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k8-foot k8-data"><p class="ar2-k">Private subnet: database</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k8-kfk"><p class="ar2-k">Private subnet: Kafka</p></div>' +
+            at('k8-c1 k8-r1', node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address')) +
+            at('k8-c1 k8-r2', node('sg', 'shield', 'c-sec', 'Security group', '443 open')) +
+            box('k8-low k8-c1 k8-r3', icon('chip', 'c-cpu') + 'EC2 c7g.medium', node('lb', 'proxy', 'c-net', 'Load balancer', 'Nginx, routes by path')) +
+            box('k8-c2 k8-r12', icon('chip', 'c-cpu') + 'EC2 servers of its own', node('cat', 'bolt', 'c-sw', 'Catalogue service', 'home page, products, search')) +
+            box('k8-c2 k8-r3', icon('chip', 'c-cpu') + '3 × EC2 c7g.2xlarge', node('core', 'bolt', 'c-sw', 'Core API', 'carts, orders, payments')) +
+            at('k8-c3 k8-r1', node('redis', 'cache', 'c-db', 'Redis', 'cached pages, r7g.large')) +
+            at('k8-c3 k8-r2', node('os', 'search', 'c-db', 'OpenSearch', 'the search index')) +
+            at('k8-c4 k8-r1', node('inv', 'bolt', 'c-sw', 'Cache invalidator', '2 copies, one group')) +
+            at('k8-c4 k8-r2', node('idx', 'bolt', 'c-sw', 'Search indexer', 'its own group')) +
+            box('k8-dbbox k8-c34 k8-r3', icon('db', 'c-db') + 'Primary: EC2 r7g.large, 10.0.2.14',
+              node('pgb', 'proxy', 'c-db', 'PgBouncer', 'one pool of 20') + node('pg', 'db', 'c-sw', 'PostgreSQL', 'the primary: every write')) +
+            at('k8-c3 k8-r4', node('reps', 'db', 'c-db', 'Replicas 1 and 2', 'read-only, db-read.internal')) +
+            at('k8-c4 k8-r4', node('disk', 'disk', 'c-sto', 'EBS gp3 disk', 'the primary’s data')) +
+            box('k8-msk k8-c5 k8-r12', icon('log', 'c-sto') + 'Amazon MSK', node('kafka', 'log', 'c-sto', 'Kafka', '3 brokers, one per zone')) +
+            box('k8-low k8-c5 k8-r3', icon('chip', 'c-cpu') + 'Kafka Connect', node('dbz', 'bolt', 'c-sw', 'Debezium', 'reads the WAL')) +
+            at('k8-c1 k8-r5 k8-out', node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', 'photos, for browsers')) +
+            at('k8-c4 k8-r5 k8-out', node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup')) +
+          '</div>' +
+        '</div>'
+    });
+
+    /* On a screen narrower than the diagram, scale the whole picture down to fit instead of squeezing
+       its columns. Phones scroll it sideways instead. */
+    var scroller = el.querySelector('.arch-scroll'), inner = scroller.firstChild, ar = inner.querySelector('.ar2');
+    var desk = window.matchMedia ? window.matchMedia('(min-width: 721px)') : null;
+    function fit() {
+      inner.style.width = inner.style.transform = scroller.style.height = scroller.style.overflow = '';
+      if (desk && !desk.matches) return;
+      var natural = ar.offsetWidth, room = scroller.clientWidth;
+      if (!room || natural <= room + 1) return;
+      var s = room / natural;
+      inner.style.width = natural + 'px';
+      inner.style.transform = 'scale(' + s + ')';
+      scroller.style.height = inner.offsetHeight * s + 'px';
+      scroller.style.overflow = 'hidden';
+    }
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(scroller);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   };
 
   /* ---------- Chapter 9: a product page's photos, from Mumbai or from an edge in the shopper's city ---------- */

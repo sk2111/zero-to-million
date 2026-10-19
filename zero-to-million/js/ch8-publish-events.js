@@ -299,6 +299,10 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
           </tbody>
         </table>
 
+        <h2>The whole of Tomazon</h2>
+        <p>Every part so far, in one picture: the way in, the services, the databases, and Kafka with its readers.</p>
+        <div class="widget wide" data-widget="kafka-full"></div>
+
         <h2>Where this leads</h2>
         <ol class="points">
           <li>Changes now reach every service that needs them, even one that was down when they happened.</li>        </ol>

@@ -31,7 +31,7 @@ ZTM.content[9] = {
         <ol class="points lede">
           <li>A shopper in New York writes in: product pages take about 6 seconds to load, and the photos appear last. Shoppers in London say the same, a little less.</li>
           <li>The same month, the AWS bill shows about $8,800 for data sent from S3 to the internet: several times what the app servers cost.</li>
-          <li>Chapter 2 said to move the photos behind a CDN before the traffic grew (page 2.2). Page 4.4 moved them to S3. The CDN never happened, and every browser fetches every photo straight from the bucket in Mumbai.</li>
+          <li>Page 4.4 moved the photos to S3. Every browser fetches every photo straight from the bucket in Mumbai.</li>
         </ol>
 
         <h2>Distance is time</h2>
@@ -84,7 +84,7 @@ ZTM.content[9] = {
         <ol class="points lede">
           <li>A <strong>content delivery network</strong> (CDN) is a network of servers, called <strong>edge locations</strong>, in hundreds of cities. Each one keeps copies of files that shoppers near it have asked for, and serves them from there.</li>
           <li>The servers that hold the originals, here the S3 bucket in Mumbai, are called the <strong>origin</strong>.</li>
-          <li>Amazon CloudFront has more than 700 edge locations in over 100 cities, including Mumbai, Delhi, Chennai, Hyderabad, Bengaluru and Kolkata. Akamai, Cloudflare and Fastly work the same way.</li>
+          <li>Amazon CloudFront has more than 700 edge locations in over 100 cities, including Mumbai, Delhi, Chennai, Hyderabad, Bengaluru and Kolkata in India, and Dubai, Singapore, London and New York, where Tomazon’s new shoppers are. Akamai, Cloudflare and Fastly work the same way.</li>
         </ol>
 
         <h2>Hits and misses</h2>
@@ -143,7 +143,6 @@ ZTM.content[9] = {
         <h2>Faster</h2>
         <ol class="points">
           <li><strong>New York:</strong> photos now arrive in about 60 ms from a nearby edge, instead of about 1.8 s from Mumbai. The whole page drops from about 6 s to about 2 s.</li>
-          <li><strong>What’s left</strong> is mostly the API, which still runs in Mumbai (chapter 11).</li>
           <li><strong>India gains less,</strong> because Mumbai is already close. There, the CDN mainly takes load off the origin.</li>
         </ol>
 

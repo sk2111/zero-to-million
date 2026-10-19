@@ -284,7 +284,7 @@ server {
         <h2>Where this leads</h2>
         <ol class="points">
           <li>Calls from one service straight to another are fragile: if the other service is down or slow, the caller is stuck too.</li>
-          <li>The answer is to stop waiting for each other. A service records what happened, such as “payment received”, and the others act on it when they can, safely, even if they’re down for a while. Chapter 8 does that with queues and events.</li>
+          <li>The answer is to stop waiting for each other. A service records what happened, such as “payment received”, and the others act on it when they can, safely, even if they’re down for a while.</li>
         </ol>
 
         <aside class="note design">

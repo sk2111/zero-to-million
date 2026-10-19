@@ -301,7 +301,6 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
             <li>It groups queries by shape, with each value replaced by <code>$1</code>, and counts how many times each one ran (<code>calls</code>) and how long it spent inside the database (<code>mean_ms</code>, <code>total_ms</code>).</li>
             <li>The reviews lookup ran 2.4 million times: exactly 20 times as often as the category listing. That’s the N+1 from above, one extra query for each product on every 20-product page.</li>
             <li>Each one takes just 0.05 ms in the database, so it looks harmless. But these times don’t include the network. Each call is also a round trip of 0.2–0.5 ms, so a category page spends about 1 ms on its reviews in the database, and 4–10 ms crossing the network.</li>
-            <li>After the <code>selectinload</code> fix, reset the counts with <code>SELECT pg_stat_statements_reset();</code> and check again: the reviews query should drop to one per category page.</li>
           </ol>
         </figure>
 

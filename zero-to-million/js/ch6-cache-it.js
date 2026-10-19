@@ -18,7 +18,7 @@ ZTM.content[6] = {
         <li>Decide what’s worth caching: expensive, asked for often, and the same for everyone.</li>
         <li>Explain what Redis is and why it’s fast.</li>
         <li>Add a cache-aside layer with Redis to a FastAPI app.</li>
-        <li>Keep the cache honest when data changes, and avoid the traps: lost notifications, lagging replicas and stampedes.</li>
+        <li>Keep the cache honest when data changes.</li>
       </ul>
     </div>`,
 
@@ -263,22 +263,11 @@ async def forget(product_id):
     await cache.delete(*keys)                        </span><span class="c"># so delete again once it has caught up</span></pre>
           <ol class="points term-note">
             <li>It connects straight to PostgreSQL, not through PgBouncer: LISTEN needs a session of its own, which PgBouncer’s transaction mode doesn’t keep. And it must be the primary: replicas don’t deliver notifications.</li>
-            <li>The second delete, a second later, is there for the lagging-replica trap below.</li>
+            <li>The second delete, a second later, is for a lagging replica: a request that misses in between can rebuild the page from a replica that hasn’t replayed the change yet (chapter 5), and put the old price back.</li>
           </ol>
         </figure>
         <p>Here’s the whole path, from a price change to a fresh page:</p>
         <div class="widget" data-widget="invalidate-arch"></div>
-
-        <h2>The traps</h2>
-        <table class="data">
-          <thead><tr><th>Trap</th><th>What happens</th><th>The fix</th></tr></thead>
-          <tbody>
-            <tr><td>A lost notification</td><td>NOTIFY isn’t stored anywhere. If the invalidator is restarting when a price changes, the message is gone, and the old copy stays.</td><td>Keep the TTL as a safety net. When the invalidator reconnects, delete the keys it may have missed.</td></tr>
-            <tr><td>A lagging replica</td><td>The key is deleted, and the next request misses. It rebuilds from a replica that hasn’t replayed the change yet (chapter 5), and puts the old price back for a full TTL.</td><td>Delete the key again a second later, or rebuild from the primary just after a change.</td></tr>
-            <tr><td>A stampede</td><td>A hot key expires during the sale. Hundreds of requests miss in the same second, and all of them run the 100 queries at once.</td><td>Let one request rebuild while the others wait a moment: a short lock in Redis with <code>SET … NX EX 10</code>. Add a little randomness to TTLs, so thousands of keys don’t expire together.</td></tr>
-            <tr><td>An empty cache</td><td>After a Redis restart, every request misses, and the full load lands on the database at once.</td><td>Make sure the database can take it for a few minutes, and fill the hottest keys before sending traffic.</td></tr>
-          </tbody>
-        </table>
 
         <h2>What we chose</h2>
         <table class="data">

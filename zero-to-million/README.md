@@ -82,8 +82,7 @@ and the CAP theorem (a lag timeline, CAP and PACELC, shades of consistency) · L
 Chapter 6 has 3 pages: Fast servers, slow pages (counting the queries behind one request, what is
 worth caching) · Redis: a cache in memory (why it is fast, cache-aside in FastAPI, a live diagram,
 sizing and eviction) · Keeping the cache honest (a TTL trade-off calculator, deleting on change,
-PostgreSQL triggers with LISTEN/NOTIFY and a cache invalidator, and the traps: lost notifications,
-lagging replicas, stampedes and an empty cache).
+PostgreSQL triggers with LISTEN/NOTIFY and a cache invalidator).
 
 Chapter 7 has 4 pages: Two squads, one codebase (a payment webhook broken by two changes that each
 passed their tests; Conway's law) · Monolith or microservices? (what splitting buys and costs, the

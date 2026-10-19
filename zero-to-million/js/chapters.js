@@ -38,7 +38,7 @@ ZTM.chapters = [
     n: 6, slug: 'cache-it', title: 'Cache it', users: 500000, status: 'ready',
     question: 'Every server looks healthy, but pages are slow. Why?',
     summary: 'Find the work you repeat for every shopper, keep the answer in Redis, and keep the cache honest when the data changes.',
-    topics: ['Finding repeated work', 'Redis and cache-aside', 'TTLs and hit rate', 'Cache invalidation', 'Stampedes and lagging replicas']
+    topics: ['Finding repeated work', 'Redis and cache-aside', 'TTLs and hit rate', 'Cache invalidation']
   },
   {
     n: 7, slug: 'split-the-monolith', title: 'Split the monolith', users: 1000000, status: 'ready',

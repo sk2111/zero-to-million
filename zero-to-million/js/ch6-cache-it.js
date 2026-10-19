@@ -267,7 +267,7 @@ async def forget(product_id):
           </ol>
         </figure>
         <p>Here’s the whole path, from a price change to a fresh page:</p>
-        <div class="widget" data-widget="invalidate-arch"></div>
+        <div class="widget wide" data-widget="invalidate-arch"></div>
 
         <h2>What we chose</h2>
         <table class="data">

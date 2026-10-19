@@ -471,6 +471,27 @@ window.ZTM = window.ZTM || {};
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
   }
 
+  /* A wide diagram (6.3, 8.4) on a screen narrower than it is scaled down whole to fit, rather than
+     having its columns squeezed. Phones scroll it sideways instead. el holds its .arch-scroll wrapper. */
+  function fitWide(el) {
+    var scroller = el.querySelector('.arch-scroll'), inner = scroller.firstChild, ar = inner.querySelector('.ar2');
+    var desk = window.matchMedia ? window.matchMedia('(min-width: 721px)') : null;
+    function fit() {
+      inner.style.width = inner.style.transform = scroller.style.height = scroller.style.overflow = '';
+      if (desk && !desk.matches) return;
+      var natural = ar.offsetWidth, room = scroller.clientWidth;
+      if (!room || natural <= room + 1) return;
+      var s = room / natural;
+      inner.style.width = natural + 'px';
+      inner.style.transform = 'scale(' + s + ')';
+      scroller.style.height = inner.offsetHeight * s + 'px';
+      scroller.style.overflow = 'hidden';
+    }
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(scroller);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  }
+
   /* Chapter 2: the pilot, everything on one server. */
   W['pilot-arch'] = function (el) {
     var node = archNode;
@@ -1238,28 +1259,84 @@ window.ZTM = window.ZTM || {};
     });
   };
 
-  /* The same again, with the cache invalidator on the database server. */
+  /* The same again, with the cache invalidator on the database server. Laid out sideways, like 8.4, so all
+     of it fits on one screen: the public subnet; the app servers; cache over the replicas; the database
+     server across two columns. A box over several cells repeats the grid inside, so each part sits on its
+     cell: the invalidator straight above PostgreSQL, and level with Redis, for straight wires. */
   W['invalidate-arch'] = function (el) {
-    var o = { who: 'Shoppers and staff', users: '500,000 of them', cache: true, inv: true };
+    var node = archNode;
+    function at(cls, html) { return '<div class="' + cls + '">' + html + '</div>'; }
     el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
     liveArch(el.querySelector('.arch-scroll > div'), {
       joints: true,
-      wires: growWires(o),
+      dock: 'side',
+      wires: [
+        ['dns', 'users', 'dns', 'v', 'DNS lookup'],
+        ['in', 'users', 'eip', 'hl', 'HTTPS'],
+        ['ph', 'users', 's3', 'hl', ''],
+        ['fw', 'eip', 'sg', 'v', ''],
+        ['lb', 'sg', 'lb', 'v', ''],
+        ['a1', 'lb', 'app1', 'h', ''],
+        ['a2', 'lb', 'app2', 'h', ''],
+        ['a3', 'lb', 'app3', 'h', ''],
+        ['c', 'apps', 'redis', 'h', ''],
+        ['w', 'apps', 'pgb', 'h', ''],
+        ['r', 'apps', 'reps', 'h', ''],
+        ['pool', 'pgb', 'db', 'h', ''],
+        ['note', 'db', 'inv', 'vu', '', true],
+        ['del', 'redis', 'inv', 'h', 'DEL', 'rev'],
+        ['io', 'db', 'disk', 'v', ''],
+        ['wal', 'db', 'reps', 'vb', 'WAL', true],
+        ['bak', 'disk', 'snap', 'v', 'daily', true]
+      ],
       request: inPath('a2').concat([['w', 0], ['pool', 0], ['pool', 1], ['w', 1]], outPath('a2'), [['note', 0], ['del', 1]]),
       start: 'Follow a price change',
       idle: 'A price change, from the database to Redis. Press <strong>Follow a price change</strong> to go through it step by step.',
       steps: [
-        { on: ['users', 'lb', 'app2', 'pgb', 'db'], run: inPath('a2').concat([['w', 0], ['pool', 0], ['pool', 1], ['w', 1]], outPath('a2')), t: 'a normal write',
+        { on: ['users', 'eip', 'sg', 'lb', 'app2', 'pgb', 'db'], run: inPath('a2').concat([['w', 0], ['pool', 0], ['pool', 1], ['w', 1]], outPath('a2')), t: 'a normal write',
           say: '<strong>The team changes a price.</strong> The update goes to the primary through PgBouncer, like every write, and commits.' },
         { on: ['db', 'inv'], run: [['note', 0]], t: 'when the transaction commits',
           say: '<strong>The database announces it.</strong> The trigger on the products table calls NOTIFY. When the transaction commits, PostgreSQL delivers the message to the cache invalidator, which runs on the same server and listens on <code>127.0.0.1</code>.' },
         { on: ['inv', 'redis'], run: [['del', 1]], t: 'about a millisecond',
           say: '<strong>Forget the old copies.</strong> The invalidator deletes <code>home:v1</code> and the product’s own key in Redis. A second later it deletes them again, in case a lagging replica put an old copy back.' },
-        { on: ['users', 'lb', 'app1', 'redis', 'rep1', 'rep2'], run: inPath('a1').concat([['c', 0], ['c', 1], ['r', 0], ['r', 1]], outPath('a1')), t: 'one rebuild',
+        { on: ['users', 'eip', 'sg', 'lb', 'app1', 'redis', 'reps'], run: inPath('a1').concat([['c', 0], ['c', 1], ['r', 0], ['r', 1]], outPath('a1')), t: 'one rebuild',
           say: '<strong>The next shopper rebuilds it.</strong> Their request misses in Redis, so the app builds the page again from the replicas, with the new price, and stores it. Everyone after them gets the new price straight from Redis.' }
       ],
-      html: growLayout(o)
+      html:
+        '<div class="ar2-left">' +
+          node('users', 'user', 'c-user', 'Shoppers and staff', '500,000 of them') +
+          node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
+        '</div>' +
+        '<div class="ar2-region">' +
+          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
+          '<div class="k8-grid k6-grid">' +
+            '<div class="k8-bg k8-vpc"><p class="ar2-k">VPC</p></div>' +
+            '<div class="k8-bg k8-sub k8-pub"><p class="ar2-k">Public subnet</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k8-foot k8-apps"><p class="ar2-k">Private subnet: app servers</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k6-cache"><p class="ar2-k">Private subnet: cache</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k8-foot k6-reps"><p class="ar2-k">Private subnet: replicas</p></div>' +
+            '<div class="k8-bg k8-sub k8-priv k6-db"><p class="ar2-k">Private subnet: database</p></div>' +
+            at('k8-c1 k8-r1', node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address')) +
+            at('k8-c1 k8-r2', node('sg', 'shield', 'c-sec', 'Security group', '443 open')) +
+            '<div class="k8-box k8-low k8-c1 k8-r3"><p class="k8-cap">' + icon('chip', 'c-cpu') + 'EC2 c7g.medium</p>' +
+              node('lb', 'proxy', 'c-net', 'Load balancer', 'Nginx: least_conn, health checks') + '</div>' +
+            '<div class="k8-box k8-span k8-c2 k8-r123" data-p="apps"><p class="k8-cap">' + icon('chip', 'c-cpu') + '3 × EC2 c7g.2xlarge</p>' +
+              node('app1', 'bolt', 'c-sw', 'FastAPI', 'app server 1, 8 workers') +
+              node('app2', 'bolt', 'c-sw', 'FastAPI', 'app server 2, 8 workers') +
+              node('app3', 'bolt', 'c-sw', 'FastAPI', 'app server 3, 8 workers') + '</div>' +
+            at('k8-c3 k8-r1', node('redis', 'cache', 'c-db', 'Redis', 'finished pages, r7g.large')) +
+            at('k8-c3 k8-r3', node('reps', 'db', 'c-db', 'Replicas 1 and 2', 'read-only, db-read.internal')) +
+            '<div class="k8-box k8-span k6-primary k8-c45 k8-r123"><p class="k8-cap">' + icon('db', 'c-db') + 'Primary: EC2 r7g.large, 10.0.2.14</p>' +
+              at('k8-c2 k8-r1', node('inv', 'bolt', 'c-sw', 'Cache invalidator', 'LISTENs on localhost')) +
+              at('k8-c1 k8-r2', node('pgb', 'proxy', 'c-db', 'PgBouncer', 'one pool of 20')) +
+              at('k8-c2 k8-r2', node('db', 'db', 'c-sw', 'PostgreSQL', 'the primary: every write')) +
+              at('k8-c2 k8-r3', node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB')) + '</div>' +
+            at('k8-c1 k8-r4 k8-out', node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', 'product photos, fetched by browsers')) +
+            at('k8-c5 k8-r4 k8-out', node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup')) +
+          '</div>' +
+        '</div>'
     });
+    fitWide(el);
   };
 
   /* ---------- Chapter 6: what a TTL costs, for one hot key and for many ---------- */
@@ -1936,7 +2013,7 @@ window.ZTM = window.ZTM || {};
             at('k8-c1 k8-r1', node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address')) +
             at('k8-c1 k8-r2', node('sg', 'shield', 'c-sec', 'Security group', '443 open')) +
             box('k8-low k8-c1 k8-r3', icon('chip', 'c-cpu') + 'EC2 c7g.medium', node('lb', 'proxy', 'c-net', 'Load balancer', 'Nginx, routes by path')) +
-            box('k8-c2 k8-r12', icon('chip', 'c-cpu') + 'EC2 servers of its own', node('cat', 'bolt', 'c-sw', 'Catalogue service', 'home page, products, search')) +
+            box('k8-c2 k8-r12', icon('chip', 'c-cpu') + 'own EC2 servers', node('cat', 'bolt', 'c-sw', 'Catalogue service', 'home page, products, search')) +
             box('k8-c2 k8-r3', icon('chip', 'c-cpu') + '3 × EC2 c7g.2xlarge', node('core', 'bolt', 'c-sw', 'Core API', 'carts, orders, payments')) +
             at('k8-c3 k8-r1', node('redis', 'cache', 'c-db', 'Redis', 'cached pages, r7g.large')) +
             at('k8-c3 k8-r2', node('os', 'search', 'c-db', 'OpenSearch', 'the search index')) +
@@ -1953,25 +2030,7 @@ window.ZTM = window.ZTM || {};
           '</div>' +
         '</div>'
     });
-
-    /* On a screen narrower than the diagram, scale the whole picture down to fit instead of squeezing
-       its columns. Phones scroll it sideways instead. */
-    var scroller = el.querySelector('.arch-scroll'), inner = scroller.firstChild, ar = inner.querySelector('.ar2');
-    var desk = window.matchMedia ? window.matchMedia('(min-width: 721px)') : null;
-    function fit() {
-      inner.style.width = inner.style.transform = scroller.style.height = scroller.style.overflow = '';
-      if (desk && !desk.matches) return;
-      var natural = ar.offsetWidth, room = scroller.clientWidth;
-      if (!room || natural <= room + 1) return;
-      var s = room / natural;
-      inner.style.width = natural + 'px';
-      inner.style.transform = 'scale(' + s + ')';
-      scroller.style.height = inner.offsetHeight * s + 'px';
-      scroller.style.overflow = 'hidden';
-    }
-    fit();
-    if (window.ResizeObserver) new ResizeObserver(fit).observe(scroller);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    fitWide(el);
   };
 
   /* ---------- Chapter 9: a product page's photos, from Mumbai or from an edge in the shopper's city ---------- */

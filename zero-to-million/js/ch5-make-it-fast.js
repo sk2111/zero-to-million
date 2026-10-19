@@ -246,6 +246,16 @@ def add_to_cart(cart_id, product_id, quantity):
         <p>Nothing is broken: every part did exactly what it was built to do. This is how a system with copies behaves. Try it:</p>
         <div class="widget" data-widget="lag-sim"></div>
 
+        <h2>Welcome to distributed systems</h2>
+        <ol class="points">
+          <li>The missing order is a classic distributed-systems problem. A <strong>distributed system</strong> is separate machines that work together by sending messages over a network, and look like one system to the people using it.</li>
+          <li>Tomazon has been one since the database got its own server (page 3.2). Two machines are enough: what makes a system distributed is the network between its parts, not how many parts there are.</li>
+          <li>Inside one machine, a call between two programs takes microseconds and never gets lost. Across a network, three things change:</li>
+          <li><strong>Every message takes time.</strong> The order took 400 ms to reach the replica, and until it arrived, the two copies disagreed.</li>
+          <li><strong>Messages get lost or delayed.</strong> When no answer comes back in time, you can’t tell whether the request was lost, the answer was lost, or the other side is just slow.</li>
+          <li><strong>Parts fail on their own.</strong> One machine can be down, or cut off, while the others keep running: a <strong>partial failure</strong>. On one server, everything was up or down together.</li>
+        </ol>
+
         <h2>The CAP theorem</h2>
         <ol class="points">
           <li>A system that keeps copies of its data on several machines would like to promise three things:</li>
@@ -268,7 +278,6 @@ def add_to_cart(cart_id, product_id, quantity):
           </tbody>
         </table>
         <ol class="points" start="5">
-          <li>CAP only covers the moment the network breaks. Most of the time it works, and the same choice comes back in a smaller form on every single write.</li>
           <li>When a shopper places an order, the primary can tell them “done” in one of two ways:</li>
         </ol>
         <table class="data">
@@ -278,7 +287,7 @@ def add_to_cart(cart_id, product_id, quantity):
             <tr><td>Answers at once, and sends the order to the replicas a moment later</td><td>Fast</td><td>Can miss the newest order for a few milliseconds</td></tr>
           </tbody>
         </table>
-        <ol class="points" start="7">
+        <ol class="points" start="6">
           <li>This extension of CAP is called <strong>PACELC</strong>. Read it as two choices: if there’s a <strong>P</strong>artition, choose <strong>A</strong>vailability or <strong>C</strong>onsistency (that’s CAP); <strong>E</strong>lse, when everything works, choose low <strong>L</strong>atency or <strong>C</strong>onsistency.</li>
           <li>PostgreSQL’s default, asynchronous replication, doesn’t wait: it chooses low latency, and accepts the lag you saw above.</li>
         </ol>
@@ -379,7 +388,6 @@ def my_orders(request: Request):
         <h2>Where this leads</h2>
         <ol class="points">
           <li>With the replicas sharing the reads, the database is calm again, and Tomazon keeps growing.</li>
-          <li>But every replica still answers the same questions over and over: the same home page and the same popular products, rebuilt for every shopper. Chapter 6 keeps the answers instead.</li>
         </ol>
 
         <aside class="note design">

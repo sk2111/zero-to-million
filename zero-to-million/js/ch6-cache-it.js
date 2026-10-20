@@ -163,7 +163,7 @@ async def home():
 
         <h2>Where Redis sits</h2>
         <p>Redis gets a server of its own on the private network, next to the database. Step through a hit and a miss:</p>
-        <div class="widget" data-widget="cache-arch"></div>
+        <div class="widget wide" data-widget="cache-arch"></div>
         <ol class="points">
           <li><strong>The result:</strong> the home page drops from about a second to about 2 ms. Its database load drops from 50,000 queries a second to 100 queries every 5 minutes.</li>
           <li><strong>Size it for what you cache.</strong> The home page is about 200 KB, and 10,000 product pages at about 20 KB each are 200 MB. An r7g.large with 16 GB leaves plenty of room. Amazon ElastiCache runs the same Redis as a managed service.</li>

@@ -153,7 +153,7 @@ ZTM.content[5] = {
         </ol>
 
         <p>Here’s how the architecture changes. Step through it to see a read, a write, and how the change reaches the replicas:</p>
-        <div class="widget" data-widget="replica-live"></div>
+        <div class="widget wide" data-widget="replica-live"></div>
 
         <h2>How PostgreSQL keeps the replicas up to date</h2>
         <ol class="steps">

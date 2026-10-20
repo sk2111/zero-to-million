@@ -54,7 +54,6 @@ ZTM.content[8] = {
         <h2>More readers are coming</h2>
         <ol class="points">
           <li>Chapter 7 ended with a plan: services stop calling each other and waiting. Instead, one records what happened, such as “payment received”, and the others act on it when they can.</li>
-          <li><strong>The catalogue service</strong> wants its own copy of the products (page 7.3).</li>
           <li><strong>Search</strong> needs every product change to keep its results right.</li>
           <li><strong>A placed order</strong> should send an email, book a delivery and update the sales dashboard, without the order service waiting for any of them.</li>
           <li>Each of them needs every change, even ones made while it was down. As the invalidator showed, LISTEN/NOTIFY can’t promise that.</li>
@@ -94,7 +93,7 @@ ZTM.content[8] = {
           </tbody>
         </table>
         <ol class="points">
-          <li>Tomazon’s problem is a fact: “product 1042’s price changed”. The cache invalidator, the catalogue and search all need it, each at its own pace.</li>
+          <li>Tomazon’s problem is a fact: “product 1042’s price changed”. The cache invalidator and search both need it, each at its own pace.</li>
           <li>A queue for each reader would work, but the sender would have to know every reader, and a new reader couldn’t get the history. A log fits.</li>
           <li>Jobs still suit a queue. Sending order emails, for example, is one job per order, and a queue’s retries and dead-letter queue are exactly what it needs.</li>
         </ol>
@@ -294,7 +293,7 @@ cache-invalidator  tomazon.public.products  2          46875           47302    
           <tbody>
             <tr><td>The cluster</td><td>Amazon MSK, three brokers, one per zone</td></tr>
             <tr><td>Getting changes in</td><td>Debezium, reading the database’s WAL</td></tr>
-            <tr><td>Readers</td><td>The cache invalidator (2 copies), the search indexer and the catalogue service</td></tr>
+            <tr><td>Readers</td><td>The cache invalidator (2 copies) and the search indexer</td></tr>
             <tr><td>Safety</td><td>3 copies of every message, readers safe to repeat, and alerts on lag</td></tr>
           </tbody>
         </table>

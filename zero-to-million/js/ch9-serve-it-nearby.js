@@ -100,7 +100,7 @@ ZTM.content[9] = {
         <p>Step through a product page from New York:</p>
         <div class="widget" data-widget="cdn-arch"></div>
         <p>And the whole of Tomazon, with shoppers in India and in New York:</p>
-        <div class="widget" data-widget="cdn-full"></div>
+        <div class="widget wide" data-widget="cdn-full"></div>
 
         <h2>What belongs on a CDN</h2>
         <table class="data">

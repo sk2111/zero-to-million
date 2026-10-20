@@ -7,8 +7,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[10] = {
   intro: `
     <ol class="points lede">
-      <li>Tomazon passes 5 million users. It runs six kinds of program, about 20 copies in all, on servers that people look after by hand.</li>
-      <li>This chapter shows why containers alone aren’t enough, and hands the running of the programs to Kubernetes.</li>
+      <li>Tomazon passes 5 million users.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
@@ -71,7 +70,7 @@ ZTM.content[10] = {
           <li>All the programs move into the cluster. An Application Load Balancer, set up by Kubernetes, replaces the Nginx load balancer from chapters 4 and 7.</li>
           <li><strong>The data stays outside:</strong> PostgreSQL and Redis on their own EC2 servers, Kafka on MSK, photos on S3 and CloudFront. A pod can be replaced at any moment; the data can’t.</li>
         </ol>
-        <div class="widget" data-widget="eks-arch"></div>`
+        <div class="widget wide" data-widget="eks-arch"></div>`
     }
   ]
 };

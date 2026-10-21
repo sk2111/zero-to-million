@@ -8,7 +8,6 @@ ZTM.content[14] = {
   intro: `
     <ol class="points lede">
       <li>Tomazon passes 25 million users. Every design from chapters 2 to 13 works. Then the month’s AWS bill arrives: $180,000.</li>
-      <li>This last chapter finds where the money goes, cuts what’s wasted, decides what belongs in the cloud, and ends with what the whole journey comes down to.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

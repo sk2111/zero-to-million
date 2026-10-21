@@ -8,7 +8,6 @@ ZTM.content[13] = {
   intro: `
     <ol class="points lede">
       <li>Tomazon passes 20 million users, and opens in Singapore and Ohio. With Mumbai and Frankfurt, that makes four regions.</li>
-      <li>This chapter gives each region its own complete shop, and moves each customer’s data to the region they shop from.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>

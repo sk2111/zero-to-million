@@ -23,6 +23,8 @@
       });
     }
   });
+  /* The cheat sheet comes last, after the takeaways: the whole journey on one page. */
+  if (ZTM.cheatsheet) pages.push({ kind: 'cheat', id: 'cheatsheet', title: 'Cheat sheet' });
 
   function current() {
     var id = location.hash.replace(/^#\/?/, '');
@@ -59,7 +61,11 @@
       }
       html += '</li>';
     });
-    document.getElementById('toc').innerHTML = html + '</ol>';
+    html += '</ol>';
+    if (ZTM.cheatsheet) html += '<a class="toc-cheat" href="#/cheatsheet"' + (p.kind === 'cheat' ? ' aria-current="page"' : '') + '>' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 15.5h5M10 19h3"/></svg>' +
+      '<span>Cheat sheet<small>System design on one page</small></span></a>';
+    document.getElementById('toc').innerHTML = html;
   }
 
   /* ---------- pages ---------- */
@@ -79,10 +85,12 @@
         '<p class="hero-sub">A practical guide to scaling your app from zero to a&nbsp;million users.</p>' +
         '<div class="us" data-widget="user-scale"></div>' +
         '<div class="hero-actions"><a class="btn primary" href="#/1">Start chapter 1</a>' +
-        '<button type="button" class="btn" data-scroll="roadmap">See all chapters</button></div>' +
+        '<button type="button" class="btn" data-scroll="roadmap">See all chapters</button>' +
+        (ZTM.cheatsheet ? '<a class="btn" href="#/cheatsheet">Cheat sheet</a>' : '') + '</div>' +
       '</section>' +
       '<section class="roadmap" id="roadmap">' +
         '<div class="roadmap-head"><h2>The chapters</h2><ol class="points">' +
+        '<li>There’s a lot to learn in system design, and these chapters won’t cover all of it. Treat them as a way to widen your knowledge.</li>' +
         '<li>There is no one right way to design a system, but every good system is built on the same fundamentals.</li>' +
         '<li>Each chapter starts where the last one stopped.</li>' +
         '<li>We add a new piece to the system only when the current design runs out of room.</li>' +
@@ -158,7 +166,7 @@
   function render() {
     var i = current(), p = pages[i];
     if (ZTM.hideTip) ZTM.hideTip();
-    var body = p.kind === 'home' ? homeHtml() : p.kind === 'cover' ? coverHtml(p) : sectionHtml(p);
+    var body = p.kind === 'home' ? homeHtml() : p.kind === 'cover' ? coverHtml(p) : p.kind === 'cheat' ? ZTM.cheatsheet() : sectionHtml(p);
     pageEl.className = 'page page-' + p.kind;
     pageEl.innerHTML = '<div class="page-inner">' + body + (p.kind === 'home' ? '' : pagerNav(i)) + '</div>';
     pageEl.querySelectorAll('[data-widget]').forEach(function (el) {
@@ -177,6 +185,7 @@
     renderToc(p);
 
     document.getElementById('crumb').innerHTML = p.kind === 'home' ? '<b>Zero to a million users</b>'
+      : p.kind === 'cheat' ? '<b>Cheat sheet</b>'
       : p.kind === 'cover' ? '<span>Chapter ' + p.ch.n + '</span><b>' + esc(p.ch.title) + '</b>'
       : '<a href="#/' + p.ch.n + '">' + esc(p.ch.title) + '</a><span class="sep" aria-hidden="true">/</span><b>' + p.num + ' ' + esc(p.sec.title) + '</b>';
     var inCh = p.ch ? pages.filter(function (x) { return x.ch === p.ch; }) : [];
@@ -245,6 +254,7 @@
   });
 
   pageEl.addEventListener('click', function (e) {
+    if (e.target.closest('[data-print]')) { window.print(); return; }
     var b = e.target.closest('[data-scroll]');
     var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (b) document.getElementById(b.getAttribute('data-scroll')).scrollIntoView({ behavior: calm ? 'auto' : 'smooth' });

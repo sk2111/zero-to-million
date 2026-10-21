@@ -123,6 +123,12 @@ $180,000 a month goes, cost per 1,000 orders, tuning first, cloud vs your own se
 steady part, the before and after) · What it all comes down to (the journey in one table, the
 takeaways, and what to observe from day one).
 
+After chapter 14 comes the cheat sheet (`index.html#/cheatsheet`, also linked from the home page and
+the sidebar): system design on one printable page, kept free of the running example. It has the key
+takeaways, the loop every chapter runs, the latency ladder and back-of-the-envelope numbers, the 13
+scaling patterns (when you see it, what to add, the trade-off), the trade-offs to know, every rule
+of thumb linked to its page, and what to watch.
+
 ## Files
 
 ```
@@ -143,6 +149,7 @@ js/ch11-go-to-the-edge.js     Chapter 11's pages
 js/ch12-split-the-data.js     Chapter 12's pages
 js/ch13-go-global.js          Chapter 13's pages
 js/ch14-count-the-cost.js     Chapter 14's pages, and the takeaways
+js/cheatsheet.js         the cheat sheet: system design on one page, after chapter 14
 js/widgets.js            the interactive pieces, mounted by data-widget="…"
 js/app.js                routing, sidebar, keys, prev/next
 ```

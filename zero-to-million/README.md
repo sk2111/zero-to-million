@@ -132,7 +132,7 @@ of thumb linked to its page, and what to watch.
 ## Files
 
 ```
-index.html               the shell: sidebar, top bar, page area
+index.html               the shell: sidebar, top bar, page area, and the PostHog setup
 css/style.css            all styles, light and dark
 js/chapters.js           the roadmap: every chapter's title, users, status, planned topics
 js/ch1-fundamentals.js   Chapter 1's pages (HTML in template strings)
@@ -170,3 +170,19 @@ The building blocks used in Chapter 1's HTML are `.lede`, `.figures`, `.split`, 
 Layout: every block on a page (text, notes, tables, terminals, widgets and diagrams) shares one
 centred column (`--column`), so all the edges line up. Type is IBM Plex Sans and IBM Plex Mono;
 sizes come from the `--fs-*` tokens at the top of `css/style.css`.
+
+## Analytics
+
+The published site reports reading to PostHog; the setup is at the top of `index.html`. It runs
+only on `sk2111.github.io`, so opening the files locally, or a fork's copy, reports nothing.
+
+- Pages are hash routes (`#/1/cpu`), so `app.js` sends each page view itself, with `page`,
+  `page_kind`, `chapter`, `section`, `prev_page`, `theme`, and `via`: how the reader got there
+  (`entry`, `key` for arrow keys and clickers, `button`, `link`, or `other` for back, forward and
+  typed addresses).
+- Three more events: `widget used` (the first time a reader works each interactive piece on a
+  page), `commands copied`, and `page printed`.
+- PostHog adds the rest itself: clicks, time on page and scroll depth (on the next page view, and
+  on `$pageleave` for the last page), the referrer, the country and the device.
+- Open the site once with `?notrack` (`https://sk2111.github.io/zero-to-million/?notrack`) to stop
+  counting your own visits in that browser. `?track` counts them again.

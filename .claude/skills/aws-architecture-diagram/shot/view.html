@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagram check</title>
+<!-- Opens the book from this repo at a page, presses a widget's step button, and moves the widget to the
+     top of the screen for a headless screenshot. Query: page, w, steps, noside, theme, dy. See shot.ps1. -->
+<link rel="stylesheet" href="../../../../zero-to-million/css/style.css">
+</head>
+<body>
+<div class="shell" id="shell">
+  <aside class="side" id="side" aria-label="Chapters">
+    <a class="side-brand" href="#/"><span class="side-title">Zero to a million users</span></a>
+    <div class="side-head" aria-hidden="true"><span>Chapter</span><span>Users</span></div>
+    <nav class="toc" id="toc"></nav>
+    <div class="side-foot">
+      <div class="theme" role="group" aria-label="Theme">
+        <button type="button" data-theme-set="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+  <div class="stage">
+    <header class="bar">
+      <button type="button" class="icon-btn" id="sideToggle" aria-controls="side" aria-expanded="true"><span class="sr">Chapters</span></button>
+      <div class="crumb" id="crumb"></div>
+      <div class="pager"><span class="count" id="count"></span>
+        <button type="button" class="icon-btn" id="prevBtn"><span class="sr">Previous page</span></button>
+        <button type="button" class="icon-btn" id="nextBtn"><span class="sr">Next page</span></button>
+      </div>
+    </header>
+    <main class="page" id="page" tabindex="-1"></main>
+  </div>
+</div>
+<div class="tooltip" id="tip" role="tooltip" hidden></div>
+<script>
+  var Q = new URLSearchParams(location.search);
+  if (Q.get('theme')) document.documentElement.setAttribute('data-theme', Q.get('theme'));
+  /* The headless clock never finishes CSS transitions, so faded parts would look unfaded: switch them off. */
+  document.write('<style>*, *::before, *::after { transition: none !important; }</style>');
+  location.hash = '#/' + (Q.get('page') || '8/running-kafka');
+</script>
+<script src="../../../../zero-to-million/js/chapters.js"></script>
+<script src="../../../../zero-to-million/js/ch1-fundamentals.js"></script>
+<script src="../../../../zero-to-million/js/ch2-one-server.js"></script>
+<script src="../../../../zero-to-million/js/ch3-scale-up.js"></script>
+<script src="../../../../zero-to-million/js/ch4-scale-out.js"></script>
+<script src="../../../../zero-to-million/js/ch5-make-it-fast.js"></script>
+<script src="../../../../zero-to-million/js/ch6-cache-it.js"></script>
+<script src="../../../../zero-to-million/js/ch7-split-the-monolith.js"></script>
+<script src="../../../../zero-to-million/js/ch8-publish-events.js"></script>
+<script src="../../../../zero-to-million/js/ch9-serve-it-nearby.js"></script>
+<script src="../../../../zero-to-million/js/ch10-run-many-services.js"></script>
+<script src="../../../../zero-to-million/js/ch11-go-to-the-edge.js"></script>
+<script src="../../../../zero-to-million/js/ch12-split-the-data.js"></script>
+<script src="../../../../zero-to-million/js/ch13-go-global.js"></script>
+<script src="../../../../zero-to-million/js/ch14-count-the-cost.js"></script>
+<script src="../../../../zero-to-million/js/cheatsheet.js"></script>
+<script src="../../../../zero-to-million/js/widgets.js"></script>
+<script src="../../../../zero-to-million/js/app.js"></script>
+<script>
+  if (Q.get('noside')) document.getElementById('shell').classList.add('side-hidden');
+  /* print=1: apply the @media print rules on screen, to check a printed page (use -W 800 for A4) */
+  if (Q.get('print')) {
+    var printCss = '';
+    [].forEach.call(document.styleSheets, function (s) {
+      try { [].forEach.call(s.cssRules, function (r) { if (r.media && /print/.test(r.media.mediaText)) [].forEach.call(r.cssRules, function (x) { printCss += x.cssText + '\n'; }); }); } catch (e) {}
+    });
+    var ps = document.createElement('style'); ps.textContent = printCss; document.head.appendChild(ps);
+  }
+  setTimeout(function () {
+    /* at=<css selector> moves any element to the top instead of a widget, e.g. at=.cs-rules */
+    var w = document.querySelector(Q.get('at') || '[data-widget="' + (Q.get('w') || 'kafka-full') + '"]');
+    if (!w) { document.title = 'NO WIDGET'; return; }
+    var n = +(Q.get('steps') || 0), b = w.querySelector('[data-next]');
+    for (var i = 0; i < n; i++) b.click();
+    /* A headless screenshot ignores scrolling, so move the page up until the widget is at the top. */
+    var top = w.getBoundingClientRect().top + window.scrollY - (+(Q.get('dy') || 20));
+    document.getElementById('shell').style.transform = 'translateY(' + (-top) + 'px)';
+    /* measure=1: print the diagram's natural size, each region's height and the fitted scale, top right */
+    if (Q.get('measure')) {
+      var ar = w.querySelector('.ar2'), inner = w.querySelector('.arch-scroll > div'), m = document.createElement('pre');
+      m.style.cssText = 'position:fixed;top:0;right:0;z-index:99;margin:0;padding:6px 10px;background:#ffeb3b;font:12px/1.4 monospace';
+      m.textContent = 'ar2 ' + ar.offsetWidth + ' x ' + ar.offsetHeight + '  window ' + innerWidth + ' x ' + innerHeight +
+        '\nscale ' + (inner.style.transform || 'none') + '\nregions ' + [].map.call(ar.querySelectorAll('.ar2-region'), function (r) { return r.offsetHeight; }).join(', ');
+      document.body.appendChild(m);
+    }
+  }, 1200);
+</script>
+</body>
+</html>

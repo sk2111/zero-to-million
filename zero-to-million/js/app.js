@@ -31,9 +31,23 @@
     for (var i = 0; i < pages.length; i++) if (pages[i].id === id) return i;
     return 0;
   }
-  function go(i) {
+  function go(i, how) {
     if (i < 0 || i >= pages.length) return;
+    via = how;
     location.hash = '#/' + pages[i].id;
+  }
+
+  /* ---------- analytics ---------- */
+
+  /* PostHog is set up in index.html. Where it isn't running (local copies, forks,
+     blockers) track() does nothing. Every event says which page it happened on;
+     a page view also says how the reader got there: entry (the page the visit
+     opened on), key (arrow keys or a clicker), button, link, or other (back,
+     forward, a typed address). */
+  var via = 'entry', lastPage = null, used = {};
+  function track(event, props) { if (window.posthog) posthog.capture(event, props); }
+  function where(p) {
+    return { page: p.id || 'home', page_kind: p.kind, chapter: p.ch ? p.ch.n : null, section: p.num || null };
   }
 
   /* ---------- sidebar ---------- */
@@ -156,7 +170,10 @@
           lines.push(cont ? l : l.replace(/^\$ /, '').replace(/\s+#.*$/, ''));
           cont = /\\$/.test(l);
         });
-        var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy commands'; }, 1600); };
+        var done = function () {
+          track('commands copied', where(pages[current()]));
+          b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy commands'; }, 1600);
+        };
         if (navigator.clipboard) navigator.clipboard.writeText(lines.join('\n')).then(done, function () {});
       });
       t.appendChild(b);
@@ -193,6 +210,13 @@
     document.getElementById('prevBtn').disabled = i === 0;
     document.getElementById('nextBtn').disabled = i === pages.length - 1;
     document.title = p.kind === 'home' ? 'Zero to a Million Users' : p.title + ' – Zero to a Million Users';
+
+    /* $pathname carries the route too, so PostHog's web analytics lists each page on its own. */
+    track('$pageview', Object.assign(where(p), {
+      via: via, prev_page: lastPage, theme: document.documentElement.getAttribute('data-theme'),
+      $pathname: location.pathname + '#/' + p.id
+    }));
+    via = 'other'; lastPage = where(p).page; used = {};
 
     window.scrollTo(0, 0);
     pageEl.focus({ preventScroll: true });
@@ -240,15 +264,21 @@
 
   /* ---------- keys and buttons ---------- */
 
-  document.getElementById('prevBtn').addEventListener('click', function () { go(current() - 1); });
-  document.getElementById('nextBtn').addEventListener('click', function () { go(current() + 1); });
+  document.getElementById('prevBtn').addEventListener('click', function () { go(current() - 1, 'button'); });
+  document.getElementById('nextBtn').addEventListener('click', function () { go(current() + 1, 'button'); });
+
+  /* A plain click on a link to another page: the sidebar, the pager, a link in the text. */
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[href^="#/"]');
+    if (a && !e.ctrlKey && !e.metaKey && !e.shiftKey && a.getAttribute('href') !== '#/' + pages[current()].id) via = 'link';
+  });
 
   document.addEventListener('keydown', function (e) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     var t = e.target;
     if (t.closest && t.closest('input, select, textarea, [role="radiogroup"], [contenteditable]')) return;
-    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(current() + 1); }
-    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(current() - 1); }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(current() + 1, 'key'); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(current() - 1, 'key'); }
     else if (e.key === 's' || e.key === 'S') { setSide(!sideOpen()); }
     else if (e.key === 'Escape' && narrow.matches) { setSide(false); }
   });
@@ -259,6 +289,18 @@
     var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (b) document.getElementById(b.getAttribute('data-scroll')).scrollIntoView({ behavior: calm ? 'auto' : 'smooth' });
   });
+
+  /* The first time a reader works each interactive piece on a page: a slider, a switch, a button.
+     Hovering a diagram doesn't count. */
+  function widgetUsed(e) {
+    var w = e.target.closest('[data-widget]'), name = w && w.getAttribute('data-widget');
+    if (!name || used[name] || (e.type === 'click' && !e.target.closest('button'))) return;
+    used[name] = true;
+    track('widget used', Object.assign(where(pages[current()]), { widget: name }));
+  }
+  pageEl.addEventListener('click', widgetUsed);
+  pageEl.addEventListener('input', widgetUsed);
+  window.addEventListener('beforeprint', function () { track('page printed', where(pages[current()])); });
 
   window.addEventListener('hashchange', render);
   render();

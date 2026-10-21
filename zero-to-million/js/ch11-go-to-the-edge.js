@@ -7,8 +7,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[11] = {
   intro: `
     <ol class="points lede">
-      <li>Tomazon passes 7 million users and opens in Europe. European shoppers find it slow, although every server is fast.</li>
-      <li>This chapter finds where the time goes, and moves the work closer to them.</li>
+      <li>Tomazon passes 7 million users and opens in Europe.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
@@ -57,10 +56,13 @@ ZTM.content[11] = {
 
         <h2>Where the edge helps</h2>
         <ol class="points">
-          <li><strong>Edge computing</strong> means doing work at locations close to the shopper, instead of only in one region.</li>
-          <li><strong>End the connection at the edge.</strong> CloudFront now sits in front of <code>tomazon.com</code> itself, not just the photos. The shopper connects to an edge about 10 ms away, and the edge keeps its connections to Mumbai open. Two of the three long round trips go.</li>
-          <li><strong>Cache whole pages at the edge.</strong> The personal parts of a product page, the shopper’s name and cart, and the fast-changing price and stock, now load after the page. The page is then the same for everyone, so an edge keeps it for 60 seconds, and its first byte arrives in about 40 ms.</li>
-          <li><strong>Not everything can be cached.</strong> Prices, stock and search results change by the second. Code at the edge that asks Mumbai for them pays the long trip anyway. For those, the app and its data have to be in Europe too.</li>
+          <li>So far the edges only serve photos. CloudFront can sit in front of <code>tomazon.com</code> itself too, so every request from a shopper in Frankfurt goes first to an edge in Frankfurt, about 10 ms away.</li>
+          <li><strong>Edge computing</strong> means doing work at these edges, close to the shopper, instead of all of it in one region. Here is what the edge can do for a product page, and what it can’t.</li>
+        </ol>
+        <ol class="points">
+          <li><strong>The handshakes stay local.</strong> Before asking for a page, the browser connects to the server and agrees on encryption with it: two round trips. From Frankfurt, each one goes to Mumbai and back, about 125 ms. With CloudFront in front, both happen with the edge, 10 ms away. The edge sends the request on to Mumbai over a connection it keeps open, as it does for a photo it doesn’t have (page 9.2). The page now crosses to Mumbai once, not three times.</li>
+          <li><strong>The page itself is kept at the edge.</strong> Most of a product page is the same for every shopper: the product’s name, description and photos. Two kinds of part aren’t: the shopper’s own name and cart, and the price and stock, which change by the second. Tomazon takes those out of the page and loads them with separate calls, after it. The rest is the same for everyone, so the edge keeps a copy for 60 seconds, as it does a photo. The first byte arrives in about 40 ms, without going to Mumbai at all.</li>
+          <li><strong>Price, stock and search still go to Mumbai.</strong> They change by the second, so a copy at the edge would soon be wrong. CloudFront can also run small programs at the edge, but a program that needs a price still has to ask Mumbai for it, 125 ms away. To make these fast, the app and a copy of its data have to be in Europe too.</li>
         </ol>
 
         <h2>The new architecture</h2>
@@ -70,7 +72,7 @@ ZTM.content[11] = {
           <li><strong>Writes go home.</strong> Carts, orders, payments and accounts go to Mumbai, where the only primary is: one long round trip, at moments when shoppers expect to wait a little.</li>
           <li><strong>The copy is a little behind.</strong> Right after a shopper changes something, their reads go to Mumbai for a few seconds, so they see their own change (page 5.4).</li>
         </ol>
-        <div class="widget" data-widget="edge-regions"></div>
+        <div class="widget wide" data-widget="edge-regions"></div>
         <table class="data">
           <thead><tr><th>For a shopper in Frankfurt</th><th>Before</th><th>After</th></tr></thead>
           <tbody>

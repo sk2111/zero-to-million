@@ -971,91 +971,6 @@ window.ZTM = window.ZTM || {};
     });
   };
 
-  /* Chapters 5 and 6 keep chapter 4's architecture and add to it: read replicas in chapter 5,
-     then Redis and the cache invalidator in chapter 6. o: { who, users, cache, inv } */
-  function growLayout(o) {
-    var node = archNode;
-    var apps = o.apps || [['FastAPI', 'app server 1'], ['FastAPI', 'app server 2'], ['FastAPI', 'app server 3']];
-    return (o.left || '<div class="ar2-left">' +
-        node('users', 'user', 'c-user', o.who || 'Users', o.users) +
-        node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
-      '</div>') +
-      '<div class="ar2-region">' +
-        '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
-        '<div class="ar2-vpc"><p class="ar2-k">VPC</p>' +
-          '<div class="ar3-subnet"><p class="ar2-k">Public subnet</p>' +
-            '<div class="ar2-row">' +
-              '<div class="ar2-edge ar3-edge">' +
-                node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address') +
-                node('sg', 'shield', 'c-sec', 'Security group', '443 open') +
-              '</div>' +
-              '<div class="ar2-ec2 ar4-lb"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'Load balancer: EC2 c7g.medium</p>' +
-                node('lb', 'proxy', 'c-net', 'Nginx', 'least_conn, health checks') +
-              '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="ar3-subnet ar3-private" data-p="apps">' +
-            '<div class="ar2-ec2 g-apps"><div class="g-three">' +
-              node('app1', 'bolt', 'c-sw', apps[0][0], apps[0][1]) +
-              node('app2', 'bolt', 'c-sw', apps[1][0], apps[1][1]) +
-              node('app3', 'bolt', 'c-sw', apps[2][0], apps[2][1]) +
-            '</div><p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + (o.appCap || '3 × EC2 c7g.2xlarge, 8 workers each' + (o.cache ? '; check Redis first' : '')) + '</p></div>' +
-            '<p class="ar2-k g-foot">Private subnet: app servers</p>' +
-          '</div>' +
-          '<div class="g-data' + (o.cache ? ' with-cache' : '') + '">' +
-            (o.cache
-              ? '<div class="ar3-subnet ar3-private">' +
-                  '<div class="ar2-ec2 ar3-db">' + node('redis', 'cache', 'c-db', 'Redis', 'finished pages') +
-                  '<p class="ar2-k ar4-cap">' + icon('cache', 'c-db') + 'r7g.large, 16 GB, 10.0.4.10</p></div>' +
-                  '<p class="ar2-k g-foot">Private subnet: cache</p>' +
-                '</div>'
-              : '') +
-            '<div class="ar3-subnet ar3-private">' +
-              '<div class="ar2-ec2 ar3-db"><div class="g-primary">' +
-                '<div class="g-pgb">' + node('pgb', 'proxy', 'c-db', 'PgBouncer', 'port 6432: one pool of 20') + '</div>' +
-                '<div class="g-db">' + node('db', 'db', 'c-sw', 'PostgreSQL', 'the primary: every write') + '</div>' +
-                (o.inv ? '<div class="g-inv">' + node('inv', 'bolt', 'c-sw', 'Cache invalidator', 'LISTENs on localhost') + '</div>' : '') +
-                '<div class="g-disk">' + node('disk', 'disk', 'c-sto', 'EBS gp3 disk', '100 GB') + '</div>' +
-              '</div><p class="ar2-k ar4-cap">' + icon('db', 'c-db') + 'Primary: EC2 r7g.large, 10.0.2.14</p></div>' +
-              '<p class="ar2-k g-foot left">Private subnet: database</p>' +
-            '</div>' +
-            '<div class="ar3-subnet ar3-private" data-p="reps">' +
-              '<div class="g-reps">' +
-                node('rep1', 'db', 'c-db', 'Replica 1', 'read-only, via db-read.internal') +
-                node('rep2', 'db', 'c-db', 'Replica 2', 'read-only, via db-read.internal') +
-              '</div>' +
-              '<p class="ar2-k g-foot">Private subnet: replicas</p>' +
-            '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="g-bak' + (o.cache ? ' with-cache' : '') + '">' +
-          '<div class="g-s3">' + node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', o.s3sub || 'product photos, fetched by browsers') + '</div>' +
-          '<div class="g-snap">' + node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') + '</div>' +
-        '</div>' +
-      '</div>';
-  }
-
-  /* The wires every stage shares: chapter 4's path in, and to the primary, plus the replicas. */
-  function growWires(o) {
-    return [
-      ['dns', 'users', 'dns', 'v', 'DNS lookup'],
-      ['in', 'users', 'eip', 'h', 'HTTPS'],
-      ['fw', 'eip', 'sg', 'v', ''],
-      ['lb', 'sg', 'lb', 'h', ''],
-      ['a1', 'lb', 'app1', 'v', ''],
-      ['a2', 'lb', 'app2', 'v', ''],
-      ['a3', 'lb', 'app3', 'v', 'least connections'],
-      ['w', 'apps', 'pgb', 'vb', ''],
-      ['r', 'apps', 'reps', 'vb', ''],
-      ['pool', 'pgb', 'db', 'v', ''],
-      ['io', 'db', 'disk', 'v', ''],
-      ['wal1', 'db', 'rep1', 'h', 'WAL', true],
-      ['wal2', 'db', 'rep2', 'h', '', true],
-      ['bak', 'disk', 'snap', 'v', 'daily', true],
-      ['ph', 'users', 's3', 'h', '']
-    ].concat(o.cache ? [['c', 'apps', 'redis', 'vb', '']] : [])
-     .concat(o.inv ? [['note', 'db', 'inv', 'v', '', true], ['del', 'redis', 'inv', 'h', 'DEL', 'rev']] : []);
-  }
   /* A request's way in and back out, through a given app server. */
   function inPath(app) { return [['in', 0], ['fw', 0], ['lb', 0], [app, 0]]; }
   function outPath(app) { return [[app, 1], ['lb', 1], ['fw', 1], ['in', 1]]; }
@@ -1446,7 +1361,7 @@ window.ZTM = window.ZTM || {};
           '<div class="hq-chrome"><i></i><i></i><i></i><span>tomazon.com</span></div>' +
           sec('header', '<div class="hq-top"><b class="hq-logo">tomazon</b><span class="hq-search">Search Tomazon</span><span class="hq-cart">Cart</span></div>' +
             '<div class="hq-menu">' + ['Electronics', 'Home &amp; Kitchen', 'Fashion', 'Grocery', 'Books', 'Toys'].map(function (c) { return '<span>' + c + '</span>'; }).join('') + '</div>') +
-          sec('banners', '<div class="hq-hero"><b>The 8 p.m. sale</b><span>Up to 60% off, tonight only</span></div>') +
+          sec('banners', '<div class="hq-hero"><b>The 6 p.m. sale</b><span>Up to 60% off, tonight only</span></div>') +
           shelf('deals', 'Today’s deals', 8) +
           shelf('tr1', 'Trending in Electronics', 6) +
           shelf('tr2', 'Trending in Home &amp; Kitchen', 6) +
@@ -1931,7 +1846,7 @@ window.ZTM = window.ZTM || {};
     });
   };
 
-  /* ---------- Chapters 8 to 10: the whole architecture, on one sideways grid ---------- */
+  /* ---------- Chapters 8 to 13: the whole architecture, on one sideways grid ---------- */
 
   /* Seven columns: the public subnet; the app servers; Redis, OpenSearch and the replicas, one under the
      other; the database server across two narrow columns; the workers; Kafka. The catalogue spans the first
@@ -1943,21 +1858,34 @@ window.ZTM = window.ZTM || {};
      o: { who, users, s3sub,
           shops: [{ id, title, sub, edge, edgeSub }]  (chapter 9 on: shoppers, each with a CloudFront edge
             beside them, photos through the edge; the way in starts at the top, above the edges),
-          eks }  (chapter 10 on: pods in one EKS cluster, behind an ALB that Kubernetes set up) */
+          eks  (chapter 10 on: pods in one EKS cluster, behind an ALB that Kubernetes set up),
+          europe  (chapter 11 on: shoppers in India and in Europe, shopIn and shopFr, with all their traffic
+            through their edges, edgeIn and edgeFr),
+          fra: 'reads' or 'cell', fraLabel  (chapter 11 on: the Frankfurt region, under Mumbai; see c11Frankfurt),
+          shards: { label, subs }  (chapter 12 on: four order shards, in a row of their own),
+          pgCap, pgSub  (the primary's server, and what it holds, once they change) } */
   function c8Wires(o) {
     var entry = o.eks ? 'lb' : 'eip', w = [];
-    if (o.shops) {
+    /* Wires from the left-hand column turn on two lanes in the gap before the region: the first goes up to
+       the way in, the second down to S3 and Frankfurt, clear of the edges' frame and of the region's border */
+    var UP = 15, DOWN = 33;
+    if (o.europe) {
+      w = [['dns', 'dns', 'shopIn', 'v', 'DNS lookup'],
+        ['iIn', 'shopIn', 'edgeIn', 'h', ''], ['ia', 'edgeIn', 'lb', 'hl', '', false, UP], ['ip', 'edgeIn', 's3', 'h', '', false, DOWN],
+        ['fIn', 'shopFr', 'edgeFr', 'h', ''], ['fp', 'edgeFr', 's3', 'h', '', false, DOWN], ['fr', 'edgeFr', 'albF', 'h', '', false, DOWN]];
+      if (o.fra === 'reads') w.push(['fw', 'edgeFr', 'lb', 'hl', '', false, UP]);   /* writes go home, to Mumbai */
+    } else if (o.shops) {
       w.push(['dns', 'dns', o.shops[0].id, 'v', 'DNS lookup']);
       o.shops.forEach(function (s) {
         w.push(['in' + s.id, s.id, entry, 'hl', '']);
         w.push(['ph' + s.id, s.id, s.edge, 'h', '']);
-        w.push(['o' + s.id, s.edge, 's3', 'h', '']);
+        w.push(['o' + s.id, s.edge, 's3', 'h', '', false, DOWN]);
       });
     } else {
       w = [['dns', 'users', 'dns', 'v', 'DNS lookup'], ['in', 'users', entry, 'hl', 'HTTPS'], ['ph', 'users', 's3', 'hl', '']];
     }
     if (!o.eks) w = w.concat([['fw', 'eip', 'sg', 'v', ''], ['sgl', 'sg', 'lb', 'v', '']]);
-    return w.concat([
+    w = w.concat([
       ['a1', 'lb', 'core', 'h', ''],
       ['a2', 'lb', 'cat', 'h', ''],
       ['c', 'cat', 'redis', 'h', ''],
@@ -1966,7 +1894,7 @@ window.ZTM = window.ZTM || {};
       ['w', 'core', 'pgb', 'h', ''],
       ['pool', 'pgb', 'pg', 'vu', ''],
       ['io', 'pg', 'disk', 'v', ''],
-      ['bak', 'disk', 'snap', 'v', 'daily', true],
+      ['bak', 'disk', 'snap', 'h', '', true, 22],   /* out of the disk's side, to the snapshots one column over */
       ['wal', 'reps', 'pg', 'h', 'WAL', 'rev'],
       ['cdc', 'pg', 'dbz', 'h', '', true],
       ['pub', 'dbz', 'kafka', 'h', ''],
@@ -1975,6 +1903,25 @@ window.ZTM = window.ZTM || {};
       ['del', 'redis', 'inv', 'h', 'DEL', 'rev'],
       ['put', 'os', 'idx', 'h', '', 'rev']
     ]);
+    if (o.shards) w.push(['sh', 'core', 'shards', 'h', '']);   /* out along the core API's row, then down to the shards */
+    if (o.fra === 'reads') w = w.concat([
+      ['af', 'albF', 'catF', 'h', ''],
+      ['cf', 'catF', 'redisF', 'h', ''],
+      ['rf', 'catF', 'repF', 'u', ''],                  /* under Redis */
+      ['walF', 'pg', 'repF', 'vt', 'WAL', true]          /* straight down from the primary */
+    ]);
+    if (o.fra === 'cell') w = w.concat([
+      ['af', 'albF', 'catF', 'h', ''],
+      ['af1', 'albF', 'coreF', 'h', ''],
+      ['cf', 'catF', 'redisF', 'h', ''],
+      ['rf', 'catF', 'readF', 'u', ''],                 /* under Redis */
+      ['shF', 'coreF', 'ordF', 'h', ''],
+      ['apD', 'readF', 'appF', 'h', '', 'rev'],
+      ['apS', 'osF', 'appF', 'h', '', 'rev'],
+      ['apK', 'appF', 'kafkaF', 'h', ''],
+      ['mr', 'kafka', 'kafkaF', 'v', 'MSK Replicator', true]   /* straight down from Mumbai's Kafka */
+    ]);
+    return w;
   }
   function c8Layout(o) {
     var node = archNode;
@@ -2009,10 +1956,18 @@ window.ZTM = window.ZTM || {};
         frame('k8-eksf k8-c6 k8-r12', icon('chip', 'c-cpu') + 'same EKS cluster')
       : frame('k8-c2 k8-r123', icon('chip', 'c-cpu') + 'own EC2 servers') +
         frame('k8-c2 k8-r4', icon('chip', 'c-cpu') + '3 × c7g.2xlarge');
+    /* Chapter 12 on: the order shards, two by two in their own frame under the replicas, reached along the
+       core API's row. S3 and the snapshots move down a row */
+    var last = o.shards ? 6 : 5;
+    var shards = o.shards
+      ? '<div class="k12-shards" data-p="shards"><p class="k8-cap">' + icon('db', 'c-db') + o.shards.label + '</p>' +
+          o.shards.subs.map(function (s, i) { return node('o' + (i + 1), 'db', 'c-db', 'orders-' + (i + 1), s); }).join('') +
+        '</div>'
+      : '';
     return left +
       '<div class="ar2-region">' +
         '<p class="ar2-k">AWS region: Asia Pacific (Mumbai), ap-south-1</p>' +
-        '<div class="k8-grid k7-grid">' +
+        '<div class="k8-grid k7-grid' + (o.shards ? ' k7-shards' : '') + '">' +
           '<div class="k8-bg k8-vpc"><p class="ar2-k">VPC</p></div>' +
           sub(o.eks ? 'k7-pub k7-pub1' : 'k7-pub', 'Public subnet') +
           sub('k8-priv k8-foot k7-apps', o.eks ? 'Private subnets: EKS nodes, 3 zones' : 'Private subnet: app servers') +
@@ -2020,8 +1975,9 @@ window.ZTM = window.ZTM || {};
           sub('k8-priv k7-db', 'Private subnet: database') +
           sub('k8-priv k7-work', 'Private subnet: workers') +
           sub('k8-priv k7-kfk', 'Private subnet: Kafka') +
+          (o.shards ? sub('k8-priv k8-foot k12-sub', 'Private subnets: order shards') : '') +
           programs +
-          frame('k8-dbf k8-c45 k8-r34', icon('db', 'c-db') + 'Primary: EC2 r7g.large, 10.0.2.14') +
+          frame('k8-dbf k8-c45 k8-r34', icon('db', 'c-db') + (o.pgCap || 'Primary: EC2 r7g.large, 10.0.2.14')) +
           frame('k8-low k8-c6 k8-r3', icon('chip', 'c-cpu') + 'Kafka Connect') +
           frame('k8-mskf k8-c7 k8-r123', icon('log', 'c-sto') + 'Amazon MSK') +
           way +
@@ -2030,15 +1986,62 @@ window.ZTM = window.ZTM || {};
           at('k8-c3 k8-r1', node('redis', 'cache', 'c-db', 'Redis', 'cached pages, r7g.large')) +
           at('k8-c3 k8-r2', node('os', 'search', 'c-db', 'OpenSearch', 'the search index')) +
           at('k8-c3 k8-r3', node('reps', 'db', 'c-db', 'Replicas 1 and 2', 'read-only, db-read.internal')) +
-          at('k7-pg k8-r3', node('pg', 'db', 'c-sw', 'PostgreSQL', 'the primary: every write')) +
+          at('k7-pg k8-r3', node('pg', 'db', 'c-sw', 'PostgreSQL', o.pgSub || 'the primary: every write')) +
           at('k8-c4 k8-r4', node('pgb', 'proxy', 'c-db', 'PgBouncer', 'one pool of 20')) +
           at('k8-c5 k8-r4', node('disk', 'disk', 'c-sto', 'EBS gp3 disk', 'the data')) +
           at('k8-c6 k8-r1', node('inv', 'bolt', 'c-sw', 'Cache invalidator', '2 copies, one group')) +
           at('k8-c6 k8-r2', node('idx', 'bolt', 'c-sw', 'Search indexer', 'its own group')) +
           at('k8-c6 k8-r3', node('dbz', 'bolt', 'c-sw', 'Debezium', 'reads the WAL')) +
           at('k8-c7 k8-r123', node('kafka', 'log', 'c-sto', 'Kafka', '3 brokers, one per zone')) +
-          at('k8-c1 k8-r5 k8-out', node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', o.s3sub || 'photos, for browsers')) +
-          at('k8-c5 k8-r5 k8-out', node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup')) +
+          shards +
+          at('k8-c1 k8-r' + last + ' k8-out k8-s3', node('s3', 'bucket', 'c-sto', 'S3: tomazon-photos', o.s3sub || 'photos, for browsers')) +
+          at('k8-c6 k8-r' + last + ' k8-out k8-snap', node('snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup')) +
+        '</div>' +
+      '</div>' +
+      (o.fra ? c11Frankfurt(o) : '');
+  }
+  /* Chapter 11 on: the Frankfurt region, under Mumbai and on the same columns, so a wire from Mumbai comes
+     straight down. For reads (chapters 11 and 12): a load balancer, the catalogue, Redis, and a replica straight
+     under the primary, which the catalogue reaches under Redis. As a cell (chapter 13): all of a region but the
+     primary, in two rows, with its Kafka straight under Mumbai's. Its subnets' labels sit on top, so a wire can
+     pass under a row */
+  function c11Frankfurt(o) {
+    var node = archNode, eks = icon('chip', 'c-cpu');
+    function at(cls, html) { return '<div class="' + cls + '">' + html + '</div>'; }
+    function sub(cls, label) { return '<div class="k8-bg k8-sub ' + cls + '"><p class="ar2-k">' + label + '</p></div>'; }
+    function frame(cls, cap) { return '<div class="k8-frame ' + cls + '"><p class="k8-cap">' + cap + '</p></div>'; }
+    var parts = o.fra === 'cell'
+      ? sub('kf-c1', 'Public subnet') +
+        sub('k8-priv kf-c2', 'Private subnets: EKS nodes') +
+        sub('k8-priv kf-c3', 'Private subnets: cache, orders') +
+        sub('k8-priv kf-c45', 'Private subnets: catalogue, search') +
+        sub('k8-priv kf-c6', 'Private subnet: workers') +
+        sub('k8-priv kf-c7', 'Private subnet: Kafka') +
+        frame('k8-eksf k8-c2 k8-r12', eks + 'Amazon EKS cluster') +
+        frame('k8-eksf k8-c6 k8-r12', eks + 'same EKS cluster') +
+        frame('k8-mskf k8-low k8-c7 k8-r12', icon('log', 'c-sto') + 'Amazon MSK') +
+        at('k8-c1 k8-r12', node('albF', 'proxy', 'c-net', 'Load balancer', 'an ALB, set up by Kubernetes')) +
+        at('k8-c2 k8-r1', node('catF', 'bolt', 'c-sw', 'Catalogue', 'pages, prices, search')) +
+        at('k8-c2 k8-r2', node('coreF', 'bolt', 'c-sw', 'Core API', 'Europe’s customers')) +
+        at('k8-c3 k8-r1', node('redisF', 'cache', 'c-db', 'Redis', 'Frankfurt’s own')) +
+        at('k8-c3 k8-r2', node('ordF', 'db', 'c-db', 'Order shard', 'Europe’s customers')) +
+        at('k7-pg k8-r1', node('readF', 'db', 'c-db', 'Read database', 'the catalogue, for pages')) +
+        at('k7-pg k8-r2', node('osF', 'search', 'c-db', 'OpenSearch', 'the cell’s search index')) +
+        at('k8-c6 k8-r12', node('appF', 'bolt', 'c-sw', 'Applier', 'writes catalogue changes')) +
+        at('k8-c7 k8-r12', node('kafkaF', 'log', 'c-sto', 'Kafka', 'a copy of the catalogue topics'))
+      : sub('kf-c1', 'Public subnet') +
+        sub('k8-priv kf-c2', 'Private subnets: EKS nodes') +
+        sub('k8-priv kf-c3', 'Private subnet: cache') +
+        sub('k8-priv kf-c45', 'Private subnet:<br>replica') +   /* two lines, clear of the WAL coming down */
+        frame('k8-eksf k8-c2 k8-r1', eks + 'Amazon EKS cluster') +
+        at('k8-c1 k8-r1', node('albF', 'proxy', 'c-net', 'Load balancer', 'an ALB, for reads')) +
+        at('k8-c2 k8-r1', node('catF', 'bolt', 'c-sw', 'Catalogue', 'pages, prices, stock')) +
+        at('k8-c3 k8-r1', node('redisF', 'cache', 'c-db', 'Redis', 'Frankfurt’s own')) +
+        at('k7-pg k8-r1', node('repF', 'db', 'c-db', 'PostgreSQL replica', 'a little behind Mumbai'));
+    return '<div class="ar2-region kf-region">' +
+        '<p class="ar2-k">' + o.fraLabel + '</p>' +
+        '<div class="k8-grid k7-grid kf-grid ' + (o.fra === 'cell' ? 'kf-cell' : 'kf-reads') + '">' +
+          '<div class="k8-bg k8-vpc"><p class="ar2-k">VPC</p></div>' + parts +
         '</div>' +
       '</div>';
   }
@@ -2320,7 +2323,7 @@ window.ZTM = window.ZTM || {};
         run([
           function () {
             for (var i = have; i < 8; i++) schedule(pod('cat', st.ver));
-            st.say = '<strong>The 8 p.m. sale starts.</strong> Catalogue CPU passes 60%, so the Horizontal Pod Autoscaler raises the Deployment to 8 pods, and the scheduler places them where there’s room.';
+            st.say = '<strong>The 6 p.m. sale starts.</strong> Catalogue CPU passes 60%, so the Horizontal Pod Autoscaler raises the Deployment to 8 pods, and the scheduler places them where there’s room.';
           }
         ].concat(autoscale(), [function () { ready(); st.say = '<strong>8 catalogue pods are serving.</strong> After the sale, the autoscaler lowers the count again, and the node autoscaler removes nodes that are left empty.'; }]));
       },
@@ -2357,137 +2360,7 @@ window.ZTM = window.ZTM || {};
     fresh();
   };
 
-  /* ---------- Chapters 10 and 11: the whole of Tomazon on EKS, every part so far ---------- */
-
-  /* Five columns: S3, then one per program, each above the store it uses most, so nearly every wire
-     runs straight. Group boxes (the cluster, the database server, MSK) sit behind the nodes they hold.
-     o.europe adds chapter 11's CloudFront edges in front, and the Frankfurt region below.
-     o.shards adds chapter 12's four order shards, in a row of their own under the database server.
-     o.cells turns Frankfurt into chapter 13's complete cell, fed from Mumbai's Kafka, with its own order shard. */
-  function fullLayout(o) {
-    var node = archNode;
-    function at(cls, id, g, cat, title, sub) { return '<div class="' + cls + '">' + node(id, g, cat, title, sub) + '</div>'; }
-    var left = o.europe
-      ? node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
-        node('shopIn', 'user', 'c-user', 'Shoppers in India', 'most of the 7 million') +
-        node('edgeIn', 'edge', 'c-net', 'CloudFront edge', 'in India: pages, photos') +
-        '<div class="fa-eu">' + node('shopFr', 'user', 'c-user', 'Shoppers in Europe', 'a tenth of the traffic') + '</div>' +
-        node('edgeFr', 'edge', 'c-net', 'CloudFront edge', o.cells ? 'in Frankfurt: everything' : 'in Frankfurt: pages, photos')
-      : node('dns', 'dns', 'c-net', 'Route 53', 'DNS for tomazon.com') +
-        node('shop', 'user', 'c-user', 'Shoppers', '5 million of them') +
-        node('edge', 'edge', 'c-net', 'CloudFront edge', 'photos, near the shopper');
-    return '<div class="ar2-left fa-left">' + left + '</div>' +
-      '<div class="fa-right">' +
-        '<div class="ar2-region fa-region">' +
-          '<p class="ar2-k">AWS region: Asia Pacific (Mumbai)</p>' +
-          '<div class="fa-grid">' +
-            '<div class="fa-box fa-k8s"><p class="ar2-k">Amazon EKS cluster: nodes in 3 zones</p></div>' +
-            '<div class="fa-box fa-db"><p class="ar2-k">Database server</p></div>' +
-            '<div class="fa-box fa-msk"><p class="ar2-k">Amazon MSK</p></div>' +
-            at('fa-alb', 'alb', 'proxy', 'c-net', 'Load balancer', 'an ALB, set up by Kubernetes') +
-            at('fa-c2 fa-r2', 'core', 'bolt', 'c-cpu', 'Core API', 'carts, orders, payments') +
-            at('fa-c3 fa-r2', 'cat', 'bolt', 'c-cpu', 'Catalogue', 'pages, prices, search') +
-            at('fa-c4 fa-r2', 'inv', 'bolt', 'c-sw', 'Cache invalidator', 'deletes stale keys') +
-            at('fa-c5 fa-r2', 'idx', 'bolt', 'c-sw', 'Search indexer', 'keeps search up to date') +
-            at('fa-c1 fa-r3', 's3', 'bucket', 'c-sto', 'S3', 'the photos, private') +
-            at('fa-c2 fa-r3', 'pgb', 'proxy', 'c-db', 'PgBouncer', 'one pool of 20') +
-            at('fa-c3 fa-r3', 'reps', 'db', 'c-db', 'Replicas 1 and 2', 'read-only') +
-            at('fa-c4 fa-r3', 'redis', 'cache', 'c-db', 'Redis', 'cached pages') +
-            at('fa-c5 fa-r3', 'os', 'search', 'c-db', 'OpenSearch', 'the search index') +
-            at('fa-c2 fa-r4', 'pg', 'db', 'c-sw', 'PostgreSQL', o.shards ? 'the primary: products' : 'the primary: every write') +
-            at('fa-c4 fa-r4', 'dbz', 'bolt', 'c-sw', 'Debezium', 'reads the WAL') +
-            at('fa-c5 fa-r4', 'kafka', 'log', 'c-sto', 'Kafka', 'product changes') +
-            at('fa-c2 fa-r5', 'disk', 'disk', 'c-sto', 'EBS disk', 'the data') +
-            at('fa-c3 fa-r5', 'snap', 'snap', 'c-sto', 'EBS snapshots', 'daily backup') +
-            (o.shards
-              ? '<div class="fa-box fa-shards" data-p="shards"><p class="ar2-k">' + (o.cells ? 'Order shards for India’s customers, each with a standby in another region' : 'New: order shards, each a primary and a replica') + '</p></div>' +
-                at('fa-c2 fa-r6', 'o1', 'db', 'c-db', 'orders-1', 'logical shards 0–15') +
-                at('fa-c3 fa-r6', 'o2', 'db', 'c-db', 'orders-2', 'logical shards 16–31') +
-                at('fa-c4 fa-r6', 'o3', 'db', 'c-db', 'orders-3', 'logical shards 32–47') +
-                at('fa-c5 fa-r6', 'o4', 'db', 'c-db', 'orders-4', 'logical shards 48–63')
-              : '') +
-          '</div>' +
-        '</div>' +
-        (o.cells
-          ? '<div class="ar2-region fa-region fa-fra">' +
-              '<p class="ar2-k">New: a complete cell in Frankfurt, and the same in Singapore and Ohio</p>' +
-              '<div class="fa-grid">' +
-                '<div class="fa-box fa-k8s fa-k8s-cell"><p class="ar2-k">Amazon EKS cluster</p></div>' +
-                '<div class="fa-box fa-msk fa-msk-cell"><p class="ar2-k">Amazon MSK</p></div>' +
-                at('fa-alb', 'albF', 'proxy', 'c-net', 'Load balancer', 'an ALB, set up by Kubernetes') +
-                at('fa-c2 fa-r2', 'coreF', 'bolt', 'c-cpu', 'Core API', 'Europe’s customers') +
-                at('fa-c3 fa-r2', 'catF', 'bolt', 'c-cpu', 'Catalogue', 'pages, prices, search') +
-                at('fa-c4 fa-r2', 'appF', 'bolt', 'c-sw', 'Applier', 'writes catalogue changes') +
-                at('fa-c5 fa-r2', 'kafkaF', 'log', 'c-sto', 'Kafka', 'a copy of the catalogue topics') +
-                at('fa-c2 fa-r3', 'ordF', 'db', 'c-db', 'Order shard', 'Europe’s customers') +
-                at('fa-c3 fa-r3', 'redisF', 'cache', 'c-db', 'Redis', 'Frankfurt’s own') +
-                at('fa-c4 fa-r3', 'readF', 'db', 'c-db', 'Read database', 'the catalogue, for pages') +
-                at('fa-c5 fa-r3', 'osF', 'search', 'c-db', 'OpenSearch', 'the cell’s search index') +
-              '</div>' +
-            '</div>'
-          : '') +
-        (o.europe && !o.cells
-          ? '<div class="ar2-region fa-region fa-fra">' +
-              '<p class="ar2-k">New: AWS region Europe (Frankfurt), for reads</p>' +
-              '<div class="fa-grid">' +
-                '<div class="fa-box fa-k8s fa-k8s-fra"><p class="ar2-k">Amazon EKS cluster</p></div>' +
-                at('fa-alb', 'albF', 'proxy', 'c-net', 'Load balancer', 'an ALB, for reads') +
-                at('fa-c3 fa-r2', 'catF', 'bolt', 'c-cpu', 'Catalogue', 'pages, prices, stock') +
-                at('fa-c1 fa-r3', 'repF', 'db', 'c-db', 'PostgreSQL replica', 'a little behind Mumbai') +
-                at('fa-c4 fa-r3', 'redisF', 'cache', 'c-db', 'Redis', 'Frankfurt’s own') +
-              '</div>' +
-            '</div>'
-          : '') +
-      '</div>';
-  }
-
-  function fullWires(o) {
-    return [
-      ['a1', 'alb', 'core', 'v', ''],
-      ['a2', 'alb', 'cat', 'v', ''],
-      ['w', 'core', 'pgb', 'v', ''],
-      ['pool', 'pgb', 'pg', 'v', ''],
-      ['io', 'pg', 'disk', 'v', ''],
-      ['bak', 'disk', 'snap', 'h', '', true],
-      ['r', 'cat', 'reps', 'v', ''],
-      ['c', 'cat', 'redis', 'h', ''],
-      ['del', 'inv', 'redis', 'v', ''],
-      ['wal', 'pg', 'reps', 'h', 'WAL', true],
-      ['cdc', 'pg', 'dbz', 'h', ''],
-      ['pub', 'dbz', 'kafka', 'h', ''],
-      ['sub', 'inv', 'kafka', 'h', ''],
-      ['ix', 'kafka', 'idx', 'r', ''],
-      ['put', 'idx', 'os', 'v', '']
-    ].concat(o.europe ? [
-      ['dns', 'dns', 'shopIn', 'v', 'DNS lookup'],
-      ['iIn', 'shopIn', 'edgeIn', 'v', ''],
-      ['ia', 'edgeIn', 'alb', 'hl', ''],
-      ['ip', 'edgeIn', 's3', 'hl', ''],
-      ['fIn', 'shopFr', 'edgeFr', 'v', ''],
-      ['fp', 'edgeFr', 's3', 'hl', ''],
-      ['fr', 'edgeFr', 'albF', 'h', ''],
-      ['af', 'albF', 'catF', 'v', '']
-    ].concat(o.cells ? [
-      ['af1', 'albF', 'coreF', 'v', ''],
-      ['shF', 'coreF', 'ordF', 'v', ''],
-      ['cf', 'catF', 'redisF', 'v', ''],
-      ['rf', 'catF', 'readF', 'h', ''],
-      ['apK', 'appF', 'kafkaF', 'h', ''],
-      ['apD', 'appF', 'readF', 'v', ''],
-      ['apS', 'appF', 'osF', 'h', ''],
-      ['mr', 'kafka', 'kafkaF', 'r', '']
-    ] : [
-      ['fw', 'edgeFr', 'alb', 'hl', ''],
-      ['rf', 'catF', 'repF', 'v', ''],
-      ['cf', 'catF', 'redisF', 'v', ''],
-      ['walF', 'pg', 'repF', 'ld', 'WAL', true]
-    ], o.shards ? [['sh', 'core', 'shards', 'lb', '']] : []) : [
-      ['dns', 'dns', 'shop', 'v', 'DNS lookup'],
-      ['in', 'shop', 'alb', 'hl', 'HTTPS'],
-      ['ph', 'shop', 'edge', 'v', 'photos'],
-      ['miss', 'edge', 's3', 'h', '']
-    ]);
-  }
+  /* ---------- Chapter 10: the whole of Tomazon on EKS, every part so far ---------- */
 
   W['eks-arch'] = function (el) {
     var o = { eks: true, s3sub: 'the photos, private', shops: [
@@ -2577,24 +2450,25 @@ window.ZTM = window.ZTM || {};
     if (window.ResizeObserver) new ResizeObserver(function () { fitLabels(wf); }).observe(wf);
   };
 
-  /* ---------- Chapter 11: chapter 10's architecture, with CloudFront edges in front and a region in Frankfurt for reads ---------- */
+  /* ---------- Chapter 11: chapter 10's architecture, with CloudFront in front of the whole site and a region in Frankfurt for reads ---------- */
 
   W['edge-regions'] = function (el) {
-    var o = { europe: true };
+    var o = { eks: true, europe: true, fra: 'reads', s3sub: 'the photos, private',
+      fraLabel: 'New AWS region: Europe (Frankfurt), eu-central-1, for reads',
+      shops: [
+        { id: 'shopIn', title: 'Shoppers in India', sub: 'most of the 7 million', edge: 'edgeIn', edgeSub: 'in India: pages, photos' },
+        { id: 'shopFr', title: 'Shoppers in Europe', sub: 'a tenth of the traffic', edge: 'edgeFr', edgeSub: 'in Frankfurt: pages, photos' }] };
     var india = [['iIn', 0], ['ia', 0], ['a2', 0], ['c', 0], ['c', 1], ['a2', 1], ['ia', 1], ['iIn', 1]];
     var page = [['fIn', 0], ['fIn', 1]];
     var photo = [['fp', 0], ['fp', 1]];
     var read = [['fIn', 0], ['fr', 0], ['af', 0], ['cf', 0], ['cf', 1], ['rf', 0], ['rf', 1], ['af', 1], ['fr', 1], ['fIn', 1]];
     var write = [['fIn', 0], ['fw', 0], ['a1', 0], ['w', 0], ['pool', 0], ['pool', 1], ['w', 1], ['a1', 1], ['fw', 1], ['fIn', 1]];
-    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
-    liveArch(el.querySelector('.arch-scroll > div'), {
-      joints: true,
-      wires: fullWires(o),
+    c8Arch(el, o, {
       request: india.concat(page, read, write, [['walF', 0]]),
       start: 'Follow the shoppers',
       idle: 'Chapter 10’s Mumbai region, unchanged. Two parts are new: CloudFront edges in front of <code>tomazon.com</code>, and a second region in Frankfurt, below it, for reads. Press <strong>Follow the shoppers</strong> to go through it step by step.',
       steps: [
-        { on: ['shopIn', 'edgeIn', 'alb', 'cat', 'redis'], run: india, t: 'as before, through an edge',
+        { on: ['shopIn', 'edgeIn', 'lb', 'cat', 'redis'], run: india, t: 'as before, through an edge',
           say: '<strong>India: the same as before.</strong> A shopper in India now connects to a nearby CloudFront edge, which passes the request to Mumbai: the load balancer, a catalogue pod and Redis, exactly as in chapter 10.' },
         { on: ['shopFr', 'edgeFr'], run: page, t: 'a hit: about 40 ms to the first byte',
           say: '<strong>Europe: the page, from the edge.</strong> A shopper in Europe connects to an edge in Frankfurt, about 10 ms away. The product page is the same for everyone, so the edge has it cached and answers at once.' },
@@ -2602,12 +2476,11 @@ window.ZTM = window.ZTM || {};
           say: '<strong>The photos, from the edge too.</strong> Only on a miss does the edge fetch a photo from S3 in Mumbai, and keep a copy for the next shopper (chapter 9).' },
         { on: ['shopFr', 'edgeFr', 'albF', 'catF', 'redisF', 'repF'], run: read, t: 'Frankfurt: a few milliseconds',
           say: '<strong>Prices and stock, from Frankfurt.</strong> They can’t be cached for long, so the edge sends them to the new region: its own load balancer, catalogue pods, Redis, and a replica of the Mumbai database.' },
-        { on: ['shopFr', 'edgeFr', 'alb', 'core', 'pgb', 'pg'], run: write, t: 'one trip to Mumbai, about 125 ms',
+        { on: ['shopFr', 'edgeFr', 'lb', 'core', 'pgb', 'pg'], run: write, t: 'one trip to Mumbai, about 125 ms',
           say: '<strong>Writes go home.</strong> Adding to the cart, ordering and paying change data, so the edge sends them to the core API in Mumbai, which writes to the only primary.' },
         { on: ['pg', 'repF'], run: [['walF', 0]], t: 'usually under a second behind',
           say: '<strong>The copy catches up.</strong> The primary streams its WAL to the Frankfurt replica, as to its other replicas (page 5.2), only farther away. Everything else in Mumbai, the cache invalidator, the search indexer, Kafka and OpenSearch, works as in chapter 10.' }
-      ],
-      html: fullLayout(o)
+      ]
     });
   };
 
@@ -2672,41 +2545,47 @@ window.ZTM = window.ZTM || {};
   /* ---------- Chapter 12: chapter 11's architecture, with the orders split across four shards ---------- */
 
   W['shard-arch'] = function (el) {
-    var o = { europe: true, shards: true };
+    var o = { eks: true, europe: true, fra: 'reads', s3sub: 'the photos, private',
+      fraLabel: 'AWS region: Europe (Frankfurt), eu-central-1, for reads',
+      pgCap: 'Primary: EC2 r7g.8xlarge, 10.0.2.14', pgSub: 'the primary: products',
+      shards: { label: 'New: order shards, each with a replica',
+        subs: ['logical 0–15', 'logical 16–31', 'logical 32–47', 'logical 48–63'] },
+      shops: [
+        { id: 'shopIn', title: 'Shoppers in India', sub: 'most of the 10 million', edge: 'edgeIn', edgeSub: 'in India: pages, photos' },
+        { id: 'shopFr', title: 'Shoppers in Europe', sub: 'a tenth of the traffic', edge: 'edgeFr', edgeSub: 'in Frankfurt: pages, photos' }] };
     var india = [['ia', 0], ['a1', 0], ['sh', 0], ['sh', 1], ['a1', 1], ['ia', 1], ['iIn', 1]];
     var europe = [['fIn', 0], ['fw', 0], ['a1', 0], ['sh', 0], ['sh', 1], ['a1', 1], ['fw', 1], ['fIn', 1]];
-    var products = [['w', 0], ['pool', 0], ['wal', 0], ['walF', 0], ['cdc', 0]];
-    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
-    liveArch(el.querySelector('.arch-scroll > div'), {
-      joints: true,
-      wires: fullWires(o),
+    var products = [['w', 0], ['pool', 0], ['wal', 1], ['walF', 0], ['cdc', 0]];
+    c8Arch(el, o, {
       request: [['iIn', 0]].concat(india, europe),
       start: 'Follow two orders',
-      idle: 'Chapter 11’s architecture, with one new part: four order shards in Mumbai, under the database server. Press <strong>Follow two orders</strong> to go through it step by step.',
+      idle: 'Chapter 11’s architecture, with one new part: four order shards in Mumbai, at the bottom of its VPC. Press <strong>Follow two orders</strong> to go through it step by step.',
       steps: [
-        { on: ['shopIn', 'edgeIn', 'alb', 'core', 'o3'], run: [['iIn', 0]].concat(india), t: 'customer 48213: orders-3',
+        { on: ['shopIn', 'edgeIn', 'lb', 'core', 'o3'], run: [['iIn', 0]].concat(india), t: 'customer 48213: orders-3',
           say: '<strong>An order, routed by customer.</strong> The core API hashes customer 48213 to logical shard 37 of 64. Its shard map, cached in every pod, says shard 37 lives on orders-3, so the order is written there, and nowhere else.' },
-        { on: ['shopFr', 'edgeFr', 'alb', 'core', 'o1'], run: europe, t: 'customer 1150: orders-1',
+        { on: ['shopFr', 'edgeFr', 'lb', 'core', 'o1'], run: europe, t: 'customer 1150: orders-1',
           say: '<strong>Another customer, another shard.</strong> Customer 1150, in Europe, hashes to logical shard 9, on orders-1. Each primary takes about a quarter of the writes, and holds about a quarter of the data.' },
         { on: ['core', 'pgb', 'pg', 'reps', 'repF', 'dbz'], run: products, t: 'products stay where they were',
           say: '<strong>The catalogue isn’t sharded.</strong> Products stay on the original primary, which still feeds the replicas, Frankfurt and Debezium. Only customers’ data moves to the shards: orders, carts, payments and addresses.' }
-      ],
-      html: fullLayout(o)
+      ]
     });
   };
 
   /* ---------- Chapter 13: chapter 12's architecture, with Frankfurt a complete cell (Singapore and Ohio the same) ---------- */
 
   W['global-arch'] = function (el) {
-    var o = { europe: true, shards: true, cells: true };
+    var o = { eks: true, europe: true, fra: 'cell', s3sub: 'the photos, private',
+      fraLabel: 'AWS region: Europe (Frankfurt), eu-central-1. New: a complete cell, the same in Singapore and Ohio',
+      pgCap: 'Primary: EC2 r7g.8xlarge, 10.0.2.14', pgSub: 'the primary: products',
+      shards: { label: 'India’s order shards, each with a standby', subs: ['', '', '', ''] },
+      shops: [
+        { id: 'shopIn', title: 'Shoppers in India', sub: 'home region: Mumbai', edge: 'edgeIn', edgeSub: 'in India: pages, photos' },
+        { id: 'shopFr', title: 'Shoppers in Europe', sub: 'home region: Frankfurt', edge: 'edgeFr', edgeSub: 'in Frankfurt: everything' }] };
     var page = [['fIn', 0], ['fr', 0], ['af', 0], ['cf', 0], ['cf', 1], ['rf', 0], ['rf', 1], ['af', 1], ['fr', 1], ['fIn', 1]];
     var order = [['fIn', 0], ['fr', 0], ['af1', 0], ['shF', 0], ['shF', 1], ['af1', 1], ['fr', 1], ['fIn', 1]];
-    var change = [['cdc', 0], ['pub', 0], ['mr', 0], ['apK', 1], ['apD', 0], ['apS', 0]];
+    var change = [['cdc', 0], ['pub', 0], ['mr', 0], ['apK', 1], ['apD', 1], ['apS', 1]];
     var india = [['iIn', 0], ['ia', 0], ['a1', 0], ['sh', 0], ['sh', 1], ['a1', 1], ['ia', 1], ['iIn', 1]];
-    el.innerHTML = '<div class="arch-scroll"><div></div></div><p class="w-note arch-hint">Swipe the diagram sideways to see all of it.</p>';
-    liveArch(el.querySelector('.arch-scroll > div'), {
-      joints: true,
-      wires: fullWires(o),
+    c8Arch(el, o, {
       request: page.concat(order, change, india),
       start: 'Follow a shopper in Europe',
       idle: 'Chapter 12’s architecture, with Frankfurt now a complete cell: it serves its shoppers’ pages, takes its own customers’ orders, and gets only the catalogue from Mumbai. Singapore and Ohio run the same cell. Press <strong>Follow a shopper in Europe</strong> to go through it step by step.',
@@ -2717,10 +2596,9 @@ window.ZTM = window.ZTM || {};
           say: '<strong>An order, at home.</strong> This customer’s home region is Frankfurt: the shard map puts their logical shard on a primary there. Their writes, and their personal data, stay in Europe.' },
         { on: ['pg', 'dbz', 'kafka', 'kafkaF', 'appF', 'readF', 'osF'], run: change, t: 'only the catalogue travels',
           say: '<strong>A price changes in Mumbai.</strong> Debezium publishes it to Kafka, MSK Replicator copies the topic to each region, and the applier writes it into the cell’s read database and search index. Nothing personal leaves home.' },
-        { on: ['shopIn', 'edgeIn', 'alb', 'core', 'o2'], run: india, t: 'India: as before',
+        { on: ['shopIn', 'edgeIn', 'lb', 'core', 'o2'], run: india, t: 'India: as before',
           say: '<strong>India, as before.</strong> Indian customers’ orders go to the shards in Mumbai. Every shard has a standby in another region: if a region is lost, browsing carries on everywhere, and only that region’s checkouts pause.' }
-      ],
-      html: fullLayout(o)
+      ]
     });
   };
 

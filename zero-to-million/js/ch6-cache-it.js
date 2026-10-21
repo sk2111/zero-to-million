@@ -32,7 +32,7 @@ ZTM.content[6] = {
       sub: 'Every server looks healthy, yet the home page takes over a second.',
       html: `
         <ol class="points lede">
-          <li>The sale starts at 8 p.m. Within minutes, shoppers report that the home page takes 2–3 seconds to appear. Some give up before they see a single deal.</li>
+          <li>The sale starts at 6 p.m. Within minutes, shoppers report that the home page takes 2–3 seconds to appear. Some give up before they see a single deal.</li>
           <li>The dashboards disagree. App servers at 30% CPU, the replicas comfortable, no errors. Every part looks healthy.</li>
           <li>When every part is healthy and the whole is slow, the time is going into how the parts are used.</li>
         </ol>

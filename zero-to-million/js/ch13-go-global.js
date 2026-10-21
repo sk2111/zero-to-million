@@ -59,7 +59,7 @@ ZTM.content[13] = {
           <li><strong>Mumbai stays the catalogue’s home.</strong> Staff edit products there, and every cell receives the changes.</li>
           <li><strong>Frankfurt, Singapore and Ohio run the same cell,</strong> built from the same manifests (chapter 10). The diagram shows Frankfurt’s.</li>
         </ol>
-        <div class="widget" data-widget="global-arch"></div>
+        <div class="widget wide" data-widget="global-arch"></div>
         <table class="data">
           <thead><tr><th></th><th>Before</th><th>After</th></tr></thead>
           <tbody>

@@ -64,6 +64,11 @@ ZTM.content[10] = {
           </tbody>
         </table>
 
+        <aside class="note tip">
+          <h3>Tip: learn more about Kubernetes</h3>
+          <p>To go further with Kubernetes, work through Soliton’s <a href="https://ventures.solitontech.in/docs/Software360/DevOps/Workshop/motivation" target="_blank" rel="noopener">DevOps workshop</a>.</p>
+        </aside>
+
         <h2>The new architecture</h2>
         <ol class="points">
           <li><strong>Amazon EKS</strong> is Kubernetes run by AWS. AWS runs the part that makes the decisions; Tomazon’s nodes, EC2 servers in three zones, run the pods. Karpenter adds and removes nodes as the pods need room.</li>

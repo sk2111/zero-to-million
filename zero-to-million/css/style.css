@@ -876,63 +876,89 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 /* A widget that is wider than the text column: as wide as the page, up to 104rem */
 .page .page-inner > .widget.wide { width: min(100cqw, 104rem); max-width: none; margin-inline: calc((100% - min(100cqw, 104rem)) / 2); }
 
-/* 8.4: the whole of Tomazon at 2 million users, drawn like 6.2 but sideways, so it fits on one screen.
-   Five columns: the public subnet; the app servers; cache and search, then the database server; the workers,
-   then the database server; Kafka. Rows 1 and 2 are the same height, so the catalogue and Kafka, spanning
-   both, sit on the line between them. The VPC and the subnets are drawn behind the parts; a server box holds
-   its parts centred, with its caption in the padding, so the parts in a row line up */
+/* The AWS architecture diagrams (5.2, 6.2, 6.3, 8.4): drawn like 6.2 but sideways, so each fits on one screen.
+   The VPC and the subnets are drawn behind the parts. A server box holds its parts centred, with its caption
+   as a tab on its border, so the parts in a row line up and their wires run straight. Each diagram's grid
+   (.k6-grid, .k7-grid) sets its own columns, rows and card areas */
 .ar2:has(.k8-grid) { grid-template-columns: 10rem minmax(0, 1fr); gap: 2.2rem; min-width: 75rem; }   /* narrower screens scale it down (fitWide) */
+.ar2:has(.k7-grid) { min-width: 88rem; }
 .arch-scroll:has(.k8-grid) > div { transform-origin: 0 0; }
 .ar2:has(.k8-grid) > .ar2-left { gap: 2rem; padding-top: 3.2rem; }
 .ar2:has(.k8-grid) .nd { padding: 0.45rem 0.45rem 0.5rem; }
 .ar2:has(.k8-grid) .nd .ic { width: 2rem; height: 2rem; margin-bottom: 0.2rem; }
 .ar2:has(.k8-grid) .nd .ic svg { width: 1.35rem; height: 1.35rem; }
-.k8-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: 1fr 1fr auto auto auto; gap: 1.8rem 2.4rem; align-items: center; padding: 3.1rem 1.6rem 0.4rem; }
-.k8-c1 { grid-column: 1; } .k8-c2 { grid-column: 2; } .k8-c3 { grid-column: 3; } .k8-c4 { grid-column: 4; } .k8-c5 { grid-column: 5; } .k8-c34 { grid-column: 3 / 5; }
-.k8-r1 { grid-row: 1; } .k8-r2 { grid-row: 2; } .k8-r12 { grid-row: 1 / 3; } .k8-r3 { grid-row: 3; } .k8-r4 { grid-row: 4; } .k8-r5 { grid-row: 5; }
+.k8-grid { display: grid; gap: 1.8rem 2.4rem; align-items: center; padding: 3.1rem 1.6rem 0.4rem; }
+.k8-c1 { grid-column: 1; } .k8-c2 { grid-column: 2; } .k8-c3 { grid-column: 3; } .k8-c4 { grid-column: 4; }
+.k8-c5 { grid-column: 5; } .k8-c6 { grid-column: 6; } .k8-c7 { grid-column: 7; } .k8-c45 { grid-column: 4 / 6; }
+.k8-r1 { grid-row: 1; } .k8-r2 { grid-row: 2; } .k8-r3 { grid-row: 3; } .k8-r4 { grid-row: 4; } .k8-r5 { grid-row: 5; }
+.k8-r123 { grid-row: 1 / 4; } .k8-r34 { grid-row: 3 / 5; }
 .k8-bg { display: flex; align-self: stretch; border-radius: 10px; }
 .k8-bg > .ar2-k { margin: 0.5rem 0.75rem; line-height: 1.25; }
-.k8-vpc { grid-area: 1 / 1 / 5 / 6; align-items: flex-end; margin: -2.9rem -1.35rem -2.9rem; border: 1.5px solid var(--accent); background: var(--accent-soft); }   /* label bottom left, where row 4 is empty */
+.k8-vpc { align-items: flex-end; margin: -2.9rem -1.35rem -2.9rem; border: 1.5px solid var(--accent); background: var(--accent-soft); }   /* label bottom left, where nothing sits */
 .k8-sub { align-items: flex-start; margin: -2.5rem -0.75rem -0.75rem; border: 1px solid var(--rule-2); background: var(--sheet); }
 .k8-priv { background: var(--paper); }
 .k8-foot { align-items: flex-end; margin: -0.75rem -0.75rem -2.5rem; }   /* the label goes underneath */
-.k8-pub { grid-area: 1 / 1 / 4 / 2; }
-.k8-apps { grid-area: 1 / 2 / 4 / 3; justify-content: flex-end; }
-.k8-mid { grid-area: 1 / 3 / 3 / 5; }
-.k8-data { grid-area: 3 / 3 / 5 / 5; }
-.k8-data > .ar2-k { max-width: calc(50% - 2rem); }   /* stays left of the line down from the disk */
-.k8-kfk { grid-area: 1 / 5 / 4 / 6; }
-/* A server box holds its parts centred, with the same padding above and below, so they sit level with the
-   parts beside it. Its caption is a tab on its top border (or its bottom one, with k8-low), on the side
-   no wire crosses */
 .k8-box { position: relative; display: flex; flex-direction: column; justify-content: center; align-self: stretch; padding: 0.75rem 0.6rem; border: 2px solid #ed7100; border-radius: 10px; background: var(--sheet); }
 .k8-cap { position: absolute; top: 0; left: 0.6rem; transform: translateY(-50%); display: flex; align-items: center; max-width: calc(100% - 1.2rem); margin: 0; padding: 0.1rem 0.4rem; border-radius: 5px; background: var(--sheet); font-size: 0.7rem; font-weight: 600; line-height: 1.25; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.k8-low > .k8-cap { top: auto; bottom: 0; transform: translateY(50%); }
+.k8-low > .k8-cap { top: auto; bottom: 0; transform: translateY(50%); }   /* the caption on the bottom border */
 .k8-cap .ic { display: inline-grid; flex: none; width: 1.15rem; height: 1.15rem; margin: 0 0.4rem 0 0; border-radius: 4px; }
 .k8-cap .ic svg { width: 0.8rem; height: 0.8rem; }
-/* The database box's two columns line up with the grid's: its gap is the grid's plus its own padding and border, twice */
-.k8-dbbox { display: grid; grid-template-columns: 1fr 1fr; column-gap: calc(3.6rem + 4px); align-items: center; align-content: center; border-color: #c925d1; }
 .k8-msk { border-color: #7aa116; }
+/* A server box over several cells repeats the grid inside it: its gaps are the grid's plus its padding and
+   border on both sides, so each part sits on its cell and lines up with the parts outside */
+.k8-span { display: grid; grid-template-rows: repeat(3, 1fr); row-gap: calc(3.3rem + 4px); column-gap: calc(3.6rem + 4px); align-items: center; }
 /* Outside the VPC: S3 and the snapshots, as single-row parts */
 .k8-out { margin-top: 1.7rem; }
 .k8-out .nd { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.6rem; align-items: center; text-align: left; }
 .ar2:has(.k8-grid) .k8-out .nd .ic { grid-row: 1 / 3; margin: 0; }
 .k8-out .nd b { align-self: end; }
 .k8-out .nd > span:last-child { align-self: start; }
-.k8-r123 { grid-row: 1 / 4; } .k8-c45 { grid-column: 4 / 6; }
-/* A server box over several cells repeats the grid inside it: its gaps are the grid's plus its padding and
-   border on both sides, so each part sits on its cell and lines up with the parts outside */
-.k8-span { display: grid; grid-template-rows: repeat(3, 1fr); row-gap: calc(3.3rem + 4px); column-gap: calc(3.6rem + 4px); align-items: center; }
 
-/* 6.3: chapter 6's architecture on the same sideways grid: the public subnet; the app servers; cache over the
-   replicas; the database server across two columns. Three rows of the same height, then S3 and the snapshots */
-.k6-grid { grid-template-rows: 1fr 1fr 1fr auto; }
+/* Chapters 5 and 6: five columns (the public subnet; the app servers; cache over the replicas, or in
+   chapter 5 replica 1 over replica 2; the database server across two columns), three rows of the same
+   height, then S3 and the snapshots */
+.k6-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: 1fr 1fr 1fr auto; }
 .k6-grid > .k8-vpc { grid-area: 1 / 1 / 4 / 6; }
+.k8-pub { grid-area: 1 / 1 / 4 / 2; }
+.k8-apps { grid-area: 1 / 2 / 4 / 3; justify-content: flex-end; }
 .k6-cache { grid-area: 1 / 3 / 2 / 4; }
 .k6-reps { grid-area: 3 / 3 / 4 / 4; }
 .k6-reps2 { grid-area: 1 / 3 / 4 / 4; }   /* chapter 5: replica 1 over replica 2, the wire to PgBouncer between them */
 .k6-db { grid-area: 1 / 4 / 4 / 6; }
 .k6-primary { grid-template-columns: 1fr 1fr; border-color: #c925d1; }
+
+/* Chapter 8 on: seven columns (the public subnet; the app servers; Redis, OpenSearch and the replicas; the
+   database server over two narrow columns; the workers; Kafka), four rows of the same height, then S3 and
+   the snapshots. The catalogue and Kafka span the first three rows */
+.k7-grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1fr) repeat(2, minmax(0, 0.9fr)) repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, 1fr) auto auto; row-gap: 2.2rem; }
+.k7-grid > .k8-vpc { grid-area: 1 / 1 / 5 / 8; margin-bottom: -3.4rem; }
+.k7-pub { grid-area: 1 / 1 / 5 / 2; }
+.k7-apps { grid-area: 1 / 2 / 5 / 3; justify-content: flex-end; }
+.k7-data { grid-area: 1 / 3 / 4 / 4; }
+.k7-db { grid-area: 3 / 4 / 5 / 6; }
+.k7-work { grid-area: 1 / 6 / 4 / 7; }
+.k7-kfk { grid-area: 1 / 7 / 4 / 8; }
+.k7-pub, .k7-work { margin-bottom: -1.5rem; }   /* room for the caption tab on the frame in their bottom row */
+.k7-apps { margin-bottom: -3rem; }              /* room for its label, under the core API's frame */
+.k7-grid > .k8-out { margin-top: 2.1rem; }      /* clear of the VPC's deeper bottom */
+/* PostgreSQL over PgBouncer and the EBS disk, centred across both, so it forks evenly to them */
+.k7-pg { grid-column: 4 / 6; justify-self: center; width: 70%; }
+/* A server's frame, drawn behind its parts like a subnet card, with its caption as a tab on its border.
+   It holds no parts itself, so it never makes a row taller and the parts stay level */
+.k8-frame { position: relative; z-index: 0; align-self: stretch; margin: -0.45rem; border: 2px solid #ed7100; border-radius: 10px; background: var(--sheet); }
+.k8-dbf { border-color: #c925d1; }
+.k8-mskf { border-color: #7aa116; }
+.k8-eksf { border-style: dashed; background: transparent; }   /* chapter 10 on: one EKS cluster, drawn on both sides of the data */
+.k8-r12 { grid-row: 1 / 3; } .k8-r1234 { grid-row: 1 / 5; }
+.k7-pub1 { grid-row: 1 / 2; }   /* chapter 10 on: the ALB alone */
+/* Chapter 9 on: shoppers on the left, each beside its CloudFront edge; Route 53 above them */
+.ar2:has(.k9-left) { grid-template-columns: 20rem minmax(0, 1fr); min-width: 96rem; }
+.ar2 > .ar2-left.k9-left { display: grid; grid-template-columns: 1fr 1fr; column-gap: 1.8rem; row-gap: 2rem; align-content: start; align-items: center; }
+.k9-dns { grid-column: 1; grid-row: 1; }
+.k9-shop { grid-column: 1; }
+.k9-edge { grid-column: 2; }
+.k9-edgef { position: relative; grid-column: 2; align-self: stretch; margin: -0.6rem; border: 2px dashed #8c4fff; border-radius: 10px; }
+.k9-left > .pt-dock { grid-column: 1 / 3; }
 
 /* 12.3: customers and logical shards, coloured by the primary that holds them */
 .sm-label { margin: 1rem 0 0.45rem; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }

@@ -8,7 +8,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[4] = {
   intro: `
     <ol class="points lede">
-      <li>V1 is a success, and marketing brings in 10,000 users.</li>
+      <li>Tomazon grows from a thousand users to ten thousand.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
@@ -30,14 +30,14 @@ ZTM.content[4] = {
       sub: 'Growth brings the next bottleneck. Find which tier is full before changing anything.',
       html: `
         <ol class="points lede">
-          <li>V1 is a success. A thousand people use it every week, and the feedback is good.</li>
-          <li>Then marketing gets involved: an announcement, a demo at the all-hands, a newsletter. Within a month there are 10,000 users.</li>
+          <li>Tomazon now has a thousand regular shoppers, and most of them come back.</li>
+          <li>Then the marketing starts: ads across Bangalore, a newsletter, and a Diwali sale. Within a month there are 10,000 users.</li>
           <li>And the app slows down again.</li>
         </ol>
 
         <h2>What users notice</h2>
         <ol class="steps">
-          <li><strong>The busiest hour is slow.</strong> Pages that took 100 ms now take 1–2 seconds between 10 and 12 in the morning.</li>
+          <li><strong>The busiest hour is slow.</strong> Pages that took 100 ms now take 1–2 seconds between 8 and 10 in the evening.</li>
           <li><strong>Some requests fail</strong> with 504 Gateway Timeout from Nginx.</li>
           <li><strong>Quiet hours are fine.</strong> The problem only appears when everyone is using it at once.</li>
         </ol>
@@ -46,7 +46,7 @@ ZTM.content[4] = {
         <figure class="term">
           <figcaption>On the database server, at the busiest hour</figcaption>
 <pre><span class="p">$</span> uptime
-<span class="o"> 11:04:51 up 63 days,  1 user,  load average: 0.84, 0.91, 0.88</span>
+<span class="o"> 21:04:51 up 63 days,  1 user,  load average: 0.84, 0.91, 0.88</span>
 <span class="p">$</span> free -h
 <span class="o">               total        used        free      shared  buff/cache   available
 Mem:            15Gi       4.2Gi       1.1Gi       2.1Gi        10Gi        11Gi
@@ -68,11 +68,11 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
 <pre><span class="p">$</span> nproc
 <span class="o">2</span>
 <span class="p">$</span> uptime
-<span class="o"> 11:05:12 up 63 days,  1 user,  load average: 7.92, 7.40, 6.15</span>
+<span class="o"> 21:05:12 up 63 days,  1 user,  load average: 7.92, 7.40, 6.15</span>
 <span class="p">$</span> top
 <span class="o">%Cpu(s): 96.4 us,  2.9 sy,  0.0 ni,  0.5 id,  0.0 wa,  0.0 hi,  0.2 si,  0.0 st</span></pre>
           <ol class="points term-note">
-            <li>A load of 7.92 on 2 vCPUs: about 4 threads for every core, and rising through the morning.</li>
+            <li>A load of 7.92 on 2 vCPUs: about 4 threads for every core, and rising through the evening.</li>
             <li>96% <code>us</code> and no <code>wa</code>: the CPU is busy running our own code, not waiting for anything.</li>
           </ol>
         </figure>

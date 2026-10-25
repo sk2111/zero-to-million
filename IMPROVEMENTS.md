@@ -47,15 +47,14 @@ total and found them all correct. Chapter 7 is the strongest chapter.
 
 | # | Item | Why first |
 |---|---|---|
-| 1 | [S2](#s2) Leftover story in chapter 4 | A different app's story (V1, all-hands demo, morning peak), visible on the first page of chapter 4 |
-| 2 | [S3](#s3) Chapter 12's flash sale | The chapter sets a problem it doesn't solve; the answer is in git |
-| 3 | [S4](#s4), [S5](#s5) Home regions in chapter 13 | Contradicts chapter 12's sharding and its own privacy point |
-| 4 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
-| 5 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
-| 6 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
-| 7 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
-| 8 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
-| 9 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
+| 1 | [S3](#s3) Chapter 12's flash sale | The chapter sets a problem it doesn't solve; the answer is in git |
+| 2 | [S4](#s4), [S5](#s5) Home regions in chapter 13 | Contradicts chapter 12's sharding and its own privacy point |
+| 3 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
+| 4 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
+| 5 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
+| 6 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
+| 7 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
+| 8 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
 
 ### Decisions for you
 
@@ -108,18 +107,6 @@ Some items change the scope of the book, so they're yours to call before anyone 
     - Alternatively, say once that from chapter 5 on "users" means registered accounts, with a stated share
       active at the peak.
     - Either way, show the primary being scaled up (see S9).
-
-<a id="s2"></a>
-- [ ] **S2 · P1 · Chapter 4 opens with another app's story.**
-  - "V1 is a success" ([ch4:11](zero-to-million/js/ch4-scale-out.js#L11), [ch4:33](zero-to-million/js/ch4-scale-out.js#L33)):
-    the book only ever says "the pilot".
-  - "a demo at the all-hands" ([ch4:34](zero-to-million/js/ch4-scale-out.js#L34)).
-  - The peak is "between 10 and 12 in the morning" ([ch4:40](zero-to-million/js/ch4-scale-out.js#L40)), with
-    `uptime` at 11:04 ([ch4:49](zero-to-million/js/ch4-scale-out.js#L49)). Tomazon is a public store whose
-    peak is in the evening: 2.2 says "9 p.m.", 3.1 shows 19:12, and 4.2 says "busy evenings".
-  - Page 5.1 has the same morning timestamps ([ch5:45](zero-to-million/js/ch5-make-it-fast.js#L45)).
-  - **Fix:** rewrite 4.1's opening as a marketing campaign or festival sale, and move all the timestamps in 4.1
-    and 5.1 to around 20:00–21:00.
 
 <a id="s3"></a>
 - [ ] **S3 · P1 · The flash sale in chapter 12 isn't solved by what the chapter adds.**
@@ -281,8 +268,8 @@ Some items change the scope of the book, so they're yours to call before anyone 
 - [ ] **S15 · P3 · Chapter openings don't follow one pattern.**
   - Chapters 3–5 and 10–14 title their first page "N users, and …". Chapters 6–9 don't.
   - Chapter 8 never states its user count. "Tomazon passes 2 million users" was removed in `068b0c3`.
-  - In chapters 3, 4 and 5 the intro repeats the first page's lede almost word for word. For example, "V1 is a
-    success…" appears twice, and "10,000 users was a success…" appears twice.
+  - In chapters 3 and 5 the intro repeats the first page's lede almost word for word, for example "10,000 users was a
+    success…" in chapter 5.
   - **Fix:** one pattern for every chapter. The intro says where Tomazon is. The first page says what broke,
     titled "N users, and …".
 

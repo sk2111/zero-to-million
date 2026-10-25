@@ -42,7 +42,7 @@ ZTM.content[5] = {
 <pre><span class="p">$</span> nproc
 <span class="o">8</span>
 <span class="p">$</span> uptime
-<span class="o"> 10:31:07 up 20 days,  1 user,  load average: 1.12, 1.30, 1.25</span>
+<span class="o"> 21:31:07 up 20 days,  1 user,  load average: 1.12, 1.30, 1.25</span>
 <span class="p">$</span> top
 <span class="o">%Cpu(s): 14.2 us,  2.1 sy,  0.0 ni, 83.4 id,  0.0 wa,  0.0 hi,  0.3 si,  0.0 st</span></pre>
           <ol class="points term-note">
@@ -56,7 +56,7 @@ ZTM.content[5] = {
         <figure class="term">
           <figcaption>On the database server, at the same moment</figcaption>
 <pre><span class="p">$</span> uptime
-<span class="o"> 10:31:40 up 140 days,  1 user,  load average: 3.86, 3.71, 3.40</span>
+<span class="o"> 21:31:40 up 140 days,  1 user,  load average: 3.86, 3.71, 3.40</span>
 <span class="p">$</span> top
 <span class="o">%Cpu(s): 91.7 us,  5.8 sy,  0.0 ni,  2.1 id,  0.2 wa,  0.0 hi,  0.2 si,  0.0 st</span></pre>
           <ol class="points term-note">

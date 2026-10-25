@@ -190,7 +190,7 @@ ZTM.content[5] = {
         </ol>
         <figure class="term">
           <figcaption>Two engines in SQLAlchemy: one for writes, one for reads</figcaption>
-<pre><span class="o">primary = create_engine("postgresql+psycopg://app@10.0.2.14/tomazon")
+<pre><span class="o">primary = create_engine("postgresql+psycopg://app@10.0.2.14:6432/tomazon")
 replica = create_engine("postgresql+psycopg://app@db-read.internal/tomazon")    </span><span class="c"># both replicas behind one name</span><span class="o">
 
 def search_products(term):

@@ -71,7 +71,7 @@ ZTM.content[5] = {
           <figcaption>PostgreSQL’s own statistics, with the pg_stat_statements extension turned on</figcaption>
 <pre><span class="p">$</span> psql -d tomazon
 <span class="o">tomazon=> SELECT calls, round(total_exec_time) AS total_ms,
-                  round(mean_exec_time, 2) AS mean_ms, left(query, 48) AS query
+                  round(mean_exec_time::numeric, 2) AS mean_ms, left(query, 48) AS query
              FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 6;
 
   calls  | total_ms | mean_ms |                      query

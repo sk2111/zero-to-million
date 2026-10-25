@@ -285,7 +285,7 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
 <span class="p">$</span> sudo -u postgres psql -d tomazon -c "CREATE EXTENSION pg_stat_statements;"
 <span class="o">CREATE EXTENSION</span>
 <span class="p">$</span> psql -d tomazon                               <span class="c"># a day later</span>
-<span class="o">tomazon=> SELECT calls, round(mean_exec_time, 2) AS mean_ms,
+<span class="o">tomazon=> SELECT calls, round(mean_exec_time::numeric, 2) AS mean_ms,
                   round(total_exec_time) AS total_ms, left(query, 50) AS query
              FROM pg_stat_statements ORDER BY calls DESC LIMIT 5;
 

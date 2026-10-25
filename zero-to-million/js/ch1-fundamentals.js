@@ -169,8 +169,8 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
-            <li><strong>CPU % is not how much work you’re doing.</strong> A core stalled on memory shows as 100% busy.
-            <code>perf stat</code> shows instructions per cycle; well below 1 usually means memory stalls, not heavy computation.</li>
+            <li><strong>CPU % is not how much work you’re doing.</strong> A core waiting for data from RAM shows as 100% busy.
+            <code>perf stat</code> shows instructions per cycle; well below 1 usually means the core is waiting on RAM, not doing heavy computation.</li>
             <li><strong>Language choice is a capacity decision.</strong> The same CPU-heavy endpoint can need ten times
             the servers in an interpreted language as in a compiled one. For I/O-bound work, the difference mostly disappears.</li>
           </ol>

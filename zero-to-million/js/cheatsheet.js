@@ -117,6 +117,7 @@ ZTM.cheatsheet = (function () {
       ['If you can’t tell how people use it, it isn’t teaching you anything.', '2.6']
     ]],
     ['compute', 'Grow the servers', [
+      ['When one server runs everything, every part competes for the same CPU, memory and disk. Growth turns that competition into failure.', '3.1'],
       ['Moving the database to its own server is usually the first, cheapest big win.', '3.2'],
       ['Cross the network as few times as possible per request: fewer queries, batched work, connections that stay open.', '3.3'],
       ['Give each server the resource its work needs most: CPU for the app, memory and a fast disk for the database.', '3.4'],

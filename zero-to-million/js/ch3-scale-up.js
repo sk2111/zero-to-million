@@ -53,7 +53,7 @@ ZTM.content[3] = {
 <span class="p">$</span> free -h
 <span class="o">               total        used        free      shared  buff/cache   available
 Mem:           459Mi       402Mi        11Mi       9.0Mi        46Mi        18Mi
-Swap:          1.0Gi       612Mi       412Mi</span>
+Swap:          1.0Gi       160Mi       864Mi</span>
 <span class="p">$</span> top -o %MEM                   <span class="c"># sorted by memory; some columns left out</span>
 <span class="o">    PID USER      %CPU %MEM COMMAND
    1834 postgres  61.2 24.1 postgres: app tomazon 127.0.0.1(48812) SELECT
@@ -63,7 +63,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
     642 www-data   6.3  2.1 nginx: worker process</span></pre>
           <ol class="points term-note">
             <li>Load 5.81 on 2 vCPUs: almost 3 threads ready for every core, and rising (page 1.3).</li>
-            <li>Only 18 MB <code>available</code>, and 612 MB already swapped out to disk: the server has run out of memory (page 1.6).</li>
+            <li>Only 18 MB <code>available</code>, and 160 MB already swapped out to disk: the server has run out of memory (page 1.6).</li>
             <li><code>top</code> shows who is competing: PostgreSQL and both FastAPI workers want the same 2 vCPUs and the same 459 MB, and Nginx needs a share too.</li>
           </ol>
         </figure>
@@ -71,10 +71,10 @@ Swap:          1.0Gi       612Mi       412Mi</span>
         <h2>The real problem: everything shares one machine</h2>
         <ol class="points">
           <li>Nginx, FastAPI and PostgreSQL all run on the same EC2 instance, so they share the same 2 vCPUs, the same 512 MB of RAM and the same disk.</li>
-          <li>At 1,000 users each part needs more: more FastAPI workers to serve more people at once, more database connections, and more RAM for PostgreSQL to cache its data. Together they need more than the server has:</li>
+          <li>At 1,000 users each part needs more: more requests in flight in each FastAPI worker, more database connections, and more RAM for PostgreSQL to cache its data. Together they need more than the server has:</li>
         </ol>
         <div class="over-wrap">
-          <div class="budget over" role="img" aria-label="At 1,000 users the server needs about 670 MB: 150 MB for Ubuntu, 220 MB for PostgreSQL, 280 MB for four FastAPI workers and 20 MB for Nginx. It has 512 MB, so about 158 MB is swapped to disk.">
+          <div class="budget over" role="img" aria-label="At 1,000 users the server needs about 670 MB: 150 MB for Ubuntu, 220 MB for PostgreSQL, 280 MB for two busier FastAPI workers and 20 MB for Nginx. It has 512 MB, so about 158 MB is swapped to disk.">
             <span class="b-os" style="flex-grow:150"><b>150 MB</b></span>
             <span class="b-db" style="flex-grow:220"><b>220 MB</b></span>
             <span class="b-app" style="flex-grow:280"><b>280 MB</b></span>
@@ -83,9 +83,9 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <span class="over-zone" style="left:76.4%"></span>
           <span class="over-mark" style="left:76.4%"><b>The server has 512 MB</b><span>158 MB too much: swapped to disk</span></span>
         </div>
-        <div class="legend budget-legend"><span><i class="sw b-os"></i>Ubuntu and system services</span><span><i class="sw b-db"></i>PostgreSQL, more connections and cache</span><span><i class="sw b-app"></i>FastAPI, 4 workers</span><span><i class="sw b-ng"></i>Nginx</span></div>
+        <div class="legend budget-legend"><span><i class="sw b-os"></i>Ubuntu and system services</span><span><i class="sw b-db"></i>PostgreSQL, more connections and cache</span><span><i class="sw b-app"></i>FastAPI, 2 busier workers</span><span><i class="sw b-ng"></i>Nginx</span></div>
         <ol class="points" start="3">
-          <li>And it’s still a single point of failure. When the OOM killer stops PostgreSQL, the whole product is down, for everyone.</li>
+          <li>And it’s still a single point of failure. When the OOM killer kills PostgreSQL, the whole product is down, for everyone.</li>
           <li>This is a time bomb. Nothing is wrong with the code, but every new user brings the explosion a little closer.</li>
         </ol>
 
@@ -165,12 +165,13 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <li><strong>Copy the data.</strong> For a pilot-sized database, <code>pg_dump</code> and <code>pg_restore</code> during a short maintenance window is enough. For a bigger one, PostgreSQL’s logical replication keeps the new server in sync until you switch.</li>
           <li><strong>Point the app at it.</strong> Change <code>DATABASE_URL</code> to the new server’s private address, and restart the app.</li>
           <li><strong>Watch it.</strong> Response times, errors, and the new server’s CPU, memory and disk, with chapter 1’s tools.</li>
-          <li><strong>Keep the old copy</strong> for a few days, read-only, in case you need to roll back.</li>
+          <li><strong>Keep the old copy</strong> for a few days, read-only, in case you need to roll back. Writes made after the switch exist only on the new server, so a rollback has to copy them back.</li>
         </ol>
 
         <figure class="term">
           <figcaption>Try it: copying the database during a maintenance window</figcaption>
 <pre><span class="p">$</span> pg_dump -Fc -d tomazon -f tomazon.dump                          <span class="c"># on the old server: a compressed copy</span>
+<span class="p">$</span> createdb -h 10.0.2.14 -U app tomazon                           <span class="c"># an empty database to restore into</span>
 <span class="p">$</span> pg_restore -j 2 -h 10.0.2.14 -U app -d tomazon tomazon.dump     <span class="c"># load it into the new database server</span>
 <span class="p">$</span> psql -h 10.0.2.14 -U app -d tomazon -c "select count(*) from products;"
 <span class="o"> count
@@ -259,12 +260,16 @@ for p in products:
 tomazon = host=10.0.2.14 port=5432 dbname=tomazon
 
 [pgbouncer]
+listen_addr = 127.0.0.1
 listen_port = 6432
+auth_type = scram-sha-256
+auth_file = /etc/pgbouncer/userlist.txt   </span><span class="c">; the users and password hashes it accepts</span><span class="o">
 pool_mode = transaction
 max_client_conn = 400        </span><span class="c">; connections the app may open</span><span class="o">
-default_pool_size = 20       </span><span class="c">; real connections to PostgreSQL</span></pre>
+default_pool_size = 20       </span><span class="c">; real connections to PostgreSQL</span><span class="o">
+max_prepared_statements = 200   </span><span class="c">; lets psycopg’s prepared statements work in transaction mode</span></pre>
           <ol class="points term-note">
-            <li>The app now connects to <code>localhost:6432</code> instead of the database server directly.</li>
+            <li>The app now connects to <code>localhost:6432</code> instead of the database server directly. <code>listen_addr</code> keeps PgBouncer on this server only, and <code>auth_file</code> lists who may log in.</li>
             <li>PgBouncer keeps 20 connections to the database at <code>10.0.2.14</code> open, and hands them out one transaction at a time.</li>
           </ol>
         </figure>
@@ -365,14 +370,15 @@ default_pool_size = 20       </span><span class="c">; real connections to Postgr
         </table>
         <ol class="points" start="2">
           <li>For most teams at this stage, memory-optimised with EBS, or RDS, is the safer start. Move to local NVMe once you’ve measured that the EBS volume is the limit, and replication is in place.</li>
+          <li><strong>Tomazon runs its own PostgreSQL on EC2.</strong> At this size it costs less than RDS, and the team wants full control of the server: its settings, its extensions, and tools such as <code>iostat</code> on the machine itself. RDS stays an option for when running the database by hand stops being worth the time.</li>
         </ol>
 
         <h2>Worked example: sizing for 1,000 users</h2>
         <ol class="steps">
-          <li><strong>Measure the pilot.</strong> At the busiest hour it serves about 50 requests a second, each using about 20 ms of CPU.</li>
+          <li><strong>Measure the server now.</strong> At the busiest hour, with about 1,000 shoppers, it serves about 50 requests a second, as page 2.2 estimated. But each one uses about 20 ms of CPU, twice the estimate: the app has grown since the pilot.</li>
           <li><strong>App server.</strong> 50 × 20 ms = 1 core busy. A c7g.large, with 2 vCPUs, runs at about 50%, leaving headroom for spikes (page 1.13).</li>
-          <li><strong>Database memory.</strong> The hot tables and indexes come to about 6 GB. An r7g.large, with 16 GB, holds all of it in RAM, with room to grow.</li>
-          <li><strong>Database disk.</strong> <code>iostat</code> shows about 1,500 IOPS at the busiest hour. The default gp3 volume, with 3,000 IOPS, is enough; buy more when it isn’t (page 1.7).</li>
+          <li><strong>Database memory.</strong> The hot tables and indexes come to about 1 GB: the products, recent orders, sessions and the usage events from page 2.6. An r7g.large, with 16 GB, holds all of it in RAM, with plenty of room to grow.</li>
+          <li><strong>Database disk.</strong> <code>iostat</code> shows about 150 IOPS at the busiest hour: with the hot data in RAM, most reads never reach the disk. The default gp3 volume, with 3,000 IOPS, has plenty of room; buy more when it doesn’t (page 1.7).</li>
           <li><strong>Result:</strong> a c7g.large for the app, and an r7g.large with gp3 for the database. Measure again after the move, because the bottleneck will be somewhere new.</li>
         </ol>
 

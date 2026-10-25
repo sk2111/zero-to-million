@@ -92,7 +92,6 @@ Some items change the scope of the book, so they're yours to call before anyone 
     In 12.1 it is suddenly an r7g.8xlarge, with no step in between
     ([ch12:37](zero-to-million/js/ch12-split-the-data.js#L37)).
   - Smaller mismatches of the same kind:
-    - 3.4's "6 GB hot set" and "1,500 IOPS" against 2.2's ~150 MB database and the t4g.nano's 250 IOPS cap (see 3-1).
     - 6.1's "10 ms per query" against 3.3's 0.2–0.5 ms round trip (see 6-5).
     - 9.1's 100 million product pages a month against the 6.2 widget's 5,000 a second (see 9-6).
   - **Fix:**
@@ -304,38 +303,6 @@ The arithmetic is right throughout, and so are the t4g.nano's specs (5% baseline
 <a id="ch3"></a>
 ### Chapter 3: Scale up, split out
 
-- [ ] **3-1 · P1 · 3.4's sizing contradicts chapter 2**
-  ([ch3:372–375](zero-to-million/js/ch3-scale-up.js#L372)).
-  - "Measure the pilot… about 50 requests a second": the pilot served 5. 50 is the 1,000-shopper figure.
-  - "20 ms of CPU" is twice 2.2's estimate, with no comment.
-  - "Hot tables and indexes come to about 6 GB": 2.2 puts the whole database at about 150 MB.
-  - "About 1,500 IOPS": the t4g.nano's steady limit is 250, and 4.1 shows about 220 IOPS at ten times the users.
-  - **Fix:**
-    - "At about 1,000 shoppers: 50 req/s, as 2.2 predicted, but 20 ms of CPU each, twice the estimate."
-    - Make the hot set about 1 GB and say what's in it.
-    - Drop the IOPS to 100–200.
-- [ ] **3-4 · P2 · The minimal `pgbouncer.ini` won't accept connections**
-  ([ch3:258–265](zero-to-million/js/ch3-scale-up.js#L258)).
-  - With no `listen_addr`, it listens only on a Unix socket.
-  - There's no `auth_type` or `auth_file`.
-  - psycopg 3's prepared statements break transaction pooling.
-  - Add `listen_addr = 127.0.0.1`, `auth_type = scram-sha-256`, `auth_file = …` and `max_prepared_statements = 200`.
-    In 4.4, note that `listen_addr` becomes the private IP.
-- [ ] **3-5 · P2 · Four workers break the book's own rule.** The 670 MB budget gives "FastAPI, 4 workers" on 2 vCPUs
-  ([ch3:77–86](zero-to-million/js/ch3-scale-up.js#L77)), against the one-async-worker-per-vCPU rule. Grow the
-  memory through PostgreSQL instead, or explain the workers.
-- [ ] **3-6 · P2 · The diagnosis ignores CPU and network.**
-  - By 2.2's own numbers, CPU (5× the baseline) and network (2.5×) run out before memory (1.3×).
-  - 3.1 shows only memory, never the CPU credits 2.6 told you to watch.
-  - `free` shows 612 MB swapped, while the bar says 158 MB too much.
-- [ ] **3-7 · P2 · Own PostgreSQL or RDS?** The book never says which Tomazon picks
-  ([ch3:367](zero-to-million/js/ch3-scale-up.js#L367)). Chapter 4 depends on it: it runs `iostat` on the server and
-  installs PgBouncer there, which RDS doesn't allow. State the choice and the reason.
-- [ ] **3-8 · P3 · Gaps on the migration page.**
-  - `pg_restore` needs the target database to exist.
-  - The photos have to move to the new app server too.
-  - Rolling back loses the writes made since the switch.
-  - The 3.2 diagram shows c7g.large and 16 GB before 3.4 chooses them.
 
 <a id="ch4"></a>
 ### Chapter 4: Scale out
@@ -671,7 +638,6 @@ strong ending.
 - [ ] **C2 · P2 · "On one page" prints as about 13 A4 pages.** The README also says "one printable page". Either add a
   condensed print layout (2 pages: patterns and rules), or drop the "one page" promise from the README.
 - [ ] **C3 · P3 · Rule and number mismatches.**
-  - Page 3.1's rule ("When one server runs everything, every part competes…") is missing.
   - "Cache it or leave it" is settled by "Plan for an empty cache", which doesn't settle the choice. That rule
     comes from 6.2 but links to 6.1; use 6.1's rule.
 - [ ] **C4 · P3 · Re-check patterns 10, 12 and 13 after S3–S5 and 10-1 are fixed.** For example, "personal data
@@ -785,11 +751,9 @@ The code is in good shape for a static site with no build step.
     - Let readers turn `S` off, or require a modifier.
 - [ ] **K9 · P3 · The lag slider on 5.3 announces a bare number.** Set `aria-valuetext` with units, as chapter 1's
   sliders now do ("16 threads", "1,000,000 users", "70% busy").
-- [ ] **K10 · P2 · Hard-coded colours fail contrast in dark mode** (besides UX1):
-  - `#b42b2b` red text on 3.1, at 2.8:1 ([style.css:603](zero-to-million/css/style.css#L603), :616).
-  - The kafka-anatomy offsets, at 2.0:1 ([style.css:792–795](zero-to-million/css/style.css#L792)).
-  - The query-latency "connect" label, at 1.8:1 ([style.css:1083](zero-to-million/css/style.css#L1083)).
-  - **Fix:** add theme tokens such as `--bad`, and use `--chip-ink` for text on accent fills.
+- [ ] **K10 · P2 · Hard-coded colours fail contrast in dark mode:** the kafka-anatomy offsets on 8.2, at 2.0:1
+  ([style.css:792–795](zero-to-million/css/style.css#L792)). Use `--chip-ink` for text on accent fills. (Chapter 3's
+  red text now uses the new `--bad` token, and its "connect" label the page's ink.)
 - [ ] **K11 · P2 · The focus ring is removed on the home-page section picker** (6.1,
   [style.css:709](zero-to-million/css/style.css#L709)). Focus becomes a 1.5:1 grey border that can't be told apart
   from selection. Keep the global accent outline.

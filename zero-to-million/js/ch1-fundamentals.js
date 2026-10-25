@@ -507,7 +507,7 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
             8 workers and two endpoints: product pages (50 ms, mostly waiting on the database) and PDF invoices (2 seconds
             of pure CPU each). If 8 people download an invoice at the same moment, all 8 workers are busy for 2 seconds,
             and every product page waits behind them, even though it needs only 50 ms. The fix is to give heavy work its
-            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue (chapter 8)
+            own pool of workers, so cheap requests always find a free one, or to hand it to a background queue
             and let the user collect the PDF when it’s ready.</li>
             <li><strong>I/O-bound services scale with concurrency.</strong> If CPU is low and throughput is capped, you
             need more requests in flight (more workers, async I/O), not more cores.</li>
@@ -750,7 +750,7 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
         <h3 class="read-head">Two problems that build up slowly</h3>
         <ol class="points">
           <li><strong>Leaks.</strong> Memory grows a little every hour until the stages above begin. A restart “fixes” it, which is why leaks survive for so long. Watch for memory that only ever goes up.</li>
-          <li><strong>Garbage-collection pressure.</strong> In Java, Go, .NET and Node you never free memory yourself. A garbage collector (GC) runs from time to time, finds the objects your code no longer uses, and frees them. Each run takes CPU time, and some runs pause your code for a moment. When the heap (the memory your program keeps its objects in) is nearly full, the GC has to run again and again to make room. Requests get stuck behind those pauses, so your slowest requests (the p99, page 1.11) get much slower long before the program runs out of memory and crashes.</li>
+          <li><strong>Garbage-collection pressure.</strong> In Java, Go, .NET and Node you never free memory yourself. A garbage collector (GC) runs from time to time, finds the objects your code no longer uses, and frees them. Each run takes CPU time, and some runs pause your code for a moment. When the heap (the memory your program keeps its objects in) is nearly full, the GC has to run again and again to make room. Requests get stuck behind those pauses, so your slowest requests get much slower long before the program runs out of memory and crashes.</li>
         </ol>
 
         <aside class="note design">
@@ -770,7 +770,7 @@ Swap:          2.0Gi          0B       2.0Gi</span></pre>
             <li><strong>A cache trades memory for speed.</strong> It keeps a copy of something that was slow to get, such as
             a database result, a rendered page or a file, in RAM. The next request reads that copy in microseconds instead of
             going back to the database, the disk or another server. You pay in RAM, and you save CPU, disk reads or network
-            round trips. The page cache above is exactly this: Linux spends spare RAM so it doesn’t have to read the disk again. Chapter 6 puts the same idea to work with Redis.</li>
+            round trips. The page cache above is exactly this: Linux spends spare RAM so it doesn’t have to read the disk again.</li>
           </ol>
         </aside>
 
@@ -987,7 +987,7 @@ Approximate round trip times in milli-seconds:
             way, and traffic out to the internet about $0.09 per GB. A chatty service spread across zones can cost more than
             its servers.</li>
             <li><strong>Big files don’t belong on app servers.</strong> Sending 2 MB images to 100 users a second is
-            200 MB/s, or 1.6 Gbps. The c7g.large that chapter 3 uses as the app server is sold as “up to 12.5 Gbps”, but
+            200 MB/s, or 1.6 Gbps. A c7g.large, a typical small app server, is sold as “up to 12.5 Gbps”, but
             that’s a burst: its steady baseline is 0.937 Gbps, and it can burst above that only for about 5 to 60 minutes
             before it drops back. The images alone need almost twice its steady bandwidth. Serve big files from object
             storage behind a CDN, and keep the app server for requests.</li>
@@ -1215,7 +1215,7 @@ Approximate round trip times in milli-seconds:
           <li><strong>Add headroom.</strong> To peak at 70%, you need 6 ÷ 0.7, about 9 cores. That is two 8-core servers, plus one spare in case one fails.</li>
           <li><strong>Requests in flight.</strong> If each request takes 100 ms end to end, 600 a second × 0.1 s = 60 in flight (Little’s Law). That’s how many workers or connections you need at the peak.</li>
         </ol>
-        <p>Now try your own numbers. The database is a separate story, covered in chapters 3 and 5.</p>
+        <p>Now try your own numbers. This counts the app servers’ CPU only; the database has limits of its own.</p>
 
         <div class="widget" data-widget="capacity"></div>
 
@@ -1241,7 +1241,7 @@ Approximate round trip times in milli-seconds:
       group: 'Putting it together',
       slug: 'recap',
       title: 'Recap: find what runs out first',
-      sub: 'A checklist for any slow system, and what to take into chapter 2.',
+      sub: 'A checklist for any slow system, and what to take with you.',
       html: `
         <ol class="points lede">
           <li>When something is slow, check every resource for three things, in this order.</li>
@@ -1260,7 +1260,7 @@ Approximate round trip times in milli-seconds:
             <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Packets being resent (<code>nstat</code>)</td><td>Connection errors and timeouts</td></tr>          </tbody>
         </table>
 
-        <h2>Take these into chapter 2</h2>
+        <h2>Take these with you</h2>
         <ol class="points">
           <li>A server is CPU, memory, disk and network, shared out by the OS as processes and threads. Every bottleneck is one of them, or a queue in front of one.</li>
           <li>Clock speeds stopped growing, so scale comes from parallelism, and the part that can’t run in parallel limits it.</li>

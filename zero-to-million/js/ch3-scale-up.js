@@ -243,7 +243,7 @@ for p in products:
         <h2>Structure queries well</h2>
         <ol class="points">
           <li><strong>Select only the columns you need,</strong> so less data crosses the network.</li>
-          <li><strong>Make sure each query uses an index,</strong> so the database’s own work stays small. Chapter 5 goes deeper.</li>
+          <li><strong>Make sure each query uses an index,</strong> so the database’s own work stays small.</li>
           <li><strong>Run independent queries at the same time.</strong> With an async driver, <code>asyncio.gather</code> sends two queries at once on two pooled connections, and you wait for the slower one instead of both in turn.</li>
         </ol>
 

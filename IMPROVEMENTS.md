@@ -42,22 +42,20 @@ total and found them all correct. Chapter 7 is the strongest chapter.
 4. Chapter 6's cache numbers ignore the cache stampede (6-1).
 5. Some snippets won't run as written: the PgBouncer config in 3-4, the Nginx config in 4-2, and the Debezium
    setup in 8-2.
-6. 16 references to later chapters remain, against the book's own rule (S17).
 
 ### Do these first
 
 | # | Item | Why first |
 |---|---|---|
 | 1 | [S2](#s2) Leftover story in chapter 4 | A different app's story (V1, all-hands demo, morning peak), visible on the first page of chapter 4 |
-| 2 | [S17](#s17) Forward references | The book's own rule, 16 one-line fixes |
-| 3 | [S3](#s3) Chapter 12's flash sale | The chapter sets a problem it doesn't solve; the answer is in git |
-| 4 | [S4](#s4), [S5](#s5) Home regions in chapter 13 | Contradicts chapter 12's sharding and its own privacy point |
-| 5 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
-| 6 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
-| 7 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
-| 8 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
-| 9 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
-| 10 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
+| 2 | [S3](#s3) Chapter 12's flash sale | The chapter sets a problem it doesn't solve; the answer is in git |
+| 3 | [S4](#s4), [S5](#s5) Home regions in chapter 13 | Contradicts chapter 12's sharding and its own privacy point |
+| 4 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
+| 5 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
+| 6 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
+| 7 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
+| 8 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
+| 9 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
 
 ### Decisions for you
 
@@ -76,7 +74,7 @@ Some items change the scope of the book, so they're yours to call before anyone 
   - "the next page" within a chapter?
   - Soft hints such as "for now" and "not yet"?
 
-  S17 lists all three kinds.
+  The later-chapter references are fixed; S17 lists the other two kinds.
 - [ ] **D4. What does the book call itself?** "Workshop" (chapters 2 and 14), "the book" (cheat sheet) and "a guide"
   (home page) are all in use.
 - [ ] **D5. How should phone readers see the wide diagrams?** Today they scroll sideways with no hint (UX5).
@@ -178,8 +176,7 @@ Some items change the scope of the book, so they're yours to call before anyone 
     ([ch12:58](zero-to-million/js/ch12-split-the-data.js#L58)).
   - 5.1's top query, catalogue search at 77% of database time, is exactly the case for one.
   - **Fix:** add a short section to 5.1: `EXPLAIN ANALYZE` on the search query, a sequential scan, an index (or a
-    trigram or full-text index), then measure again. What's left justifies the replicas. Drop "Chapter 5 goes
-    deeper" either way (S17).
+    trigram or full-text index), then measure again. What's left justifies the replicas.
 
 <a id="s9"></a>
 - [ ] **S9 · P2 · Chapter 5 skips the book's own "scale up first" rule.**
@@ -301,33 +298,15 @@ Some items change the scope of the book, so they're yours to call before anyone 
   - "Workshop", "book" and "guide": see D4.
 
 <a id="s17"></a>
-- [ ] **S17 · P1 · References to later chapters (the book's own rule).** 16 remain:
-  - Chapter 1:
-    - [ch1:510](zero-to-million/js/ch1-fundamentals.js#L510) "(chapter 8)"
-    - [ch1:753](zero-to-million/js/ch1-fundamentals.js#L753) "(the p99, page 1.11)" on page 1.6
-    - [ch1:773](zero-to-million/js/ch1-fundamentals.js#L773) "Chapter 6 puts the same idea to work"
-    - [ch1:990](zero-to-million/js/ch1-fundamentals.js#L990) "that chapter 3 uses"
-    - [ch1:1218](zero-to-million/js/ch1-fundamentals.js#L1218) "covered in chapters 3 and 5"
-    - [ch1:1244](zero-to-million/js/ch1-fundamentals.js#L1244) and [ch1:1263](zero-to-million/js/ch1-fundamentals.js#L1263) "Take these into chapter 2"
-  - Widget text:
-    - [widgets.js:3274](zero-to-million/js/widgets.js#L3274) "the app server from chapter 3"
-    - [widgets.js:3318](zero-to-million/js/widgets.js#L3318) "the next chapters deal with those"
-  - Chapter 2:
-    - [ch2:75](zero-to-million/js/ch2-one-server.js#L75) "(chapter 5)"
-    - [ch2:179](zero-to-million/js/ch2-one-server.js#L179) "(chapter 4)"
-    - [ch2:182](zero-to-million/js/ch2-one-server.js#L182) "(chapters 5, 6 and 8)"
-    - [ch2:183](zero-to-million/js/ch2-one-server.js#L183) "(chapters 11 and 13)"
-    - [ch2:356](zero-to-million/js/ch2-one-server.js#L356) "That's where chapter 3 starts"
-    - [ch2:363](zero-to-million/js/ch2-one-server.js#L363) "Chapter 3 splits them"
-  - Chapter 3: [ch3:246](zero-to-million/js/ch3-scale-up.js#L246) "Chapter 5 goes deeper"
-  - Chapter 5: [ch5:213](zero-to-million/js/ch5-make-it-fast.js#L213) "(chapter 12)"
-  - **Within a chapter** (decision D3, P3):
+- [ ] **S17 · P3 · References to later pages, and soft hints** (decision D3). The references to later
+  *chapters* are fixed (see IMPROVEMENTS-DONE.md). If D3 says the rule covers these too:
+  - **Within a chapter:**
     - ch1:263, :305
     - ch2:70, :128, :135, :137, :193
     - ch3:156–158
     - ch4:83, :118, :150
     - ch5:121, :309
-  - **Soft hints** (D3, P3):
+  - **Soft hints:**
     - "stays with Orders for now" (ch7:173)
     - "More readers are coming" (ch8:54)
     - "for now, just products" (ch8:175)

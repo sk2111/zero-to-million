@@ -72,7 +72,7 @@ ZTM.content[2] = {
             <tr><td>How many reads for each write?</td><td>Read-heavy systems scale with caches and copies of the database; write-heavy ones need other tools.</td><td>Very read-heavy: shoppers look at many products for every one they buy.</td></tr>
             <tr><td>Can it ever be down?</td><td>Staying up through failures needs at least two of everything, which costs money and time.</td><td>The pilot can be down for an hour at night now and then. Later, every minute down is lost sales.</td></tr>
             <tr><td>How fast must it be?</td><td>It sets a time budget for every part of a request.</td><td>Product pages in well under a second. Checkout can take a couple of seconds, because it waits for the payment gateway.</td></tr>
-            <tr><td>How up to date must the data be?</td><td>Always showing the latest data is simple on one server, and harder once data is copied (chapter 5).</td><td>Stock and payments must be exact: never sell the last item twice, never charge twice. Product pages and reviews can be a moment behind.</td></tr>
+            <tr><td>How up to date must the data be?</td><td>Always showing the latest data is simple on one server, and harder once data is copied to other servers.</td><td>Stock and payments must be exact: never sell the last item twice, never charge twice. Product pages and reviews can be a moment behind.</td></tr>
             <tr><td>What matters most?</td><td>You can’t optimise for everything at once.</td><td>For the pilot: speed of change and low cost. Correct orders and payments, always.</td></tr>
           </tbody>
         </table>
@@ -176,11 +176,11 @@ ZTM.content[2] = {
         <table class="data">
           <thead><tr><th>Leave out</th><th>Why it can wait</th><th>Add it when</th></tr></thead>
           <tbody>
-            <tr><td>Several servers and a load balancer</td><td>A handful of users fit easily on one machine</td><td>Traffic is real, or the product must survive a server failure (chapter 4)</td></tr>
+            <tr><td>Several servers and a load balancer</td><td>A handful of users fit easily on one machine</td><td>Traffic is real, or the product must survive a server failure</td></tr>
             <tr><td>Microservices</td><td>They slow down every change while the product is still moving</td><td>The team and the codebase are big enough that one codebase gets in the way</td></tr>
             <tr><td>Kubernetes</td><td>A lot to learn and run for one small app</td><td>You run many services and need to automate deploying them</td></tr>
-            <tr><td>Caches, queues, read replicas</td><td>They solve problems you don’t have yet</td><td>Measurements show a real bottleneck (chapters 5, 6 and 8)</td></tr>
-            <tr><td>Several regions</td><td>The users are in one place</td><td>Users are spread across the world, or you must survive a region going down (chapters 11 and 13)</td></tr>
+            <tr><td>Caches, queues, read replicas</td><td>They solve problems you don’t have yet</td><td>Measurements show a real bottleneck</td></tr>
+            <tr><td>Several regions</td><td>The users are in one place</td><td>Users are spread across the world, or you must survive a region going down</td></tr>
           </tbody>
         </table>
 
@@ -353,14 +353,14 @@ ZTM.content[2] = {
         <ol class="points">
           <li>The pilot fits on every count, with the most room on disk space and the least on memory.</li>
           <li><strong>A small instance limits its disk and network, not just its CPU.</strong> A gp3 volume offers 3,000 IOPS and 125 MB/s, but a t4g.nano can only use 250 IOPS and 5.4 MB/s steadily (page 1.7).</li>
-          <li>When traffic becomes steady rather than spiky, move to a bigger or non-burstable instance. That’s where chapter 3 starts.</li>
+          <li>When traffic becomes steady rather than spiky, move to a bigger or non-burstable instance.</li>
         </ol>
 
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>Keep the database on the same server, for now.</strong> There’s no network hop and nothing extra to run.
-            The cost: the app and the database fight over the same CPU and memory, and one failure takes both down. Chapter 3 splits them.</li>
+            The cost: the app and the database fight over the same CPU and memory, and one failure takes both down.</li>
             <li><strong>This server is a single point of failure.</strong> If it stops, the product is down until it’s back. For
             a pilot that’s usually an acceptable trade-off, as long as it’s written down.</li>
             <li><strong>Automate the setup.</strong> A script, or a tool such as Ansible or Terraform, lets you rebuild the server

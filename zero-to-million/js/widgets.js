@@ -3271,7 +3271,7 @@ window.ZTM = window.ZTM || {};
       var say = fmtInt(st.rps) + ' requests a second × ' + size + ' = <b>' + fmtNum(mbs) + ' MB/s</b>, or ' + rate(gbpsNow) + ', at the busiest hour. ';
       var large = SERVERS[0];
       if (pick === large) {
-        say += 'Even with headroom, that fits in the steady ' + large.base + ' Gbps of a c7g.large, the app server from chapter 3. The network isn’t your limit here. ';
+        say += 'Even with headroom, that fits in the steady ' + large.base + ' Gbps of a c7g.large, a typical small app server. The network isn’t your limit here. ';
       } else if (pick) {
         say += 'That needs a <b>' + pick.name + '</b> for its steady ' + pick.base + ' Gbps. ';
         if (large.burst >= need) say += 'A c7g.large could only manage it in bursts, which last about 5 to 60 minutes. ';
@@ -3315,7 +3315,7 @@ window.ZTM = window.ZTM || {};
         '<div class="tile key"><span>Servers</span><b data-o="servers"></b><small data-o="spare"></small></div>' +
       '</div>' +
       '<p class="calc-math" data-o="math"></p>' +
-      '<p class="w-note">CPU only. In real systems memory, the database or the network often runs out first; the next chapters deal with those.</p>';
+      '<p class="w-note">CPU only. In real systems memory, the database or the network often runs out first.</p>';
 
     function field(id, label, input) {
       return '<div class="w-field"><label for="' + id + '">' + label + '</label>' + input + '<output for="' + id + '"></output></div>';

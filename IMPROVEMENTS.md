@@ -9,6 +9,7 @@ The review covers all 14 chapters, the cheat sheet, the widgets, the styles, the
 - **P1**: wrong, broken or misleading. Fix before sharing the book widely.
   **P2**: weakens the book, or trips up a careful reader.
   **P3**: polish.
+- Finished items move to [IMPROVEMENTS-DONE.md](IMPROVEMENTS-DONE.md), so this file only lists what's left.
 - File links are relative to the repo root. Line numbers are as of `10fbe4e`.
 - Sections 1 and 4 come from reading the whole book and testing the site. Section 2 merges four independent
   chapter-by-chapter fact checks with that reading. Where two reviews found the same problem, it appears once.
@@ -21,14 +22,12 @@ The review covers all 14 chapters, the cheat sheet, the widgets, the styles, the
 console errors, no broken internal links, no empty widgets and no `NaN` or `undefined` on screen, even after
 every slider, button and select was worked. The arrow keys walk all 68 pages in order, and the simulators' maths
 matches the text. Section 5 lists what the code review found:
-- one visible bug: a stray "00" on page 1.1 (K1);
 - diagram pages that stay in memory (K2);
 - a "Copy commands" button that can empty the clipboard (K3);
 - gaps in keyboard and screen-reader support (K7–K11).
 
 **The design is consistent and polished.** Typography, the sidebar, the notes and the architecture diagrams
-read as one system in both themes. The problems are local: a dark-mode bug, tiny text in the widest
-diagrams on a laptop, and print.
+read as one system in both themes. The problems are local: tiny text in the widest diagrams on a laptop, and print.
 
 **Chapters 1 to 8 are careful and well taught.** The chapter 1 reviewer re-did every calculation and terminal
 total and found them all correct. Chapter 7 is the strongest chapter.
@@ -37,32 +36,28 @@ total and found them all correct. Chapter 7 is the strongest chapter.
 
 1. Tomazon's numbers stop following the book's own traffic model after chapter 4 (S1).
 2. Chapters 9 to 14 were cut down hard on 18 October. Some of what was removed is still referred to, or was
-   the answer to the problem the chapter sets up (S3, S7, S12, S13).
+   the answer to the problem the chapter sets up (S3, S12, S13).
 3. A few later claims don't hold up for an expert reader: the chapter 12 flash sale, and home regions in
    chapter 13 (S3, S4, S5).
 4. Chapter 6's cache numbers ignore the cache stampede (6-1).
-5. Some snippets won't run as written: the SQL in 3-3, the PgBouncer config in 3-4, the Nginx config in 4-2,
-   the database URL in 5-1, and the Debezium setup in 8-2.
+5. Some snippets won't run as written: the PgBouncer config in 3-4, the Nginx config in 4-2, and the Debezium
+   setup in 8-2.
 6. 16 references to later chapters remain, against the book's own rule (S17).
 
 ### Do these first
 
 | # | Item | Why first |
 |---|---|---|
-| 1 | [K1](#k1) Stray "00" on page 1.1 | Visible on the first content page; a one-line CSS fix |
-| 2 | [S2](#s2) Leftover story in chapter 4 | A different app's story (V1, all-hands demo, morning peak), visible on the first page of chapter 4 |
-| 3 | [S7](#s7) Dangling "scripts" line on the last page | The last page refers to something the book never says |
-| 4 | [S17](#s17) Forward references | The book's own rule, 16 one-line fixes |
-| 5 | [3-2](#ch3), [3-3](#ch3), [5-1](#ch5) Snippets and arithmetic | Readers copy these snippets |
-| 6 | [S3](#s3) Chapter 12's flash sale | The chapter sets a problem it doesn't solve; the answer is in git |
-| 7 | [S4](#s4), [S5](#s5) Home regions in chapter 13 | Contradicts chapter 12's sharding and its own privacy point |
-| 8 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
-| 9 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
-| 10 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
-| 11 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
-| 12 | [UX1](#ux1) Dark-mode memory bars | Visibly broken in a supported theme |
-| 13 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
-| 14 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
+| 1 | [S2](#s2) Leftover story in chapter 4 | A different app's story (V1, all-hands demo, morning peak), visible on the first page of chapter 4 |
+| 2 | [S17](#s17) Forward references | The book's own rule, 16 one-line fixes |
+| 3 | [S3](#s3) Chapter 12's flash sale | The chapter sets a problem it doesn't solve; the answer is in git |
+| 4 | [S4](#s4), [S5](#s5) Home regions in chapter 13 | Contradicts chapter 12's sharding and its own privacy point |
+| 5 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
+| 6 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
+| 7 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
+| 8 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
+| 9 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
+| 10 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
 
 ### Decisions for you
 
@@ -174,12 +169,6 @@ Some items change the scope of the book, so they're yours to call before anyone 
     - Or checkout reserves stock and confirms the price in Mumbai: one long round trip, at a moment when shoppers
       expect to wait.
 
-<a id="s7"></a>
-- [x] **S7 · P1 · The last page refers to something the book never says.** *Fixed: now "Faster servers wouldn't
-  have fixed Europe", which chapter 11 shows. It doesn't repeat the two-city test from the bullet above.*
-  - "The scripts weren't what slowed Europe down" ([ch14:131](zero-to-million/js/ch14-count-the-cost.js#L131)).
-    Chapter 11 never suspects scripts; that went out with the old chapter 11 pages.
-  - **Fix:** "The servers weren't what slowed Europe down: testing from two cities showed it was distance."
 
 <a id="s8"></a>
 - [ ] **S8 · P1 · Indexes are promised and claimed, but never taught.**
@@ -456,12 +445,6 @@ The arithmetic is right throughout, and so are the t4g.nano's specs (5% baseline
     - "At about 1,000 shoppers: 50 req/s, as 2.2 predicted, but 20 ms of CPU each, twice the estimate."
     - Make the hot set about 1 GB and say what's in it.
     - Drop the IOPS to 100–200.
-- [x] **3-2 · P1 · Arithmetic.** *Fixed: page 3.3 now says 4–10 ms, and the cheat sheet says "up to 10 ms".* "Twenty small queries… add about 10–20 ms"
-  ([ch3:214](zero-to-million/js/ch3-scale-up.js#L214)). At 0.2–0.5 ms each, that's 4–10 ms, which is what the
-  same page says later and what the widget shows.
-- [x] **3-3 · P1 · The SQL won't run.** *Fixed: both queries now use `mean_exec_time::numeric`.* `round(mean_exec_time, 2)`
-  ([ch3:288](zero-to-million/js/ch3-scale-up.js#L288), and again at [ch5:74](zero-to-million/js/ch5-make-it-fast.js#L74)).
-  PostgreSQL has no `round(double precision, integer)`. Use `round(mean_exec_time::numeric, 2)`.
 - [ ] **3-4 · P2 · The minimal `pgbouncer.ini` won't accept connections**
   ([ch3:258–265](zero-to-million/js/ch3-scale-up.js#L258)).
   - With no `listen_addr`, it listens only on a Unix socket.
@@ -519,10 +502,6 @@ The scale-up versus scale-out maths, the per-vCPU pricing and the PgBouncer move
 The query statistics check out (77%, 95%, the visit ratios), and so do streaming replication,
 read-your-own-writes and the LSN technique.
 
-- [x] **5-1 · P1 · The code bypasses PgBouncer.** *Fixed: the primary's URL now uses `:6432`. The replica line is
-  unchanged; see 5-2.* `create_engine("postgresql+psycopg://app@10.0.2.14/tomazon")`
-  connects on 5432 ([ch5:193](zero-to-million/js/ch5-make-it-fast.js#L193)). Since 4.4, the security group allows only
-  6432. Use `app@10.0.2.14:6432`.
 - [ ] **5-2 · P2 · The replicas have no pooling.** 3 servers × 8 workers × a pool of 10 is 240 connections per replica,
   above PostgreSQL's default `max_connections` of 100 ([ch5:189–194](zero-to-million/js/ch5-make-it-fast.js#L189)).
   Put PgBouncer on or in front of the replicas.
@@ -826,7 +805,6 @@ strong ending.
   - Page 3.1's rule ("When one server runs everything, every part competes…") is missing.
   - "Cache it or leave it" is settled by "Plan for an empty cache", which doesn't settle the choice. That rule
     comes from 6.2 but links to 6.1; use 6.1's rule.
-  - ~~"Twenty small queries add 10–20 ms" should match page 3.3.~~ Done with 3-2: it now says "up to 10 ms".
   - The context switch is 2 µs here and 3 µs on 1.2 (1-11).
 - [ ] **C4 · P3 · Re-check patterns 10, 12 and 13 after S3–S5 and 10-1 are fixed.** For example, "personal data
   stays home" sits beside "a standby in another region".
@@ -837,13 +815,6 @@ The cheat sheet is otherwise a faithful summary: all 81 links resolve, and its n
 
 ## 4. Design and UX
 
-<a id="ux1"></a>
-- [x] **UX1 · P1 · The dark-mode memory bars are unreadable** (pages 2.5 and 3.1). *Fixed: `.b-os` and `.b-free`
-  labels use `--ink`. Dark-mode contrast is now 8.7:1 and 16:1.*
-  - The segment labels are dark text on dark fills, with contrast of 1.0–1.9:1.
-  - The "Left for the page cache" label is invisible.
-  - The classes are `.b-os` and `.b-free` in [style.css](zero-to-million/css/style.css).
-  - Give the labels a light colour in dark mode, or put them outside the bar.
 - [ ] **UX2 · P2 · The widest diagrams are too small to read on a laptop with the sidebar open.**
   - At 1440×900, the 8.4 and 12.1 diagrams scale their labels to about 7 px, and the step text beside them to
     about 9 px.
@@ -904,14 +875,6 @@ The code is in good shape for a static site with no build step.
 - Almost every animation loop stops when its page goes away.
 - If PostHog is blocked, nothing breaks.
 
-<a id="k1"></a>
-- [x] **K1 · P1 · A stray "00" on every code panel of page 1.1.** *Fixed: the three rules now start with `.cs-patterns`.*
-  - The cheat sheet's pattern cards reuse the class `.cp-head`, which 1.1's "From one line of Python to CPU
-    instructions" panels also use.
-  - The cheat sheet's numbering counter and spacing ([style.css:1392–1393](zero-to-million/css/style.css#L1392))
-    therefore apply to chapter 1 too. All five panel headings show "00" and centre their titles.
-  - This is visible on the first content page of the book.
-  - **Fix:** scope the rules to `.cs-patterns .cp-head`, or rename the cheat sheet's classes (for example `cs-pat-*`).
 - [ ] **K2 · P2 · Diagram pages stay in memory until the window is resized.**
   - Each wide diagram adds a `resize` listener on `window` that removes itself only on a later resize
     ([widgets.js:499–500](zero-to-million/js/widgets.js#L499)). Its closure holds the old page's DOM.

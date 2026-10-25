@@ -128,7 +128,7 @@ ZTM.content[14] = {
           <li><strong>Add value.</strong> Every change should make something better for shoppers or the business: faster pages, fewer failures, a lower cost per order.</li>
           <li><strong>Engineer the solution to fit.</strong> Choose the smallest change that solves the problem: a cache before a rewrite, a replica before a shard, tuning before a migration.</li>
           <li><strong>Measure, then optimise.</strong> <code>pg_stat_statements</code> found the busy queries, testing from two cities found the distance, and the bill’s lines found the waste.</li>
-          <li><strong>Don’t optimise blindly.</strong> The scripts weren’t what slowed Europe down, and a CDN didn’t make India’s bandwidth cheaper. Each time, a measurement told us what a guess would have got wrong.</li>
+          <li><strong>Don’t optimise blindly.</strong> Faster servers wouldn’t have fixed Europe, and a CDN didn’t make India’s bandwidth cheaper. Each time, a measurement told us what a guess would have got wrong.</li>
           <li><strong>Observability is mandatory.</strong> You can’t scale, fix or pay for what you can’t see. Build it in from the first server, not after the first outage.</li>
         </ol>
 

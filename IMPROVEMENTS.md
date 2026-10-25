@@ -742,12 +742,10 @@ The cheat sheet is otherwise a faithful summary: all 81 links resolve, and its n
   "In this chapter" (S13).
 - [ ] **UX10 · P3 · Accessibility** (axe-core, 15 pages, both themes). Nothing critical. Each of these is one line
   to fix:
-  - `aria-label` on plain `<span>`s in the 1.3 request timeline: add `role="img"`.
-  - An empty first `<th>` in comparison tables on 1.1, 8.2, 8.4 and 12.1: add visually hidden text.
+  - An empty first `<th>` in comparison tables on 8.2, 8.4 and 12.1: add visually hidden text (done on 1.1 and 1.2).
   - Every note is an unlabelled `<aside>` landmark: add `aria-label`, or use `<div>`.
   - Two near-miss contrasts in light mode: `.b-db` labels at 4.41:1, and the cheat sheet's `small` at 4.48:1.
   - The chapter 2 cover jumps from h1 to h3.
-  - "Point at a piece of the code" on 1.1 works on hover only, not by keyboard or touch.
 
 ---
 
@@ -818,10 +816,8 @@ The code is in good shape for a static site with no build step.
     - Skip when the target or one of its parents can scroll sideways.
     - Use PageUp and PageDown only at the top or bottom of the page.
     - Let readers turn `S` off, or require a modifier.
-- [ ] **K9 · P2 · Two sliders announce their raw positions.**
-  - The Threads slider says "40" for 16 threads ([widgets.js:2996](zero-to-million/js/widgets.js#L2996)).
-  - The capacity users slider says "60" for 1,000,000 users ([widgets.js:3294](zero-to-million/js/widgets.js#L3294)).
-  - **Fix:** set `aria-valuetext` with units. The lag and utilisation sliders would benefit too.
+- [ ] **K9 · P3 · The lag slider on 5.3 announces a bare number.** Set `aria-valuetext` with units, as chapter 1's
+  sliders now do ("16 threads", "1,000,000 users", "70% busy").
 - [ ] **K10 · P2 · Hard-coded colours fail contrast in dark mode** (besides UX1):
   - `#b42b2b` red text on 3.1, at 2.8:1 ([style.css:603](zero-to-million/css/style.css#L603), :616).
   - The kafka-anatomy offsets, at 2.0:1 ([style.css:792–795](zero-to-million/css/style.css#L792)).
@@ -835,13 +831,10 @@ The code is in good shape for a static site with no build step.
   ([app.js:137–140](zero-to-million/js/app.js#L137)).
 - [ ] **K13 · P3 · Live regions are too chatty.**
   - kafka-log rewrites its readout every 650 ms.
-  - The capacity, disk and network tile rows re-announce 3–5 tiles on every slider move.
   - kafka-anatomy and lb-sim each have two live regions.
   - **Fix:** write only when the text changes, and keep one live region per widget.
 - [ ] **K14 · P3 · ARIA details.**
-  - percentile-strip uses `role="img"` around focusable children.
-  - `aria-label` sits on role-less `div`s and `span`s (`.ld-row`, `.wf-seg`, `.hq-page`).
-  - The tooltip can't be dismissed with Escape, and the latency ladder's explanation lives only in the tooltip.
+  - `aria-label` sits on a role-less `div` in 6.1's home-page picker (`.hq-page`).
   - lb-sim's fast and slow slots, and kafka-anatomy's keys, rely on colour alone.
   - The in-page scroll buttons don't move focus to their target.
 - [ ] **K15 · P3 · Analytics gaps.** `widget used` misses keyboard-only changes to the segmented controls, and clicks

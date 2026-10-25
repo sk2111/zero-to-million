@@ -47,16 +47,16 @@ ZTM.content[1] = {
           <div class="cp-panel">
             <p class="cp-head"><b>1. Your code</b><span>1 line</span></p>
 <pre class="cp-code"><span class="cp-dim">def add_gst(price):</span>
-    <span data-k="ret">return</span> <span data-k="load">price</span> <span data-k="mul">*</span> <span data-k="const">1.18</span></pre>
+    <span tabindex="0" data-k="ret">return</span> <span tabindex="0" data-k="load">price</span> <span tabindex="0" data-k="mul">*</span> <span tabindex="0" data-k="const">1.18</span></pre>
           </div>
           <div class="cp-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
           <div class="cp-panel">
             <p class="cp-head"><b>2. Python bytecode</b><span>4 steps</span></p>
 <pre class="cp-code"><span class="cp-dim">RESUME        0</span>
-<span data-k="load">LOAD_FAST     0 (price)</span>
-<span data-k="const">LOAD_CONST    1 (1.18)</span>
-<span data-k="mul">BINARY_OP     5 (*)</span>
-<span data-k="ret">RETURN_VALUE</span></pre>
+<span tabindex="0" data-k="load">LOAD_FAST     0 (price)</span>
+<span tabindex="0" data-k="const">LOAD_CONST    1 (1.18)</span>
+<span tabindex="0" data-k="mul">BINARY_OP     5 (*)</span>
+<span tabindex="0" data-k="ret">RETURN_VALUE</span></pre>
           </div>
           <div class="cp-panel cp-dark cp-wide">
             <p class="cp-head"><b>3. What the CPU runs for one step, <code>BINARY_OP *</code></b><span>dozens of instructions</span></p>
@@ -69,7 +69,7 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
 <span class="cp-dim">…       then reference counting, and fetching the next step</span></pre>
           </div>
         </div>
-        <p class="caption">Point at a piece of the code to see where it goes. The bytecode is real output from
+        <p class="caption">Point at, tap or tab to a piece of the code to see where it goes. The bytecode is real output from
         <code>python -m dis</code> on Python 3.13; the machine instructions are simplified x86-64.</p>
         <ol class="points">
           <li>One line of Python became 4 bytecode steps. (<code>RESUME</code> is a marker Python puts at the start of every function. The numbers are slots: <code>price</code> is local variable 0, <code>1.18</code> is constant 1, and 5 is the code for multiply.)</li>
@@ -98,7 +98,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             </div>
           </div>
           <table class="data">
-            <thead><tr><th></th><th>Python (CPython)</th><th>Go</th></tr></thead>
+            <thead><tr><th><span class="sr">Aspect</span></th><th>Python (CPython)</th><th>Go</th></tr></thead>
             <tbody>
               <tr><td>Becomes machine code</td><td>Not by default: the interpreter runs the bytecode</td><td>Once, before the program runs</td></tr>
               <tr><td>Knows the types</td><td>Only while running, checked on every operation</td><td>At compile time</td></tr>
@@ -211,7 +211,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
 
         <h2>Process or thread?</h2>
         <table class="data">
-          <thead><tr><th></th><th>Process</th><th>Thread</th></tr></thead>
+          <thead><tr><th><span class="sr">Aspect</span></th><th>Process</th><th>Thread</th></tr></thead>
           <tbody>
             <tr><td>Memory</td><td>Private. Others can’t read or corrupt it.</td><td>Shared with every thread in the process.</td></tr>
             <tr><td>Cost to start</td><td>Higher: up to milliseconds for a large program</td><td>Lower: tens of microseconds</td></tr>

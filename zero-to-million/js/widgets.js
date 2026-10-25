@@ -73,6 +73,7 @@ window.ZTM = window.ZTM || {};
     root.addEventListener('focusout', tipHide);
   }
   ZTM.hideTip = tipHide;
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') tipHide(); });   /* Escape closes any tooltip */
 
   /* A row of radio-style buttons. Arrow keys move the choice inside it. */
   function segmented(label, options, current, onChange) {
@@ -149,8 +150,8 @@ window.ZTM = window.ZTM || {};
     var cpu = segs.reduce(function (a, s) { return a + (s.kind === 'cpu' ? s.ms : 0); }, 0);
     var html = legend([['cpu', 'CPU working'], ['net', 'Waiting on another machine']]);
     html += '<div class="tl-bar">' + segs.map(function (s) {
-      return '<span class="tl-seg ' + s.kind + '" style="flex:' + s.ms + ' 1 0px" tabindex="0" data-tip="<b>' + esc(s.label) +
-        '</b><br>' + s.ms + ' ms, ' + (s.kind === 'cpu' ? 'CPU busy' : 'CPU idle') + '" aria-label="' + esc(s.label) + ', ' + s.ms + ' ms">' +
+      return '<span class="tl-seg ' + s.kind + '" style="flex:' + s.ms + ' 1 0px" tabindex="0" role="img" data-tip="<b>' + esc(s.label) +
+        '</b><br>' + s.ms + ' ms, ' + (s.kind === 'cpu' ? 'CPU busy' : 'CPU idle') + '" aria-label="' + esc(s.label) + ', ' + s.ms + ' ms, ' + (s.kind === 'cpu' ? 'CPU busy' : 'CPU idle') + '">' +
         '<span class="seg-label">' + esc(s.short) + ' ' + s.ms + ' ms</span></span>';
     }).join('') + '</div>';
     html += '<div class="tl-axis">' + [0, 10, 20, 30, 40, 50].map(function (t) {
@@ -207,7 +208,7 @@ window.ZTM = window.ZTM || {};
       rows.forEach(function (row) {
         var t = 0, cells = '';
         row.segs.forEach(function (s) {
-          cells += '<span class="wf-seg ' + s[0] + '" style="left:' + (t / max * 100) + '%;width:' + (s[2] / max * 100) + '%" tabindex="0" data-tip="<b>' +
+          cells += '<span class="wf-seg ' + s[0] + '" style="left:' + (t / max * 100) + '%;width:' + (s[2] / max * 100) + '%" tabindex="0" role="img" data-tip="<b>' +
             esc(s[1]) + '</b><br>' + fmtMs(s[2]) + '" aria-label="' + esc(s[1]) + ', ' + fmtMs(s[2]) + '"><span class="seg-label">' + esc(s[1]) + '</span></span>';
           t += s[2];
         });
@@ -256,7 +257,7 @@ window.ZTM = window.ZTM || {};
           ticks.map(function (t) { return '<span class="tick" style="left:' + pos(t) + '%">' + fmtNs(t) + '</span>'; }).join('') +
         '</span><span></span></div>' +
         rows.map(function (r) {
-          return '<div class="ld-row" tabindex="0" aria-label="' + esc(r[1]) + ': about ' + fmtNs(r[2]) + '" data-tip="<b>' + esc(r[1]) +
+          return '<div class="ld-row" tabindex="0" role="img" aria-label="' + esc(r[1]) + ': about ' + fmtNs(r[2]) + '. ' + esc(r[3]) + '" data-tip="<b>' + esc(r[1]) +
             '</b><br>~' + fmtNs(r[2]) + '<br><span class=&quot;tip-note&quot;>' + esc(r[3]) + '</span>">' +
             '<span class="ld-label">' + esc(r[1]) + '</span>' +
             '<span class="ld-track">' + grid + '<span class="ld-bar ' + r[0] + '" style="width:' + pos(r[2]) + '%"></span></span>' +
@@ -2693,7 +2694,7 @@ window.ZTM = window.ZTM || {};
       '<div class="pct-wrap">' +
         '<span class="pct-label l50">Request 50 is the p50: <b>50 ms</b></span>' +
         '<span class="pct-label l99">Request 99 is the p99: <b>3,000 ms</b></span>' +
-        '<div class="pct-strip" role="img" aria-label="100 requests sorted from fastest to slowest: 98 take 50 ms and the last 2 take 3,000 ms. Request 50, the p50, is 50 ms; request 99, the p99, is 3,000 ms.">' + cells + '</div>' +
+        '<div class="pct-strip" role="group" aria-label="100 requests sorted from fastest to slowest: 98 take 50 ms and the last 2 take 3,000 ms. Request 50, the p50, is 50 ms; request 99, the p99, is 3,000 ms.">' + cells + '</div>' +
         '<div class="pct-axis"><span>Fastest</span><span>100 requests, sorted</span><span>Slowest</span></div>' +
       '</div>';
     bindTips(el);
@@ -2737,6 +2738,7 @@ window.ZTM = window.ZTM || {};
     function R(p) { return S / (1 - p); }
 
     function draw() {
+      input.setAttribute('aria-valuetext', u + '% busy');
       var Wd = Math.max(280, box.clientWidth), H = Wd < 520 ? 240 : 300;
       var m = { l: 52, r: 16, t: 34, b: 42 };
       var iw = Wd - m.l - m.r, ih = H - m.t - m.b;
@@ -3007,6 +3009,8 @@ window.ZTM = window.ZTM || {};
         big = el.querySelector('.ut-big'), say = el.querySelector('.ut-say');
     function draw() {
       var s = lock / 100, k = SYNC, n = threadsAt(pos);
+      inN.setAttribute('aria-valuetext', n + (n === 1 ? ' thread' : ' threads'));
+      inL.setAttribute('aria-valuetext', lock + '% of each request');
       function X(t) { return SOLO * t / (1 + s * (t - 1) + k * t * (t - 1)); }
       var bestN = Math.round(Math.sqrt((1 - s) / k)), top = X(bestN), now = X(n);
       var wait = n / now * 1e9, bestWait = bestN / top * 1e9;           /* response times in ns, for fmtNs */
@@ -3139,13 +3143,13 @@ window.ZTM = window.ZTM || {};
         '<div class="w-field"><label for="dpW">Writes per second at the busiest hour</label><input type="range" id="dpW" min="0" max="10000" step="100" value="' + st.w + '"><output for="dpW"></output></div>' +
         '<div class="w-field"><span class="lbl">Average size of one read or write</span><span class="cores"></span></div>' +
       '</div>' +
-      '<div class="tiles tiles-3" aria-live="polite">' +
+      '<div class="tiles tiles-3">' +
         '<div class="tile"><span>IOPS needed</span><b data-o="iops"></b><small>with 50% headroom</small></div>' +
         '<div class="tile"><span>Throughput needed</span><b data-o="mbs"></b><small>with 50% headroom</small></div>' +
         '<div class="tile key"><span>Recommended disk</span><b data-o="pick"></b><small data-o="set"></small></div>' +
       '</div>' +
       '<div class="dp-opts" role="list" aria-label="Disk options, simplest first"></div>' +
-      '<p class="calc-math" data-o="say"></p>';
+      '<p class="calc-math" data-o="say" aria-live="polite"></p>';
     el.querySelector('.cores').appendChild(segmented('Average size of one read or write', SIZES, st.kb, function (v) { st.kb = v; draw(); }));
     el.querySelector('#dpR').addEventListener('input', function (e) { st.r = +e.target.value; draw(); });
     el.querySelector('#dpW').addEventListener('input', function (e) { st.w = +e.target.value; draw(); });
@@ -3233,13 +3237,13 @@ window.ZTM = window.ZTM || {};
         '<div class="w-field"><label for="npR">Requests per second at the busiest hour</label><input type="range" id="npR" min="10" max="2000" step="10" value="' + st.rps + '"><output for="npR"></output></div>' +
         '<div class="w-field"><span class="lbl">Average size of one response</span><span class="cores"></span></div>' +
       '</div>' +
-      '<div class="tiles tiles-3" aria-live="polite">' +
+      '<div class="tiles tiles-3">' +
         '<div class="tile"><span>Bandwidth needed</span><b data-o="need"></b><small data-o="needmb"></small></div>' +
         '<div class="tile key"><span>Recommended server</span><b data-o="pick"></b><small data-o="pickwhy"></small></div>' +
         '<div class="tile"><span>Data out in that hour</span><b data-o="gb"></b><small data-o="cost"></small></div>' +
       '</div>' +
       '<div class="dp-opts" role="list" aria-label="Servers, smallest first"></div>' +
-      '<p class="calc-math" data-o="say"></p>';
+      '<p class="calc-math" data-o="say" aria-live="polite"></p>';
     el.querySelector('.cores').appendChild(segmented('Average size of one response', SIZES, st.kb, function (v) { st.kb = v; draw(); }));
     el.querySelector('#npR').addEventListener('input', function (e) { st.rps = +e.target.value; draw(); });
     function o(n) { return el.querySelector('[data-o="' + n + '"]'); }
@@ -3307,14 +3311,14 @@ window.ZTM = window.ZTM || {};
         field('cUtil', 'Highest utilisation you’ll accept', '<input type="range" id="cUtil" min="40" max="90" step="5" value="' + st.util + '">') +
         '<div class="w-field"><span class="lbl" id="cCoresL">Cores per server</span><span class="cores"></span></div>' +
       '</div>' +
-      '<div class="tiles" aria-live="polite">' +
+      '<div class="tiles">' +
         '<div class="tile"><span>Average load</span><b data-o="avg"></b><small>requests a second</small></div>' +
         '<div class="tile"><span>Busiest hour</span><b data-o="peak"></b><small>requests a second</small></div>' +
         '<div class="tile"><span>Cores needed</span><b data-o="cores"></b><small>at the busiest hour</small></div>' +
         '<div class="tile"><span>In flight</span><b data-o="flight"></b><small>requests at once, at the busiest hour</small></div>' +
         '<div class="tile key"><span>Servers</span><b data-o="servers"></b><small data-o="spare"></small></div>' +
       '</div>' +
-      '<p class="calc-math" data-o="math"></p>' +
+      '<p class="calc-math" data-o="math" aria-live="polite"></p>' +
       '<p class="w-note">CPU only. In real systems memory, the database or the network often runs out first.</p>';
 
     function field(id, label, input) {
@@ -3332,6 +3336,7 @@ window.ZTM = window.ZTM || {};
 
     function draw() {
       var users = usersAt(st.t);
+      el.querySelector('#cUsers').setAttribute('aria-valuetext', fmtInt(users) + ' users');
       var perDay = users * st.rpu;
       var avg = perDay / 100000;   /* a day rounded to 100,000 s, as in the worked example above */
       var peak = avg * st.peak;

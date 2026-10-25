@@ -401,10 +401,10 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .cp-arrow svg { width: 1.6rem; height: 1.6rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .compile [data-k] { padding: 0 0.12em; border-radius: 3px; transition: background-color 0.15s; }
 .compile [data-k="mul"] { box-shadow: inset 0 -2px 0 var(--c-cpu); }   /* the step expanded in panel 3 */
-.compile:has([data-k="load"]:hover) [data-k="load"],
-.compile:has([data-k="const"]:hover) [data-k="const"],
-.compile:has([data-k="mul"]:hover) [data-k="mul"],
-.compile:has([data-k="ret"]:hover) [data-k="ret"] { background: var(--hl); }
+.compile:has([data-k="load"]:is(:hover, :focus)) [data-k="load"],
+.compile:has([data-k="const"]:is(:hover, :focus)) [data-k="const"],
+.compile:has([data-k="mul"]:is(:hover, :focus)) [data-k="mul"],
+.compile:has([data-k="ret"]:is(:hover, :focus)) [data-k="ret"] { background: var(--hl); }
 
 /* ---------- 1.1: the clock and the pipeline ---------- */
 
@@ -455,7 +455,7 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .pt-thread.running { box-shadow: 0 0 0 2px var(--pc); }
 .pt-thread.running .pt-state::before { background: var(--pc); }
 .pt-thread.ready .pt-state::before { background: var(--amber-mark); }
-.pt-thread.sleeping { opacity: 0.7; }
+.pt-thread.sleeping { border-left-style: dashed; background: var(--paper); }   /* idle, but its text stays readable */
 .pt-note { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--pc); }
 .pt-wall { display: flex; justify-content: center; width: 1.6rem; background: linear-gradient(var(--ink-2), var(--ink-2)) center / 3px 100% no-repeat; }
 .pt-wall span { padding: 0.4rem 0; background: var(--sheet); writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.74rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; align-self: center; }

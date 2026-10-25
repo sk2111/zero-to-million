@@ -157,7 +157,7 @@ ZTM.cheatsheet = (function () {
   /* Page 1.14's USE checks and its table of where to look, and page 14.2's signals */
   var USE = [['U', 'Utilisation', 'How busy is it?'], ['S', 'Saturation', 'Is work queuing for it?'], ['E', 'Errors', 'Is it reporting any?']];
   var USE_TABLE = [
-    ['CPU', '<code>top</code>: us + sy, per core', 'Load above the core count; <code>r</code> in <code>vmstat 1</code>', 'High <code>st</code> (steal) on cloud VMs'],
+    ['CPU', '<code>top</code>: us + sy, per core', 'Load above the core count; <code>r</code> in <code>vmstat 1</code>; high <code>st</code> (steal) on cloud VMs', 'Rare: machine-check errors in <code>dmesg</code>'],
     ['Memory', '<code>free -h</code>: used vs available', 'Swapping: <code>si</code>/<code>so</code> in <code>vmstat 1</code>', 'OOM kills in <code>dmesg</code>, exit code 137'],
     ['Disk', '<code>iostat -xz 1</code>: %util', '<code>aqu-sz</code> and <code>await</code> rising', 'Disk full (<code>df -h</code>)'],
     ['Network', '<code>sar -n DEV 1</code>: bytes a second', 'Packets resent (<code>nstat</code>)', 'Connection errors and timeouts']
@@ -190,13 +190,13 @@ ZTM.cheatsheet = (function () {
       ['compute', 'Read from the L1 cache', 1, '1 ns'],
       ['compute', 'Read from the L2 cache', 4, '4 ns'],
       ['compute', 'Read from RAM', 100, '100 ns'],
-      ['compute', 'Switch threads on a core', 2000, '2 µs'],
+      ['compute', 'Switch threads on a core', 3000, '3 µs'],
       ['distance', 'Send 1 KB on a 1 Gbps link', 1e4, '10 µs'],
       ['data', 'Read 4 KB at random from an SSD', 1e5, '100 µs'],
       ['distance', 'Round trip inside a datacenter', 5e5, '500 µs'],
       ['data', 'Read 1 MB in sequence from an SSD', 1e6, '1 ms'],
       ['data', 'Read 1 MB in sequence from a hard disk', 5e6, '5 ms'],
-      ['data', 'Hard disk seek', 1e7, '10 ms'],
+      ['data', 'Hard disk random read', 1e7, '10 ms'],
       ['distance', 'Round trip to a city 1,000 km away', 2e7, '20 ms'],
       ['distance', 'Round trip halfway round the world', 2e8, '200 ms']
     ];

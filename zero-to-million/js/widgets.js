@@ -236,13 +236,13 @@ window.ZTM = window.ZTM || {};
       ['cpu', 'Read from the L1 cache', 1, 'The CPU’s own tiny cache, right beside the core.'],
       ['cpu', 'Read from the L2 cache', 4, 'A bigger cache, still on the CPU.'],
       ['cpu', 'Read from RAM', 100, 'Main memory. Where your app’s data lives while it runs.'],
-      ['cpu', 'Switch threads on a core', 2000, 'The OS saving one thread and loading another (a context switch).'],
+      ['cpu', 'Switch threads on a core', 3000, 'The OS saving one thread and loading another (a context switch).'],
       ['net', 'Send 1 KB on a 1 Gbps link', 1e4, 'Just putting the bits on the wire.'],
       ['disk', 'Read 4 KB at random from an SSD', 1e5, 'One small read, like fetching a database page.'],
       ['net', 'Round trip inside a datacenter', 5e5, 'Your app server asking the database server something.'],
       ['disk', 'Read 1 MB in sequence from an SSD', 1e6, 'A big, contiguous read: SSDs are good at these.'],
       ['disk', 'Read 1 MB in sequence from a hard disk', 5e6, 'A spinning disk at full speed.'],
-      ['disk', 'Hard disk seek', 1e7, 'Moving the disk’s head to a new spot. Random reads pay this every time.'],
+      ['disk', 'Hard disk random read', 1e7, 'Moving the disk’s head to a new spot, then waiting for the platter to turn. Random reads pay this every time.'],
       ['net', 'Round trip Bangalore to Mumbai', 2e7, 'About 1,000 km of fibre each way, plus routing.'],
       ['net', 'Round trip India to US east', 2e8, 'Half the planet. The speed of light sets this, not your code.']
     ];
@@ -3002,7 +3002,7 @@ window.ZTM = window.ZTM || {};
       '<div class="ut-read" aria-live="polite"><b class="ut-big"></b><span class="ut-say"></span></div>' +
       legend([['ideal', 'Perfect scaling'], ['real', 'Your service'], ['hurt', 'Too many threads']]) +
       '<div class="chart"></div>' +
-      '<p class="w-note">A busy service: one request takes 50 ms on its own, and there is enough traffic to keep every thread busy. Response time is threads ÷ throughput (Little’s Law).</p>';
+      '<p class="w-note">A busy service: one request takes 50 ms on its own, and there is enough traffic to keep every thread busy. Response time is threads ÷ throughput (Little’s Law: requests in progress = throughput × time per request).</p>';
     var box = el.querySelector('.chart'), inN = el.querySelector('#tsN'), inL = el.querySelector('#tsL'),
         big = el.querySelector('.ut-big'), say = el.querySelector('.ut-say');
     function draw() {
@@ -3333,7 +3333,7 @@ window.ZTM = window.ZTM || {};
     function draw() {
       var users = usersAt(st.t);
       var perDay = users * st.rpu;
-      var avg = perDay / 86400;
+      var avg = perDay / 100000;   /* a day rounded to 100,000 s, as in the worked example above */
       var peak = avg * st.peak;
       var busy = peak * st.cpu / 1000;
       var need = busy / (st.util / 100);
@@ -3351,7 +3351,7 @@ window.ZTM = window.ZTM || {};
       o('flight').textContent = fmtNum(peak * st.lat / 1000);
       o('servers').textContent = servers;
       o('spare').textContent = 'of ' + per + ' cores, plus 1 spare';
-      o('math').innerHTML = fmtInt(users) + ' users × ' + st.rpu + ' requests ÷ 86,400 s = <b>' + fmtNum(avg) + '/s</b> on average. ' +
+      o('math').innerHTML = fmtInt(users) + ' users × ' + st.rpu + ' requests ÷ 100,000 s = <b>' + fmtNum(avg) + '/s</b> on average. ' +
         '× ' + st.peak + ' at the busiest hour = <b>' + fmtNum(peak) + '/s</b>. ' +
         '× ' + st.cpu + ' ms of CPU = <b>' + fmtNum(busy) + ' cores</b> busy. ' +
         '÷ ' + st.util + '% = <b>' + fmtNum(need) + ' cores</b>, so <b>' + servers + ' server' + (servers === 1 ? '' : 's') + '</b> of ' + per + ' cores, plus one spare. ' +

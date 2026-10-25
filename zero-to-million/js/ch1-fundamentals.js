@@ -13,7 +13,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[1] = {
   intro: `
     <ol class="points lede">
-      <li>Every system you will ever design &amp; scale, from a side project to a production application, runs on the same few parts: CPU, memory, disk and network.</li>
+      <li>Every system you will ever design and scale, from a side project to a production application, runs on the same few parts: CPU, memory, disk and network.</li>
       <li>The operating system shares those parts out between all the programs on the machine.</li>
       <li>For each part we start with how it works, then how it behaves under load, then what it means when you design a system.</li>
     </ol>
@@ -79,7 +79,7 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
         <aside class="note tip">
           <h3>Tip: why compiled languages run this 10–100 times faster</h3>
           <ol class="points">
-            <li>Python’s bytecode is never turned into machine code. Standard Python (CPython) is an <strong>interpreter</strong>: a program written in C, already compiled, that reads your bytecode one step at a time and runs its own general-purpose machine code for each step.</li>
+            <li>By default, Python’s bytecode is never turned into machine code. Standard Python (CPython) is an <strong>interpreter</strong>: a program written in C, already compiled, that reads your bytecode one step at a time and runs its own general-purpose machine code for each step.</li>
             <li>So every time <code>price * 1.18</code> runs, the CPU also does the interpreter’s work: fetch the next step, check what type <code>price</code> is, find the right multiply, create a new object for the answer, update reference counts.</li>
             <li>Go, Rust and C <strong>compile ahead of time</strong>: once, before the program runs. The compiler already knows <code>price</code> is a 64-bit float, so it emits just the multiply, on a value that sits in a CPU register.</li>
           </ol>
@@ -100,7 +100,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           <table class="data">
             <thead><tr><th></th><th>Python (CPython)</th><th>Go</th></tr></thead>
             <tbody>
-              <tr><td>Becomes machine code</td><td>Never: the interpreter runs the bytecode</td><td>Once, before the program runs</td></tr>
+              <tr><td>Becomes machine code</td><td>Not by default: the interpreter runs the bytecode</td><td>Once, before the program runs</td></tr>
               <tr><td>Knows the types</td><td>Only while running, checked on every operation</td><td>At compile time</td></tr>
               <tr><td>Where <code>price</code> lives</td><td>A 24-byte object in memory</td><td>A CPU register</td></tr>
               <tr><td>Instructions for <code>price * 1.18</code></td><td>Dozens to hundreds</td><td>1 or 2</td></tr>
@@ -108,7 +108,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           </table>
           <ol class="points" start="4">
             <li>Java and C# sit in between: they start as bytecode, and a <strong>JIT</strong> (just-in-time compiler) turns the hot parts into machine code while the program runs, which is why they speed up after a warm-up.</li>
-            <li>Python is catching up the same way: PyPy uses a JIT and is often several times faster than CPython, and Python 3.13 ships an experimental JIT of its own.</li>
+            <li>Python is catching up the same way: PyPy uses a JIT and is often several times faster than CPython, and since 3.13 CPython has an experimental JIT of its own, switched off by default.</li>
           </ol>
         </aside>
 
@@ -118,7 +118,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
           <li>Each tick is the signal for every part of the core to move its work one stage forward. An instruction goes through four stages: <strong>fetch</strong> it from memory, <strong>decode</strong> what it means, <strong>execute</strong> it, <strong>store</strong> the result.</li>
           <li><strong>Clock speed</strong> is the number of ticks per second, measured in gigahertz (GHz). 3 GHz means 3 billion ticks a second, so one tick lasts a third of a nanosecond.</li>
         </ol>
-        <p>Run the clock and watch four instructions from the example above move through a core:</p>
+        <p>Run the clock and watch four instructions like the ones above move through a core:</p>
         <div class="widget" data-widget="clock-pipeline"></div>
         <ol class="points" start="4">
           <li>The stages overlap. While instruction 1 executes, instruction 2 is being decoded and instruction 3 fetched. This is a <strong>pipeline</strong>, like an assembly line.</li>
@@ -217,7 +217,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             <tr><td>Cost to start</td><td>Higher: up to milliseconds for a large program</td><td>Lower: tens of microseconds</td></tr>
             <tr><td>If it crashes</td><td>Only that process dies</td><td>The whole process dies with it</td></tr>
             <tr><td>Sharing data</td><td>Pipes, sockets, shared memory: slower</td><td>Read the same variable, guarded by a lock</td></tr>
-            <tr><td>You’ll see it in</td><td>PostgreSQL connections, gunicorn workers, Chrome tabs</td><td>Java and Go servers</td></tr>
+            <tr><td>You’ll see it in</td><td>PostgreSQL connections, gunicorn workers, Chrome tabs</td><td>Java servers, and Go (with lightweight goroutines)</td></tr>
           </tbody>
         </table>
 
@@ -233,7 +233,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         </table>
         <ol class="points">
           <li>When more threads are runnable than there are cores, they queue.</li>
-          <li>That queue is what <strong>load average</strong> measures. On Linux it also counts threads stuck waiting on disk.</li>
+          <li><strong>Load average</strong> counts the threads running on a core plus those waiting in that queue. On Linux it also counts threads stuck waiting on disk.</li>
           <li>A load of 12 on 8 cores means that, on average, 4 threads are waiting for a turn.</li>
           <li>Moving a core from one thread to another is a <strong>context switch</strong>. The kernel saves where the old thread was, loads the new one, and the new thread starts with the caches full of the old thread’s data.</li>
           <li>One switch costs only a few microseconds, but servers switch thousands of times a second, so it adds up. Say each switch costs 3 µs:</li>
@@ -261,7 +261,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <div class="widget" data-widget="thread-sweet-spot"></div>
         <ol class="points" start="3">
           <li><strong>So there is always a sweet spot.</strong> Throughput rises as you add threads, levels off, then falls. Past the peak, every extra thread makes the whole system slower, not faster. Where the sweet spot sits depends on the kind of work, which the next page covers.</li>
-          <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or p99 latency starts to climb.</li>
+          <li><strong>Find it by measuring, not guessing.</strong> Add workers step by step under realistic load, and stop where throughput stops rising or the slowest requests start to get slower.</li>
         </ol>
 
         <figure class="term">
@@ -318,7 +318,8 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             can’t corrupt another’s data, but 100 worker processes hold 100 copies of your app in memory. Threads share
             one copy, and a bug in one can break them all.</li>
             <li><strong>Standard Python runs one thread at a time.</strong> The GIL lets only one thread execute Python
-            code at once (a thread waiting on I/O lets go of it). For CPU-heavy Python, run several processes, not more threads.</li>
+            code at once (a thread waiting on I/O lets go of it). Python 3.13 and later also come in an optional free-threaded build
+            without the GIL, but most libraries and servers still run the standard one. For CPU-heavy Python, run several processes, not more threads.</li>
             <li><strong>Involuntary context switches mean CPU shortage.</strong> In <code>pidstat</code>, a high
             <code>cswch/s</code> means threads are waiting on I/O; a high <code>nvcswch/s</code> means they were pushed
             off a core that someone else needed.</li>
@@ -328,7 +329,7 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
         <aside class="note rule">
           <h3>Rule of thumb</h3>
           <ol class="points">
-            <li><strong>Count ready threads, not threads.</strong> 2,000 sleeping threads cost almost nothing; 50 ready threads on 8 cores are queuing.</li>
+            <li><strong>Count ready threads, not threads.</strong> 2,000 sleeping threads cost almost no CPU; 50 ready threads on 8 cores are queuing.</li>
             <li><strong>Grow thread and connection pools only while throughput keeps rising.</strong> Past the sweet spot, more threads make things slower.</li>
           </ol>
         </aside>`
@@ -481,7 +482,7 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
           <li><code>htop</code> draws one bar per core, so a single maxed-out core stands out at a glance. <code>top</code>’s summary line averages it away.</li>
           <li>CPU bar colours: <strong>green</strong> is your code, <strong>red</strong> is the kernel, <strong>blue</strong> is low-priority work, and <strong>cyan</strong> is time taken by the hypervisor (steal).</li>
           <li>Memory bar: <strong>green</strong> is used by programs, <strong>blue</strong> is buffers, and <strong>yellow</strong> is page cache, which Linux gives back when programs need it.</li>
-          <li>Useful keys: <kbd>F6</kbd> to sort by CPU or memory, <kbd>t</kbd> for a tree of processes, <kbd>H</kbd> to hide threads, and <kbd>F2</kbd> to turn on “Detailed CPU time”, which shows iowait and steal separately.</li>
+          <li>Useful keys: <kbd>F6</kbd> to sort by CPU or memory, <kbd>t</kbd> for a tree of processes, <kbd>H</kbd> to hide threads, and <kbd>F2</kbd>, then Display options, to turn on “Detailed CPU time”, which shows iowait and steal separately.</li>
         </ol>
 
         <figure class="term">
@@ -540,7 +541,7 @@ MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   4452.3 avail Mem
             <tr><td>Clock speed</td><td>2–3.5 GHz base, up to about 4 GHz boost</td><td>How fast one core runs. 3 GHz means 3 billion ticks a second, and each tick moves the work one step forward. Boost is a faster speed the chip can keep up for a while when only some cores are busy and it isn’t too hot.</td><td>How long one CPU-heavy request takes</td></tr>
             <tr><td>Physical cores</td><td>8 to over 100 per chip</td><td>How many threads the chip can really run at the same moment. With 8 cores, 8 threads run at once and the rest wait their turn.</td><td>Throughput: requests served in parallel</td></tr>
             <tr><td>Threads per core</td><td>1 or 2</td><td>Whether one core can hold two threads at once (hyper-threading). When one thread stops to wait for memory, the core works on the other. The OS sees two CPUs, but they share one core.</td><td>About 10–30% more throughput, not twice as much</td></tr>
-            <tr><td>vCPUs</td><td>2 to 192+ per cloud instance</td><td>How many CPUs the cloud gives you, and charges you for. On Intel and AMD, one vCPU is one of a core’s two threads, so 8 vCPUs are 4 real cores. On AWS Graviton, one vCPU is a whole core.</td><td>Comparing instance sizes and prices</td></tr>
+            <tr><td>vCPUs</td><td>1 to 192+ per cloud instance</td><td>How many CPUs the cloud gives you, and charges you for. On most Intel instances, and AMD before the 7th generation, one vCPU is one of a core’s two threads, so 8 vCPUs are 4 real cores. On AWS Graviton, and on AMD from the 7th generation (such as c7a), one vCPU is a whole core.</td><td>Comparing instance sizes and prices</td></tr>
             <tr><td>Generation</td><td>e.g. AMD EPYC Zen 5, Intel Xeon 6, AWS Graviton4</td><td>How new the chip’s design is. Newer cores get more done in each tick, so a new 3 GHz core can be about 1.5 times faster than a 3 GHz core from ten years ago.</td><td>Getting more for the same money. Don’t compare GHz across generations; benchmark.</td></tr>
             <tr><td>Cache (L2 and L3)</td><td>1–2 MB L2 per core, tens to hundreds of MB L3</td><td>How much small, fast memory sits on the chip itself. Data found there arrives many times sooner than from RAM, so a bigger cache means fewer slow trips to RAM.</td><td>Databases, caches, anything with a big working set</td></tr>
             <tr><td>Instruction set</td><td>x86-64 (Intel, AMD) or ARM64 (Graviton, Ampere)</td><td>Which kind of machine code the chip runs. A program built for x86-64 won’t run on ARM64, or the other way round, until it’s rebuilt.</td><td>Your binaries and Docker images must be built for it. ARM is often cheaper for the same work.</td></tr>
@@ -667,7 +668,7 @@ CPU(s):                  8
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>RAM is where fast systems keep their data.</strong> Redis, Memcached, a database’s buffer pool and
-            a CDN’s hot set are all ways of keeping the working set in RAM instead of on disk or across the network.</li>
+            a CDN’s hot set (the files a content delivery network keeps near its users) are all ways of keeping the working set in RAM instead of on disk or across the network.</li>
             <li><strong>Memory bandwidth is shared.</strong> Hundreds of GB/s sounds endless, but 64 cores streaming data
             at once can use it all, and then extra cores add nothing.</li>
           </ol>
@@ -848,14 +849,14 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
             <li><code>rkB/s</code> and <code>wkB/s</code>: KB read and written per second, its throughput. About 17 MB/s here.</li>
             <li><code>r_await</code> and <code>w_await</code>: average milliseconds per read and per write, including time spent waiting in line. Reads take 8 ms.</li>
             <li><code>aqu-sz</code>: how many operations are waiting in line on average. 23 here.</li>
-            <li><code>%util</code>: how much of the time the disk was busy.</li>
-            <li>Put together: exactly 3,000 operations a second, a long queue and slow reads. This is a default cloud SSD (AWS gp3) at its IOPS limit.</li>
+            <li><code>%util</code>: how much of the time the disk was busy. SSDs and cloud disks serve many requests at once, so 100% doesn’t mean full: trust <code>aqu-sz</code> and the wait times.</li>
+            <li>Put together: exactly 3,000 operations a second, a long queue and slow reads. This is a default cloud SSD (AWS gp3) at its IOPS limit. (On AWS, EBS volumes show up as <code>nvme</code> devices, even though they’re network disks.)</li>
           </ol>
         </figure>
 
         <h2>Picking a disk for your workload</h2>
         <ol class="points">
-          <li>Every workload leans on one of the three numbers. Work out which one first: in the cloud you pay for each separately.</li>
+          <li>Every workload leans on one of the three numbers. Work out which one first: in the cloud you buy IOPS and throughput separately, and latency comes with the type of disk.</li>
         </ol>
         <table class="data">
           <thead><tr><th>Number</th><th>Matters most when</th><th>Typical workloads</th></tr></thead>
@@ -872,7 +873,7 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <tbody>
             <tr><td>App servers: code, logs, temporary files</td><td>The default cloud SSD (AWS gp3: 3,000 IOPS, 125 MB/s)</td><td>Plenty for this, and cheap</td></tr>
             <tr><td>Transactional database</td><td>A cloud SSD with extra IOPS bought, or a high-IOPS volume (AWS io2) for the busiest</td><td>Lots of small random reads and writes, and commit latency is felt by users</td></tr>
-            <tr><td>A database that copies itself to other servers (Cassandra, Kafka)</td><td>Local NVMe inside the server (instance store)</td><td>The fastest disk there is. Its data is lost if the server stops, but the copies on other servers cover that.</td></tr>
+            <tr><td>A data store that copies itself to other servers (Cassandra, Kafka)</td><td>Local NVMe inside the server (instance store)</td><td>The fastest disk there is. Its data is lost if the server stops, but the copies on other servers cover that.</td></tr>
             <tr><td>Analytics, backups, big batch jobs</td><td>A cloud SSD with extra throughput, or a throughput-optimised hard disk (AWS st1) for big, rarely read data</td><td>MB per second matters here, not latency</td></tr>
             <tr><td>Caches and scratch space</td><td>Local NVMe</td><td>Fast, and losing it when the server stops doesn’t matter</td></tr>
           </tbody>
@@ -893,11 +894,11 @@ nvme1n1  2610.0   390.0  10440.0   6240.0     8.41     3.10   23.1   99.6</span>
           <h3>For system design</h3>
           <ol class="points">
             <li><strong>In the cloud, durability comes from copies, not from a better disk.</strong> EBS copies a volume
-            within one zone, S3 spreads objects across zones, and databases replicate to other machines. Assume any single
+            within one availability zone (one or more datacenters with their own power and network), S3 spreads objects across zones, and databases replicate to other machines. Assume any single
             disk can vanish.</li>
             <li><strong>Your laptop flatters you.</strong> A query that’s instant on a laptop NVMe can crawl on a default
             cloud volume. Instance size caps disk bandwidth too: a small instance can’t use a fast volume’s full speed.</li>
-            <li><strong>Objects for blobs, databases for rows.</strong> Put images, PDFs and backups in object storage and
+            <li><strong>Objects for blobs, databases for rows.</strong> Put images, PDFs and backups in object storage (such as AWS S3: files kept by name, fetched over HTTP) and
             keep only their keys in the database.</li>
           </ol>
         </aside>
@@ -978,11 +979,12 @@ Approximate round trip times in milli-seconds:
           <ol class="points">
             <li><strong>Bandwidth is cheap; latency is physics.</strong> You can buy a wider pipe. You can’t buy a shorter
             one, except by moving the server closer to the user.</li>
-            <li><strong>One connection has its own speed limit.</strong> Throughput ≤ window size ÷ round-trip time.
+            <li><strong>One connection has its own speed limit.</strong> Throughput ≤ window size ÷ round-trip time, where the window is how much data TCP sends before it
+            waits for an acknowledgement. A 4 MB window to the US, 200 ms away, caps one connection at 20 MB/s.
             Copying a big file across the world over one connection can be far slower than the link; parallel connections
             or larger buffers fix it.</li>
             <li><strong>Pool and reuse every connection.</strong> Every new connection spends a few round trips on setup
-            (TCP, then TLS for HTTPS) before any useful work. Keep-alive to browsers and connection pools to databases skip that.</li>
+            (TCP, then TLS, the encryption behind HTTPS) before any useful work. Keep-alive to browsers and connection pools to databases skip that.</li>
             <li><strong>Network traffic has a price.</strong> In AWS, traffic between zones costs about $0.01 per GB each
             way, and traffic out to the internet about $0.09 per GB. A chatty service spread across zones can cost more than
             its servers.</li>
@@ -1033,7 +1035,7 @@ Approximate round trip times in milli-seconds:
           <li>The kernel wakes the thread waiting on that socket, and the thread waits in line for a core. <span class="uses">OS, CPU</span></li>
           <li>Your code parses the request and checks the login. <span class="uses">CPU, memory</span></li>
           <li>It queries the database over another TCP connection, and the thread sleeps until the answer comes back. <span class="uses">Network</span></li>
-          <li>On the database server, the rows come from the buffer cache in RAM, or from disk if they aren’t there. <span class="uses">Memory, disk</span></li>
+          <li>On the database server, the rows come from the buffer pool in RAM, or from disk if they aren’t there. <span class="uses">Memory, disk</span></li>
           <li>Your code builds the response, and the kernel sends it back out as packets. <span class="uses">CPU, network</span></li>
         </ol>
 
@@ -1043,8 +1045,8 @@ Approximate round trip times in milli-seconds:
             <li><strong>CPU:</strong> a core is very fast, but it spends most of its time waiting for data.</li>
             <li><strong>Processes and threads:</strong> the OS shares a few cores by letting threads take turns. Past a sweet spot, more threads make things slower.</li>
             <li><strong>CPU-bound or I/O-bound:</strong> most web requests wait far more than they compute. Check <code>top</code> before you buy more CPU.</li>
-            <li><strong>Memory:</strong> keep the working set in RAM. When it runs out, the server swaps, slows to a crawl, and the OOM killer stops processes.</li>
-            <li><strong>Disk:</strong> the slowest part inside the server. Know whether you need low latency, more IOPS or more throughput; cloud disks sell each one separately.</li>
+            <li><strong>Memory:</strong> keep the working set in RAM. When it runs out, the server swaps, slows to a crawl, and the OOM killer kills processes.</li>
+            <li><strong>Disk:</strong> the slowest part inside the server. Know whether you need low latency, more IOPS or more throughput; cloud disks sell IOPS and throughput separately.</li>
             <li><strong>Network:</strong> distance sets a floor on latency that no code can beat, so count the round trips.</li>
             <li><strong>A system is only as fast as its busiest part.</strong> Adding cores does nothing when the server is short of memory, and more RAM does nothing when the disk is the limit.</li>
             <li><strong>The network can be the limit when everything else is fine.</strong> CPU, RAM and disk can all have room to spare while large responses, such as images, files and exports, fill the server’s bandwidth (page 1.8).</li>
@@ -1071,7 +1073,7 @@ Approximate round trip times in milli-seconds:
         <ol class="points">
           <li>A request that does one RAM lookup and one round trip inside the datacenter spends 99.98% of its time on the network.</li>
           <li>Caching works because RAM is about 1,000 times faster than an SSD and 5,000 times faster than a round trip to another server.</li>
-          <li>A database in another region adds 100 ms or more to every query, and a page often runs dozens of queries.</li>
+          <li>A database in another region (another part of the world, such as Mumbai and Virginia) adds tens to hundreds of milliseconds to every query, and a page often runs dozens of queries.</li>
         </ol>`
     },
 
@@ -1138,7 +1140,7 @@ Approximate round trip times in milli-seconds:
 
         <h2>Three ways to serve many requests</h2>
         <ol class="points">
-          <li><strong>A process per request.</strong> The server starts a fixed number of worker processes, and each one handles one request from start to finish. While its request waits for the database, the whole process waits too. Python’s gunicorn (with sync workers) and PHP-FPM work this way, and so does PostgreSQL, with one process per connection.</li>
+          <li><strong>A pool of worker processes.</strong> The server starts a fixed number of worker processes, and each one handles one request from start to finish. While its request waits for the database, the whole process waits too. Python’s gunicorn (with sync workers) and PHP-FPM work this way, and so does PostgreSQL, with one process per connection.</li>
           <li><strong>A thread per request.</strong> One process keeps a pool of threads, and each request gets a thread until it’s done. Threads are lighter than processes and share the same memory, but a waiting request still holds its thread. Java’s Tomcat (under Spring MVC) and Ruby’s Puma work this way.</li>
           <li><strong>An event loop.</strong> One thread handles thousands of requests. Whenever a request would wait, the thread sets it aside, works on another, and comes back when the answer arrives. Node.js, Nginx, Redis and Python’s asyncio (which FastAPI uses) work this way.</li>
         </ol>
@@ -1223,7 +1225,7 @@ Approximate round trip times in milli-seconds:
         <ol class="points">
           <li><strong>Storage.</strong> 1 million users × 10 orders a year × 2 KB per order = 20 GB a year. That fits on one disk.</li>
           <li><strong>Bandwidth.</strong> 600 requests a second × 50 KB responses = 30 MB/s, or 240 Mbps. Fine on a 1 Gbps link, as long as the images live on a CDN.</li>
-          <li><strong>Memory for workers.</strong> 60 requests in flight with sync workers at about 150 MB each is 9 GB of RAM just for workers. One async process per core could do it in far less.</li>
+          <li><strong>Memory for workers.</strong> 60 requests in flight with sync workers at about 100 MB each is 6 GB of RAM just for workers. One async process per core could do it in far less.</li>
         </ol>
 
         <aside class="note rule">
@@ -1254,16 +1256,16 @@ Approximate round trip times in milli-seconds:
         <table class="data use">
           <thead><tr><th>Resource</th><th>Utilisation: how busy?</th><th>Saturation: is work waiting?</th><th>Errors</th></tr></thead>
           <tbody>
-            <tr><td>CPU</td><td><code>top</code> or <code>htop</code>: us + sy, per core</td><td>Load above core count; <code>r</code> in <code>vmstat 1</code></td><td>High <code>st</code> (steal) on cloud VMs</td></tr>
+            <tr><td>CPU</td><td><code>top</code> or <code>htop</code>: us + sy, per core</td><td>Load above core count; <code>r</code> in <code>vmstat 1</code>; high <code>st</code> (steal) on cloud VMs</td><td>Rare: machine-check errors in <code>dmesg</code></td></tr>
             <tr><td>Memory</td><td><code>free -h</code>: used vs available</td><td>Swapping: <code>si</code>/<code>so</code> in <code>vmstat 1</code>; GC time</td><td>OOM kills in <code>dmesg</code>, exit code 137</td></tr>
             <tr><td>Disk</td><td><code>iostat -xz 1</code>: %util</td><td><code>aqu-sz</code> and <code>await</code> rising</td><td>Disk full (<code>df -h</code>)</td></tr>
-            <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Packets being resent (<code>nstat</code>)</td><td>Connection errors and timeouts</td></tr>          </tbody>
+            <tr><td>Network</td><td><code>sar -n DEV 1</code>: bytes per second</td><td>Packets being resent (<code>TcpRetransSegs</code> in <code>nstat</code>)</td><td>Connection errors and timeouts</td></tr>          </tbody>
         </table>
 
         <h2>Take these with you</h2>
         <ol class="points">
           <li>A server is CPU, memory, disk and network, shared out by the OS as processes and threads. Every bottleneck is one of them, or a queue in front of one.</li>
-          <li>Clock speeds stopped growing, so scale comes from parallelism, and the part that can’t run in parallel limits it.</li>
+          <li>Clock speeds stopped growing, so scale comes from parallelism, and whatever can’t run in parallel, such as work under a lock (page 1.2), limits it.</li>
           <li>Memory is nanoseconds, SSDs are microseconds, networks are milliseconds.</li>
           <li>Most web requests spend their time waiting, so concurrency matters more than cores.</li>
           <li>Every network call costs round trips and can fail in ways a function call can’t.</li>

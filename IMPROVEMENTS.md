@@ -311,20 +311,6 @@ Items already covered in section 1 aren't repeated here.
 Every calculation and terminal total was re-done and is correct, and the HTML is well formed. What's left is
 mostly precision and currency.
 
-- [ ] **1-1 · P2 · AMD vCPUs.** "On Intel and AMD, one vCPU is one of a core's two threads"
-  ([ch1:543](zero-to-million/js/ch1-fundamentals.js#L543)). On AWS's 7th-generation AMD instances and later,
-  SMT is off, so one vCPU is a whole core. "2 to 192+" should be "1 to 192+": c7g.medium has 1 vCPU.
-- [ ] **1-2 · P2 · Load average wording.** "That queue is what load average measures"
-  ([ch1:236](zero-to-million/js/ch1-fundamentals.js#L236)) suggests it counts only waiting threads. The worked
-  examples count running plus waiting. Say "threads running or waiting for a core".
-- [ ] **1-3 · P2 · The iostat device is `nvme1n1`, but the text calls it a gp3 cloud disk**
-  ([ch1:845](zero-to-million/js/ch1-fundamentals.js#L845)). This comes right after the page contrasts local NVMe with
-  network disks. Add: "On AWS, EBS volumes show up as `nvme` devices, even though they're network disks."
-- [ ] **1-4 · P2 · The worked example and the calculator disagree.**
-  - 1.13's example rounds a day to 100,000 s: 200 → 600 req/s, 9 cores.
-  - The calculator below it starts with the same inputs but divides by 86,400: 231 → 694 req/s, 9.9 cores
-    ([widgets.js:3336](zero-to-million/js/widgets.js#L3336)).
-  - Use one, or add a line saying why the numbers differ.
 - [ ] **1-5 · P2 · The network page promises what it doesn't deliver.**
   - Its lede promises the cost of lost packets and of connection setup
     ([ch1:921](zero-to-million/js/ch1-fundamentals.js#L921)), and the recap says the network "can fail in ways a
@@ -332,54 +318,14 @@ mostly precision and currency.
   - A ready-made `connection-waterfall` widget ([widgets.js:184](zero-to-million/js/widgets.js#L184)) is unused
     anywhere in the book. Add it with two lines: a new HTTPS connection costs 2 round trips before the request
     (TCP 1, TLS 1.3 1), which is 400 ms from India to the US. Align its 220 ms with the book's 200 ms.
-- [ ] **1-6 · P2 · "Window size" is never explained**
-  ([ch1:981](zero-to-million/js/ch1-fundamentals.js#L981)). Add a gloss and a number: 4 MB ÷ 0.2 s = 20 MB/s on one
-  connection to the US.
-- [ ] **1-7 · P2 · The heading says "A process per request"**
-  ([ch1:1141](zero-to-million/js/ch1-fundamentals.js#L1141)). The text describes a fixed pool of worker processes,
-  and the table calls it "Worker processes". Rename it "A pool of worker processes".
 - [ ] **1-8 · P2 · Go and Java virtual threads don't fit the three patterns**
-  ([ch1:1136](zero-to-million/js/ch1-fundamentals.js#L1136), and :220 lists Go under plain threads). Add one point:
+  on 1.12 ([ch1:1136](zero-to-million/js/ch1-fundamentals.js#L1136)). (1.2's table now says "Go, with lightweight goroutines".) Add one point:
   they let you write thread-per-request code over an event loop.
-- [ ] **1-9 · P2 · Steal time isn't an error.** The USE table puts CPU "Errors: High `st` (steal)"
-  ([ch1:1257](zero-to-million/js/ch1-fundamentals.js#L1257)). Move it to saturation, and put machine-check errors in
-  `dmesg` under errors.
-- [ ] **1-10 · P2 · Sleeping threads contradict 1.12.** 1.2 says "2,000 sleeping threads cost almost nothing"
-  ([ch1:331](zero-to-million/js/ch1-fundamentals.js#L331)). 1.12 says each one holds about 1 MB of stack. Say
-  "almost no CPU".
-- [ ] **1-11 · P3 · Numbers that disagree between pages:**
-  - A context switch is 3 µs on 1.2 and 2 µs on the latency ladder.
-  - A Python worker is 100 MB on 1.12 and 150 MB on 1.13.
-  - The ladder calls ~10 ms "Hard disk seek", but it's seek plus rotation.
-  - "Buffer cache" ([ch1:1036](zero-to-million/js/ch1-fundamentals.js#L1036)) and "buffer pool" are both used.
-- [ ] **1-12 · P3 · Currency.**
-  - "Python's bytecode is never turned into machine code" against "Python 3.13 ships an experimental JIT".
-  - The GIL is now optional in free-threaded builds (3.13+, officially supported since 3.14).
-  - "Graviton4": Graviton5 was announced in December 2025.
-  - "A database in another region adds 100 ms or more" ([ch1:1074](zero-to-million/js/ch1-fundamentals.js#L1074)):
-    nearby regions are 10–70 ms. Say "tens to hundreds of ms".
-- [ ] **1-13 · P3 · Terms used before they're explained:**
-  - p99 on 1.2 and 1.6 (defined on 1.11).
-  - CDN, object storage, TLS, zone and region.
-  - Little's Law in the sweet-spot widget note on 1.2.
-  - Window size (1-6).
-- [ ] **1-14 · P3 · The recap introduces things the chapter never taught:**
-  - Amdahl's "the part that can't run in parallel".
-  - `sar -n DEV`, `nstat` and `df -h`.
-- [ ] **1-15 · P3 · Smaller accuracy points:**
-  - htop's "F2 to turn on Detailed CPU time": it's F2, then Display options.
-  - "In the cloud you pay for each separately" ([ch1:858](zero-to-million/js/ch1-fundamentals.js#L858)): IOPS and
-    throughput are bought, but latency comes with the disk type.
-  - "A database that copies itself (Cassandra, Kafka)": Kafka isn't a database.
-  - "The OOM killer stops processes": it kills them.
-  - 1.1 says "watch four instructions from the example above", but the widget's instructions aren't those.
-  - `%util` near 100% doesn't mean an SSD or EBS volume is saturated; trust `aqu-sz` and `await`.
 - [ ] **1-16 · P3 · Structure.**
   - 1.11 has no lede, unlike every other page.
   - 1.10 is a widget and three bullets.
   - 1.3 is the densest page in the book; consider moving "How to tell which kind you have" to its own page.
   - The big Tip box on 1.1 breaks the flow from instructions to the clock; consider moving it after the clock.
-  - `&amp;` in prose at [ch1:16](zero-to-million/js/ch1-fundamentals.js#L16) ("design & scale"): write "and".
 
 <a id="ch2"></a>
 ### Chapter 2: One server
@@ -770,7 +716,6 @@ strong ending.
   - Page 3.1's rule ("When one server runs everything, every part competes…") is missing.
   - "Cache it or leave it" is settled by "Plan for an empty cache", which doesn't settle the choice. That rule
     comes from 6.2 but links to 6.1; use 6.1's rule.
-  - The context switch is 2 µs here and 3 µs on 1.2 (1-11).
 - [ ] **C4 · P3 · Re-check patterns 10, 12 and 13 after S3–S5 and 10-1 are fixed.** For example, "personal data
   stays home" sits beside "a standby in another region".
 

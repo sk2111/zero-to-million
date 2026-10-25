@@ -112,13 +112,13 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
         </ol>
 
         <table class="data">
-          <thead><tr><th></th><th>Scale up (vertical)</th><th>Scale out (horizontal)</th></tr></thead>
+          <thead><tr><th><span class="sr">Aspect</span></th><th>Scale up (vertical)</th><th>Scale out (horizontal)</th></tr></thead>
           <tbody>
             <tr><td>How</td><td>A bigger instance: c7g.large becomes c7g.4xlarge</td><td>More instances, with a load balancer in front</td></tr>
             <tr><td>Code changes</td><td>None</td><td>The app must not keep anything important in one server’s memory (page 4.4)</td></tr>
             <tr><td>How far it goes</td><td>Up to the biggest instance in the family, then it stops</td><td>Keep adding servers</td></tr>
             <tr><td>If a server fails</td><td>Everything is down</td><td>The others keep serving</td></tr>
-            <tr><td>Deploying a new version</td><td>A restart, so a short outage</td><td>One server at a time, with no outage</td></tr>
+            <tr><td>Deploying a new version</td><td>A graceful reload, but a bad release or a reboot takes everything down</td><td>One server at a time; a bad release reaches only some users</td></tr>
             <tr><td>Adding capacity</td><td>In doubling steps, with a few minutes of downtime to resize</td><td>One server at a time, with no downtime</td></tr>
             <tr><td>Paying for capacity</td><td>Sized for the busiest hour, all day, every day</td><td>Add servers for busy hours, remove them when it’s quiet</td></tr>
             <tr><td>New moving parts</td><td>None</td><td>A load balancer, health checks, and more servers to look after</td></tr>
@@ -137,8 +137,8 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
         <ol class="steps">
           <li><strong>The need.</strong> About 500 requests a second at the busiest hour × 20 ms of CPU each = 10 cores busy. To peak at around 70% (page 1.11), that’s about 14 vCPUs.</li>
           <li><strong>Scaling up</strong> would mean one c7g.4xlarge, with 16 vCPUs. Simple, but every deploy and every failure still takes the whole product down.</li>
-          <li><strong>Scaling out</strong> means two c7g.2xlarge, with 8 vCPUs each, behind a load balancer. The same total capacity at about the same price, and no single app server whose failure stops everything.</li>
-          <li><strong>One catch.</strong> If one of the two fails, the other has 8 vCPUs for 10 cores of work, and slows down. Either size each server to carry the busiest hour alone, or run three. Plan for one server to be missing: this is called <strong>N+1</strong>.</li>
+          <li><strong>Scaling out</strong> means c7g.2xlarge servers, with 8 vCPUs each, behind a load balancer. Two of them match the c7g.4xlarge: the same capacity at about the same price, and no single app server whose failure stops everything.</li>
+          <li><strong>One catch.</strong> If one of two fails, the other has 8 vCPUs for 10 cores of work, and slows down. So Tomazon runs three: 24 vCPUs in all, and if one fails, the other two still carry the busiest hour. Planning for one server to be missing is called <strong>N+1</strong>.</li>
         </ol>
 
         <aside class="note design">
@@ -166,7 +166,7 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
       html: `
         <ol class="points lede">
           <li>A <strong>load balancer</strong> sits in front of the app servers and decides which one gets each request.</li>
-          <li>You already run one: Nginx. Its <code>upstream</code> block can spread requests across several servers, and it moves to a small server of its own, in front of the app servers.</li>
+          <li>You already run one: Nginx. Its <code>upstream</code> block can spread requests across several servers. Nginx moves to a small server of its own, a c7g.medium, in front of the app servers.</li>
         </ol>
 
         <h2>Ways to choose a server</h2>
@@ -184,8 +184,9 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
         <h2>Round robin vs least connections</h2>
         <ol class="points">
           <li>This app mixes fast requests (product pages, about 100 ms) with slow ones (checkout, about 2 seconds, because it waits for the payment gateway).</li>
-          <li><strong>Round robin</strong> sends every other request to each server, even when one server’s workers are all busy with checkouts. Fast requests then queue behind slow ones.</li>
-          <li><strong>Least connections</strong> sends each request to the server with fewer in progress, so a fast request goes wherever a worker is free. Switch between them:</li>
+          <li>Each server works on only so many requests at once. A checkout calls the payment gateway’s SDK, which blocks, so FastAPI runs it in its thread pool (page 1.12), and it holds its place there for 2 seconds.</li>
+          <li><strong>Round robin</strong> sends requests to each server in turn, even when one server is full of checkouts. Fast requests then queue behind slow ones.</li>
+          <li><strong>Least connections</strong> sends each request to the server with fewer in progress, so a fast request goes wherever there’s room. Switch between them:</li>
         </ol>
         <div class="widget" data-widget="lb-sim"></div>
 
@@ -196,24 +197,37 @@ nvme1n1    42.0   180.0    336.0   2880.0     0.61     0.92    0.2    6.1</span>
     least_conn;
     server 10.0.1.21:8000 max_fails=3 fail_timeout=10s;
     server 10.0.1.22:8000 max_fails=3 fail_timeout=10s;
+    server 10.0.1.23:8000 max_fails=3 fail_timeout=10s;
     keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name tomazon.com;
+    return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl;
     server_name tomazon.com;
+    ssl_certificate     /etc/letsencrypt/live/tomazon.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tomazon.com/privkey.pem;
 
     location / {
         proxy_pass http://app;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_next_upstream error timeout;
     }
 }</span></pre>
           <ol class="points term-note">
+            <li>The first <code>server</code> block only redirects <code>http://</code> to <code>https://</code>. The second holds the TLS certificate from Let’s Encrypt.</li>
             <li><code>least_conn</code> sends each request to the app server with the fewest requests in progress.</li>
             <li><code>max_fails=3 fail_timeout=10s</code>: after 3 failed attempts within 10 seconds, Nginx stops sending that server traffic for 10 seconds. This is a passive health check.</li>
-            <li><code>proxy_next_upstream</code>: if a server fails or times out, Nginx retries the request on the other one. It doesn’t retry POSTs by default, because repeating one could, say, place an order twice.</li>
+            <li><code>Host</code> and <code>X-Forwarded-Proto</code> tell FastAPI the name and scheme the browser used, so the links it builds point back to <code>https://tomazon.com</code>.</li>
+            <li><code>proxy_next_upstream</code>: if a server fails or times out, Nginx retries the request on another one. It doesn’t retry POSTs by default, because repeating one could, say, place an order twice.</li>
             <li><code>keepalive 32</code>, with HTTP/1.1 and an empty <code>Connection</code> header, keeps connections to the app servers open instead of opening one per request (page 3.3).</li>
           </ol>
         </figure>
@@ -243,36 +257,37 @@ server {
       group: 'Scale out',
       slug: 'architecture-10k',
       title: 'The architecture for 10,000 users',
-      sub: 'A load balancer in front, two app servers behind it, one database.',
+      sub: 'A load balancer in front, three app servers behind it, one database.',
       html: `
         <ol class="points lede">
-          <li>Nginx moves to a small server of its own at the front, and the app runs on two app servers behind it.</li>
+          <li>Nginx moves to a small server of its own at the front, and the app runs on three app servers behind it.</li>
           <li>The database stays on one server: at 10,000 users it still has room. One thing moves onto it: PgBouncer. Step through a request:</li>
         </ol>
         <div class="widget" data-widget="scaleout-live"></div>
 
         <h2>What scaling out needs</h2>
         <ol class="points">
-          <li><strong>Stateless app servers.</strong> Any server must be able to handle any request, so nothing a user needs can live in one server’s memory or disk. Sessions go in the database or Redis, or in a signed cookie; photos go to S3 (below).</li>
+          <li><strong>Stateless app servers.</strong> Any server must be able to handle any request, so nothing a user needs can live in one server’s memory or disk. Sessions go in a shared store or a signed cookie, and Tomazon’s are already in the database (the <code>sessions</code> table on page 3.3); photos go to S3 (below).</li>
           <li><strong>Health checks.</strong> Open-source Nginx only notices a broken server when real requests to it fail. For active checks that call a <code>/health</code> endpoint every few seconds, use an AWS load balancer or Nginx Plus.</li>
           <li><strong>Rolling deploys.</strong> Take one app server out of the <code>upstream</code>, deploy to it, put it back, then do the next. Users never see an outage.</li>
-          <li><strong>Logs and metrics in one place.</strong> Logging in to a server to read its logs no longer works when there are two. Send them all to one place, such as CloudWatch Logs.</li>
-          <li><strong>Database connections add up.</strong> Two app servers × 8 workers × a pool of 10 = 160 connections from the app. One PgBouncer in front of the database turns them into 20 (below).</li>
+          <li><strong>A NAT gateway.</strong> The app servers now sit in a private subnet, with no public address. A NAT gateway lets them call out, to the payment gateway, SMS and email, without letting anyone call in.</li>
+          <li><strong>Logs and metrics in one place.</strong> Logging in to a server to read its logs no longer works when there are three. Send them all to one place, such as CloudWatch Logs.</li>
+          <li><strong>Database connections add up.</strong> Three app servers × 8 workers × a pool of 10 = 240 connections from the app. One PgBouncer in front of the database turns them into 20 (below).</li>
         </ol>
 
         <h2>Where the photos go</h2>
         <ol class="points">
-          <li><strong>They can’t stay on an app server’s disk.</strong> A photo uploaded to app server 1 isn’t on app server 2, so half the shoppers would see a broken image.</li>
+          <li><strong>They can’t stay on an app server’s disk.</strong> A photo uploaded to app server 1 isn’t on app servers 2 and 3, so most shoppers would see a broken image.</li>
           <li><strong>They’d swamp the load balancer too.</strong> At 10,000 shoppers, the busiest hour needs about 100 MB/s of photos, about 800 Mbps: page 2.2’s numbers, ten times over. A c7g.medium’s steady network bandwidth is about 0.5 Gbps.</li>
-          <li><strong>So they move to Amazon S3,</strong> AWS’s object storage. A bucket, <code>tomazon-photos</code>, keeps each file on many disks across zones, grows without limit, and costs about $0.025 per GB a month: Tomazon’s 10 GB of photos cost about 25 cents.</li>
-          <li><strong>Browsers fetch the photos straight from S3.</strong> Each photo’s link on the page points at the bucket, and a bucket policy lets Tomazon users read the photos, and nothing else. Photo traffic never touches the load balancer or the app servers.</li>
+          <li><strong>So they move to Amazon S3,</strong> AWS’s object storage. A bucket, <code>tomazon-photos</code>, keeps each file on many disks across zones, grows without limit, and costs about $0.025 per GB a month to store: Tomazon’s 10 GB of photos cost about 25 cents. Sending them to browsers costs more, about $0.11 per GB, the same as sending them from a server.</li>
+          <li><strong>Browsers fetch the photos straight from S3.</strong> Each photo’s link on the page points at the bucket, and a bucket policy lets anyone read the photos, and nothing else. (New buckets block public access, so it’s switched off for this one bucket.) Photo traffic never touches the load balancer or the app servers.</li>
           <li><strong>The app uploads new photos to the bucket</strong> when staff add a product, so every app server sees the same files.</li>
         </ol>
 
         <h2>Move PgBouncer next to the database</h2>
         <ol class="points">
           <li>In chapter 3, PgBouncer ran on the app server, and PostgreSQL saw its 20 connections (page 3.3).</li>
-          <li>Scaling out copies the app server, and its PgBouncer with it. Each copy opens its own 20 connections: two app servers mean 40, and ten would mean 200. Every one of them is a PostgreSQL process with its own memory (page 1.2).</li>
+          <li>Scaling out copies the app server, and its PgBouncer with it. Each copy opens its own 20 connections: three app servers mean 60, and ten would mean 200. Every one of them is a PostgreSQL process with its own memory (page 1.2).</li>
           <li>So PgBouncer moves onto the database server. Every app server connects to it on port 6432, and PostgreSQL sees one pool of 20, however many app servers there are.</li>
           <li>Each query still crosses the network once. Before, it crossed after PgBouncer; now it crosses before it.</li>
         </ol>
@@ -293,6 +308,7 @@ server {
         <h2>The new weak spots</h2>
         <ol class="points">
           <li><strong>The load balancer is now a single point of failure.</strong> If its server stops, nothing gets through. The usual fixes are an AWS Application Load Balancer, which runs across zones for you, or two Nginx servers sharing an Elastic IP that moves to the healthy one.</li>
+          <li><strong>So is the database.</strong> It’s still one server, with PgBouncer on it. If it stops, the whole product stops, however many app servers there are.</li>
         </ol>
 
         <aside class="note design">

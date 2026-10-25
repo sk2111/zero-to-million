@@ -184,10 +184,6 @@ Some items change the scope of the book, so they're yours to call before anyone 
     - 5.1 says "the app tier adds servers when it's busy" ([ch5:35](zero-to-million/js/ch5-make-it-fast.js#L35)).
     - But chapter 4 has a fixed Nginx upstream, and 10.1 says sales need servers "added by hand"
       ([ch10:39](zero-to-million/js/ch10-run-many-services.js#L39)).
-  - **A NAT gateway.**
-    - From 4.4 the app servers sit in a private subnet, so they can't reach the payment gateway, SMS or email.
-    - A NAT gateway first appears as a line in 14.1's bill.
-  - **The load balancer's own server** (c7g.medium). It appears in the diagrams, and in the text only in passing.
   - **Fix:** a sentence or two where each one arrives. Remove the auto-scaling claim from 5.1 or introduce it.
 
 <a id="s11"></a>
@@ -309,28 +305,6 @@ The arithmetic is right throughout, and so are the t4g.nano's specs (5% baseline
 
 The scale-up versus scale-out maths, the per-vCPU pricing and the PgBouncer move are all correct.
 
-- [ ] **4-1 · P2 · The plan for one missing server is never chosen.** 4.2 states the rule
-  ([ch4:139–141](zero-to-million/js/ch4-scale-out.js#L139)), then 4.4 ships two servers, each too small to carry the
-  peak alone. "Rolling deploys… Users never see an outage" overloads the one left. Chapter 5's diagram then shows
-  three servers, unexplained. Say what was chosen: preferably three servers.
-- [ ] **4-2 · P2 · The Nginx config won't load.** `listen 443 ssl` with no `ssl_certificate` and
-  `ssl_certificate_key` fails `nginx -t` ([ch4:195–212](zero-to-million/js/ch4-scale-out.js#L195)). Also add
-  `proxy_set_header Host $host` and `X-Forwarded-Proto`, or FastAPI builds the wrong redirect URLs.
-- [ ] **4-3 · P2 · S3: the policy and the cost are both wrong**
-  ([ch4:267–268](zero-to-million/js/ch4-scale-out.js#L267)).
-  - A bucket policy can't limit reads to "Tomazon users"; it makes the photos public. Block Public Access must
-    also be turned off.
-  - "10 GB cost about 25 cents" is storage only. Sending the photos costs about $0.11 per GB.
-- [ ] **4-4 · P2 · Least connections versus async workers.** The case for least connections assumes blocking
-  workers ([ch4:186](zero-to-million/js/ch4-scale-out.js#L186)). The book chose async workers, which a checkout
-  waiting on the payment gateway doesn't tie up. The `lb-sim` widget also shows 4 workers per server, against 8 in
-  the architecture. Model the slots as in-flight limits, or say checkout is a sync endpoint.
-- [ ] **4-5 · P3 · Smaller points.**
-  - "The new weak spots" lists only the load balancer, but the single database is one too.
-  - Sessions are already in the database (the `sessions` table in 3.3); say so in 4.4.
-  - "Deploying… a short outage" overstates it: Gunicorn reloads gracefully on HUP.
-  - "it moves to a small server" ([ch4:169](zero-to-million/js/ch4-scale-out.js#L169)) has an unclear "it".
-  - From 4.4 on, the load balancer's security group says "443 open". Open port 80 too, for the HTTPS redirect and certificate renewal, as 2.5 now does.
 
 <a id="ch5"></a>
 ### Chapter 5: Make it fast
@@ -676,7 +650,7 @@ The cheat sheet is otherwise a faithful summary: all 81 links resolve, and its n
   "In this chapter" (S13).
 - [ ] **UX10 · P3 · Accessibility** (axe-core, 15 pages, both themes). Nothing critical. Each of these is one line
   to fix:
-  - An empty first `<th>` in comparison tables on 8.2, 8.4 and 12.1: add visually hidden text (done on 1.1, 1.2 and 2.4).
+  - An empty first `<th>` in comparison tables on 8.2, 8.4 and 12.1: add visually hidden text (done on 1.1, 1.2, 2.4 and 4.2).
   - Every note is an unlabelled `<aside>` landmark: add `aria-label`, or use `<div>`.
   - A near-miss contrast in light mode: the cheat sheet's `small` at 4.48:1.
 
@@ -727,11 +701,8 @@ The code is in good shape for a static site with no build step.
   - At 1366×768, 12.1 scales to 0.55. The step text, which sits inside the scaled element, renders at 7.4 px.
   - **Fix:** clamp the whole scale to at least 0.6, scroll sideways below that, and keep the step panel
     (`.pt-dock`) outside the scaled element. This is the code side of UX2.
-- [ ] **K6 · P2 · The load-balancer simulator goes stale with reduced motion** ([widgets.js:842](zero-to-million/js/widgets.js#L842), :891).
-  - With reduced motion on, switching the algorithm updates the tiles but not the server cards.
-  - Fix: call `advance(30); render()` in that case.
-  - The seeded simulation (240,000 steps) also reruns on every visit to 4.3, though its results never change.
-    Hard-code them.
+- [ ] **K6 · P3 · The load-balancer simulator reruns 240,000 steps on every visit to 4.3,** though its results
+  never change ([widgets.js:842](zero-to-million/js/widgets.js#L842)). Hard-code them. (The reduced-motion bug is fixed.)
 - [ ] **K7 · P2 · The closed sidebar is still reachable by keyboard on tablets and phones**
   ([style.css:1479–1487](zero-to-million/css/style.css#L1479), [app.js:230–239](zero-to-million/js/app.js#L230)).
   - Below 900 px, the closed drawer is only moved off screen. About 20 invisible links stay in the tab order and
@@ -762,11 +733,11 @@ The code is in good shape for a static site with no build step.
   ([app.js:137–140](zero-to-million/js/app.js#L137)).
 - [ ] **K13 · P3 · Live regions are too chatty.**
   - kafka-log rewrites its readout every 650 ms.
-  - kafka-anatomy and lb-sim each have two live regions.
+  - kafka-anatomy has two live regions.
   - **Fix:** write only when the text changes, and keep one live region per widget.
 - [ ] **K14 · P3 · ARIA details.**
   - `aria-label` sits on a role-less `div` in 6.1's home-page picker (`.hq-page`).
-  - lb-sim's fast and slow slots, and kafka-anatomy's keys, rely on colour alone.
+  - kafka-anatomy's keys rely on colour alone.
   - The in-page scroll buttons don't move focus to their target.
 - [ ] **K15 · P3 · Analytics gaps.** `widget used` misses keyboard-only changes to the segmented controls, and clicks
   on 6.1's sections ([app.js:295–302](zero-to-million/js/app.js#L295)).

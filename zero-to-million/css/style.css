@@ -637,11 +637,11 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .lb-q i { display: block; width: 0.85rem; height: 0.85rem; border-radius: 3px; }
 .lb-q em { font-size: 0.76rem; font-style: normal; color: var(--muted); }
 .lb-slots i.lbfast, .lb-q i.lbfast, .sw.lbfast { background: var(--c-disk); box-shadow: none; }
-.lb-slots i.lbslow, .lb-q i.lbslow, .sw.lbslow { background: var(--c-cpu); box-shadow: none; }
+.lb-slots i.lbslow, .lb-q i.lbslow, .sw.lbslow { background: repeating-linear-gradient(45deg, transparent 0 3px, rgba(0, 0, 0, 0.28) 3px 5px), var(--c-cpu); box-shadow: none; }   /* striped: not colour alone */
 .lb-tiles { margin-top: 1rem; }
 .ar4-lb { flex: none; width: 15rem; }
 .ar4-lb .nd { width: 100%; }
-.ar4-apps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2.6rem; }
+.ar4-apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6rem; }
 .ar4-apps .ar2-ec2 .nd { max-width: 13rem; margin: 0 auto; }
 .ar2 .ar4-cap { margin: 0.7rem 0 0; }
 .ar2 .ar4-c > .ar2-k { justify-content: center; }

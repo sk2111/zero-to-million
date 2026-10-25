@@ -828,19 +828,19 @@ window.ZTM = window.ZTM || {};
       legend([['lbfast', 'Product page: 100 ms of work'], ['lbslow', 'Checkout: 2 s, waiting for the payment gateway']]) +
       '<p class="lb-from">Nginx sends each new request to…</p>' +
       '<div class="lb-servers">' + [1, 2].map(function (i) {
-        return '<div class="lb-card"><p class="lb-name"><b>App server ' + i + '</b><span>4 workers</span></p>' +
-          '<div class="lb-slots"></div><p class="lb-qk">Waiting for a worker</p><div class="lb-q"></div></div>';
+        return '<div class="lb-card"><p class="lb-name"><b>App server ' + i + '</b><span>4 at a time</span></p>' +
+          '<div class="lb-slots"></div><p class="lb-qk">Waiting for room</p><div class="lb-q"></div></div>';
       }).join('') + '</div>' +
-      '<div class="tiles tiles-3 lb-tiles" aria-live="polite">' +
+      '<div class="tiles tiles-3 lb-tiles">' +
         '<div class="tile"><span>Typical product page (p50)</span><b data-o="p50"></b><small>over 10 simulated minutes</small></div>' +
         '<div class="tile"><span>Slowest 5% of product pages (p95)</span><b data-o="p95"></b><small>over 10 simulated minutes</small></div>' +
         '<div class="tile key"><span>With the other algorithm</span><b data-o="other"></b><small data-o="otherk"></small></div>' +
       '</div>' +
       '<p class="readout" aria-live="polite"></p>' +
-      '<p class="w-note">The live view runs at half speed. The numbers in the tiles come from ten simulated minutes of exactly the same traffic under each algorithm.</p>';
+      '<p class="w-note">Two servers, to keep the picture simple. Checkouts are striped. The live view runs at half speed. The numbers in the tiles come from ten simulated minutes of exactly the same traffic under each algorithm.</p>';
     el.querySelector('.w-controls').appendChild(segmented('Load balancing algorithm', [
       { value: 'rr', label: 'Round robin' }, { value: 'lc', label: 'Least connections' }
-    ], alg, function (v) { alg = v; reset(); show(); }));
+    ], alg, function (v) { alg = v; reset(); show(); if (reduceMotion) { advance(30); render(); } }));
     var cards = el.querySelectorAll('.lb-card'), out = el.querySelector('.readout');
     function o(n) { return el.querySelector('[data-o="' + n + '"]'); }
 
@@ -851,8 +851,8 @@ window.ZTM = window.ZTM || {};
       o('other').textContent = other.p95 + ' ms';
       o('otherk').textContent = 'p95 with ' + (alg === 'rr' ? 'least connections' : 'round robin');
       out.innerHTML = alg === 'rr'
-        ? '<strong>Round robin</strong> alternates between the servers without looking at them. When one server’s workers are all busy with checkouts, product pages still get sent there, and wait in its queue while the other server has free workers.'
-        : '<strong>Least connections</strong> sends each request to the server with fewer requests in progress, so a product page goes wherever a worker is free. The typical page is just as fast, but the slow tail is about ' +
+        ? '<strong>Round robin</strong> alternates between the servers without looking at them. When one server is full of checkouts, product pages still get sent there, and wait in its queue while the other server has room.'
+        : '<strong>Least connections</strong> sends each request to the server with fewer requests in progress, so a product page goes wherever there’s room. The typical page is just as fast, but the slow tail is about ' +
           Math.max(2, Math.round(stats.rr.p95 / stats.lc.p95)) + ' times shorter.';
     }
 
@@ -893,7 +893,7 @@ window.ZTM = window.ZTM || {};
     else requestAnimationFrame(frame);
   };
 
-  /* Chapter 4: an Nginx load balancer in front of two app servers. */
+  /* Chapter 4: an Nginx load balancer in front of three app servers. */
   W['scaleout-live'] = function (el) {
     var node = archNode;
     liveArch(el, {
@@ -905,8 +905,10 @@ window.ZTM = window.ZTM || {};
         ['lb', 'sg', 'lb', 'h', ''],
         ['a1', 'lb', 'app1', 'v', ''],
         ['a2', 'lb', 'app2', 'v', 'least connections'],
+        ['a3', 'lb', 'app3', 'v', ''],
         ['d1', 'app1box', 'pgb', 'v', ''],
         ['d2', 'app2box', 'pgb', 'v', ''],
+        ['d3', 'app3box', 'pgb', 'v', ''],
         ['pool', 'pgb', 'db', 'h', ''],
         ['io', 'db', 'disk', 'h', ''],
         ['bak', 'disk', 'snap', 'v', 'daily', true],
@@ -919,16 +921,16 @@ window.ZTM = window.ZTM || {};
           say: '<strong>Find the service.</strong> DNS now points <code>tomazon.com</code> at the load balancer’s Elastic IP. Users never see the app servers directly.' },
         { on: ['users', 'eip', 'sg', 'lb'], run: [['in', 0], ['fw', 0], ['lb', 0]], t: '~40 ms: 2 round trips to Mumbai',
           say: '<strong>Connect to the load balancer.</strong> The browser’s HTTPS connection ends at Nginx, which holds the TLS certificate. Behind it, everything stays on the private network.' },
-        { on: ['lb', 'app1', 'app2'], run: [['a2', 0]], t: 'a fraction of a millisecond',
-          say: '<strong>Choose a server.</strong> Nginx uses least connections: app server 1 has 7 requests in progress, app server 2 has 3, so this one goes to server 2.' },
+        { on: ['lb', 'app1', 'app2', 'app3'], run: [['a2', 0]], t: 'a fraction of a millisecond',
+          say: '<strong>Choose a server.</strong> Nginx uses least connections: app server 1 has 7 requests in progress, app server 2 has 3 and app server 3 has 5, so this one goes to server 2.' },
         { on: ['app2', 'pgb', 'db', 'disk'], run: [['d2', 0], ['pool', 0], ['pool', 1], ['d2', 1]], t: '~0.2–0.5 ms per query',
-          say: '<strong>Do the work.</strong> FastAPI on server 2 sends its query across the private network to PgBouncer on the database server, which lends it one of 20 real connections to PostgreSQL over <code>localhost</code>. Both app servers share that one pool, so PostgreSQL sees 20 connections in all.' },
+          say: '<strong>Do the work.</strong> FastAPI on server 2 sends its query across the private network to PgBouncer on the database server, which lends it one of 20 real connections to PostgreSQL over <code>localhost</code>. All three app servers share that one pool, so PostgreSQL sees 20 connections in all.' },
         { on: ['app2', 'lb', 'users'], run: [['a2', 1], ['lb', 1], ['fw', 1], ['in', 1]], t: '~20 ms: 1 round trip',
           say: '<strong>Answer.</strong> The response goes back through Nginx to the browser. The user can’t tell, and doesn’t need to know, which server answered.' },
         { on: ['users', 's3'], run: [['ph', 0], ['ph', 1]], t: 'straight from S3',
           say: '<strong>Fetch the photos.</strong> The page’s photo links point at the S3 bucket, so the browser downloads them straight from S3. The load balancer and the app servers never carry them.' },
-        { on: ['lb', 'app2'], run: [['a2', 0]], t: 'after 3 failed attempts',
-          say: '<strong>If a server fails.</strong> When requests to app server 1 keep failing, Nginx stops sending it traffic for a while and server 2 takes everything. That’s why each server needs room to spare.' }
+        { on: ['lb', 'app2', 'app3'], run: [['a2', 0], ['a3', 0]], t: 'after 3 failed attempts',
+          say: '<strong>If a server fails.</strong> When requests to app server 1 keep failing, Nginx stops sending it traffic for a while, and servers 2 and 3 take everything. That’s why there are three: two can carry the busiest hour.' }
       ],
       html:
         '<div class="ar2-left">' +
@@ -942,7 +944,7 @@ window.ZTM = window.ZTM || {};
               '<div class="ar2-row">' +
                 '<div class="ar2-edge ar3-edge">' +
                   node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address') +
-                  node('sg', 'shield', 'c-sec', 'Security group', '443 open') +
+                  node('sg', 'shield', 'c-sec', 'Security group', '80 and 443 open') +
                 '</div>' +
                 '<div class="ar2-ec2 ar4-lb"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'Load balancer: EC2 c7g.medium</p>' +
                   node('lb', 'proxy', 'c-net', 'Nginx', 'least_conn, health checks') +
@@ -953,6 +955,7 @@ window.ZTM = window.ZTM || {};
               '<div class="ar4-apps">' +
                 '<div class="ar2-ec2" data-p="app1box">' + node('app1', 'bolt', 'c-sw', 'FastAPI', '8 workers') + '<p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + 'App server 1: c7g.2xlarge, 8 vCPUs</p></div>' +
                 '<div class="ar2-ec2" data-p="app2box">' + node('app2', 'bolt', 'c-sw', 'FastAPI', '8 workers') + '<p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + 'App server 2: c7g.2xlarge, 8 vCPUs</p></div>' +
+                '<div class="ar2-ec2" data-p="app3box">' + node('app3', 'bolt', 'c-sw', 'FastAPI', '8 workers') + '<p class="ar2-k ar4-cap">' + icon('chip', 'c-cpu') + 'App server 3: c7g.2xlarge, 8 vCPUs</p></div>' +
               '</div>' +
             '</div>' +
             '<div class="ar3-subnet ar3-private ar4-c"><p class="ar2-k">Private subnet: database</p>' +
@@ -1023,7 +1026,7 @@ window.ZTM = window.ZTM || {};
             : sub('k8-priv k6-reps2', 'Private subnet: replicas')) +
           sub('k8-priv k6-db', 'Private subnet: database') +
           at('k8-c1 k8-r1', node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address')) +
-          at('k8-c1 k8-r2', node('sg', 'shield', 'c-sec', 'Security group', '443 open')) +
+          at('k8-c1 k8-r2', node('sg', 'shield', 'c-sec', 'Security group', '80 and 443 open')) +
           '<div class="k8-box k8-low k8-c1 k8-r3"><p class="k8-cap">' + icon('chip', 'c-cpu') + 'EC2 c7g.medium</p>' +
             node('lb', 'proxy', 'c-net', 'Load balancer', 'Nginx: least_conn, health checks') + '</div>' +
           '<div class="k8-box k8-span k8-c2 k8-r123" data-p="apps"><p class="k8-cap">' + icon('chip', 'c-cpu') + '3 × EC2 c7g.2xlarge</p>' +
@@ -1949,7 +1952,7 @@ window.ZTM = window.ZTM || {};
     var way = o.eks
       ? at('k8-c1 k8-r' + top, node('lb', 'proxy', 'c-net', 'Load balancer', 'an ALB, set up by Kubernetes'))
       : at('k8-c1 k8-r' + top, node('eip', 'ip', 'c-net', 'Elastic IP', 'the load balancer’s address')) +
-        at('k8-c1 k8-r' + (top + 1), node('sg', 'shield', 'c-sec', 'Security group', '443 open')) +
+        at('k8-c1 k8-r' + (top + 1), node('sg', 'shield', 'c-sec', 'Security group', '80 and 443 open')) +
         frame('k8-low k8-c1 k8-r4', icon('chip', 'c-cpu') + 'c7g.medium') +
         at('k8-c1 k8-r4', node('lb', 'proxy', 'c-net', 'Load balancer', 'Nginx, routes by path'));
     var programs = o.eks

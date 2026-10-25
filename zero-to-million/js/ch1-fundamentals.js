@@ -76,41 +76,6 @@ call    PyFloat_FromDouble   <span class="cp-dim">; wrap the answer in a new Pyt
           <li>Each bytecode step becomes dozens to hundreds of machine instructions, depending on the types involved.</li>
         </ol>
 
-        <aside class="note tip">
-          <h3>Tip: why compiled languages run this 10–100 times faster</h3>
-          <ol class="points">
-            <li>By default, Python’s bytecode is never turned into machine code. Standard Python (CPython) is an <strong>interpreter</strong>: a program written in C, already compiled, that reads your bytecode one step at a time and runs its own general-purpose machine code for each step.</li>
-            <li>So every time <code>price * 1.18</code> runs, the CPU also does the interpreter’s work: fetch the next step, check what type <code>price</code> is, find the right multiply, create a new object for the answer, update reference counts.</li>
-            <li>Go, Rust and C <strong>compile ahead of time</strong>: once, before the program runs. The compiler already knows <code>price</code> is a 64-bit float, so it emits just the multiply, on a value that sits in a CPU register.</li>
-          </ol>
-          <div class="compile">
-            <div class="cp-panel">
-              <p class="cp-head"><b>Go</b><span>the same function</span></p>
-<pre class="cp-code">func addGST(price float64) float64 {
-    return price * 1.18
-}</pre>
-            </div>
-            <div class="cp-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
-            <div class="cp-panel cp-dark">
-              <p class="cp-head"><b>What the CPU runs</b><span>2 instructions</span></p>
-<pre class="cp-code">mulsd   xmm0, [1.18]  <span class="cp-dim">; price × 1.18</span>
-ret                   <span class="cp-dim">; answer is ready</span></pre>
-            </div>
-          </div>
-          <table class="data">
-            <thead><tr><th><span class="sr">Aspect</span></th><th>Python (CPython)</th><th>Go</th></tr></thead>
-            <tbody>
-              <tr><td>Becomes machine code</td><td>Not by default: the interpreter runs the bytecode</td><td>Once, before the program runs</td></tr>
-              <tr><td>Knows the types</td><td>Only while running, checked on every operation</td><td>At compile time</td></tr>
-              <tr><td>Where <code>price</code> lives</td><td>A 24-byte object in memory</td><td>A CPU register</td></tr>
-              <tr><td>Instructions for <code>price * 1.18</code></td><td>Dozens to hundreds</td><td>1 or 2</td></tr>
-            </tbody>
-          </table>
-          <ol class="points" start="4">
-            <li>Java and C# sit in between: they start as bytecode, and a <strong>JIT</strong> (just-in-time compiler) turns the hot parts into machine code while the program runs, which is why they speed up after a warm-up.</li>
-            <li>Python is catching up the same way: PyPy uses a JIT and is often several times faster than CPython, and since 3.13 CPython has an experimental JIT of its own, switched off by default.</li>
-          </ol>
-        </aside>
 
         <h2>How a CPU processes instructions</h2>
         <ol class="points">
@@ -164,6 +129,42 @@ ret                   <span class="cp-dim">; answer is ready</span></pre>
             <li>That’s 0.68 instructions per tick: the cores spend much of their “busy” time waiting for memory.</li>
           </ol>
         </figure>
+
+        <aside class="note tip">
+          <h3>Tip: why compiled languages run this 10–100 times faster</h3>
+          <ol class="points">
+            <li>By default, Python’s bytecode is never turned into machine code. Standard Python (CPython) is an <strong>interpreter</strong>: a program written in C, already compiled, that reads your bytecode one step at a time and runs its own general-purpose machine code for each step.</li>
+            <li>So every time <code>price * 1.18</code> runs, the CPU also does the interpreter’s work: fetch the next step, check what type <code>price</code> is, find the right multiply, create a new object for the answer, update reference counts.</li>
+            <li>Go, Rust and C <strong>compile ahead of time</strong>: once, before the program runs. The compiler already knows <code>price</code> is a 64-bit float, so it emits just the multiply, on a value that sits in a CPU register.</li>
+          </ol>
+          <div class="compile">
+            <div class="cp-panel">
+              <p class="cp-head"><b>Go</b><span>the same function</span></p>
+<pre class="cp-code">func addGST(price float64) float64 {
+    return price * 1.18
+}</pre>
+            </div>
+            <div class="cp-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+            <div class="cp-panel cp-dark">
+              <p class="cp-head"><b>What the CPU runs</b><span>2 instructions</span></p>
+<pre class="cp-code">mulsd   xmm0, [1.18]  <span class="cp-dim">; price × 1.18</span>
+ret                   <span class="cp-dim">; answer is ready</span></pre>
+            </div>
+          </div>
+          <table class="data">
+            <thead><tr><th><span class="sr">Aspect</span></th><th>Python (CPython)</th><th>Go</th></tr></thead>
+            <tbody>
+              <tr><td>Becomes machine code</td><td>Not by default: the interpreter runs the bytecode</td><td>Once, before the program runs</td></tr>
+              <tr><td>Knows the types</td><td>Only while running, checked on every operation</td><td>At compile time</td></tr>
+              <tr><td>Where <code>price</code> lives</td><td>A 24-byte object in memory</td><td>A CPU register</td></tr>
+              <tr><td>Instructions for <code>price * 1.18</code></td><td>Dozens to hundreds</td><td>1 or 2</td></tr>
+            </tbody>
+          </table>
+          <ol class="points" start="4">
+            <li>Java and C# sit in between: they start as bytecode, and a <strong>JIT</strong> (just-in-time compiler) turns the hot parts into machine code while the program runs, which is why they speed up after a warm-up.</li>
+            <li>Python is catching up the same way: PyPy uses a JIT and is often several times faster than CPython, and since 3.13 CPython has an experimental JIT of its own, switched off by default.</li>
+          </ol>
+        </aside>
 
         <aside class="note design">
           <h3>For system design</h3>
@@ -1095,6 +1096,25 @@ Approximate round trip times in milli-seconds:
           <li>A request that does one RAM lookup and one round trip inside the datacenter spends 99.98% of its time on the network.</li>
           <li>Caching works because RAM is about 1,000 times faster than an SSD and 5,000 times faster than a round trip to another server.</li>
           <li>A database in another region (another part of the world, such as Mumbai and Virginia) adds tens to hundreds of milliseconds to every query, and a page often runs dozens of queries.</li>
+        </ol>
+
+        <h2>Use it to estimate a request</h2>
+        <p>A shopper in Bangalore opens a product page, served from Mumbai over a connection that’s already open (page 1.8):</p>
+        <table class="data">
+          <thead><tr><th>Step</th><th>How many × how long</th><th>Time</th></tr></thead>
+          <tbody>
+            <tr><td>The round trip from Bangalore to Mumbai and back</td><td>1 × 20 ms</td><td>20 ms</td></tr>
+            <tr><td>Database queries, one after another, in the same datacenter</td><td>5 × 0.5 ms</td><td>2.5 ms</td></tr>
+            <tr><td>Rows that aren’t in RAM, read from an SSD</td><td>10 × 0.1 ms</td><td>1 ms</td></tr>
+            <tr><td>Your code: parse, check, build the JSON (page 1.3)</td><td></td><td>4 ms</td></tr>
+            <tr class="hl"><td>The whole request</td><td></td><td>About 28 ms</td></tr>
+          </tbody>
+        </table>
+        <ol class="points">
+          <li>The one long round trip is more than two-thirds of the time. Halving your code’s CPU time saves 2 ms; the 20 ms
+          only shrinks if the server moves closer to the shopper.</li>
+          <li>That’s the habit this table builds: before you optimise anything, add up where the time goes, and start with
+          the biggest line.</li>
         </ol>`
     },
 
@@ -1105,6 +1125,13 @@ Approximate round trip times in milli-seconds:
       title: 'Measuring performance',
       sub: 'Latency, throughput, percentiles, and why busy isn’t the same as full.',
       html: `
+        <ol class="points lede">
+          <li>“The site is slow” can’t be fixed. “At the busiest hour, the slowest 1 in 100 checkouts went from 300 ms to
+          2 seconds” can.</li>
+          <li>Four numbers describe how a system is doing. Two habits keep them honest: look at percentiles, not
+          averages, and never plan to run anything close to 100% busy.</li>
+        </ol>
+
         <dl class="terms">
           <div><dt>Latency</dt><dd>How long one request takes, in milliseconds.</dd></div>
           <div><dt>Throughput</dt><dd>How many requests the system finishes per second (RPS).</dd></div>

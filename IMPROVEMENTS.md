@@ -68,9 +68,6 @@ Some items change the scope of the book, so they're yours to call before anyone 
   Options:
   - Keep the title and make chapters 7 to 14 an explicit "Beyond a million" part (recommended).
   - Change the subtitle.
-- [ ] **D3. How strict is "no forward references"?** It certainly covers later chapters. Does it also cover:
-  - "the next page" within a chapter?
-  - Soft hints such as "for now" and "not yet"?
 
   The later-chapter references are fixed; S17 lists the other two kinds.
 - [ ] **D4. What does the book call itself?** "Workshop" (chapters 2 and 14), "the book" (cheat sheet) and "a guide"
@@ -283,21 +280,6 @@ Some items change the scope of the book, so they're yours to call before anyone 
   - Product ids: `TZ-10442` (6.1), "product 1042" (8.2), and `product_id: int` (6.3).
   - "Workshop", "book" and "guide": see D4.
 
-<a id="s17"></a>
-- [ ] **S17 · P3 · References to later pages, and soft hints** (decision D3). The references to later
-  *chapters* are fixed (see IMPROVEMENTS-DONE.md). If D3 says the rule covers these too:
-  - **Within a chapter:**
-    - ch1:263, :305
-    - ch2:70, :128, :135, :137, :193
-    - ch3:156–158
-    - ch4:83, :118, :150
-    - ch5:121, :309
-  - **Soft hints:**
-    - "stays with Orders for now" (ch7:173)
-    - "More readers are coming" (ch8:54)
-    - "for now, just products" (ch8:175)
-    - "Not yet" (ch9:111)
-    - "Still in Mumbai, for now" (ch9:177)
 
 ---
 
@@ -311,11 +293,6 @@ Items already covered in section 1 aren't repeated here.
 Every calculation and terminal total was re-done and is correct, and the HTML is well formed. What's left is
 mostly precision and currency.
 
-- [ ] **1-16 · P3 · Structure.**
-  - 1.11 has no lede, unlike every other page.
-  - 1.10 is a widget and three bullets.
-  - 1.3 is the densest page in the book; consider moving "How to tell which kind you have" to its own page.
-  - The big Tip box on 1.1 breaks the flow from instructions to the clock; consider moving it after the clock.
 
 <a id="ch2"></a>
 ### Chapter 2: One server

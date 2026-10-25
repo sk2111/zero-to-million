@@ -974,6 +974,27 @@ Approximate round trip times in milli-seconds:
         <p>Bandwidth needed is the number of requests a second × the size of each response. Try your own numbers:</p>
         <div class="widget" data-widget="net-picker"></div>
 
+        <h2>What a new connection costs</h2>
+        <ol class="points">
+          <li>Before a request can leave, a new HTTPS connection needs two round trips: one for TCP to agree to talk,
+          and one for TLS to agree on the keys that encrypt the conversation (TLS 1.3; the older TLS 1.2 needs two).</li>
+          <li>Then the request goes out and the answer comes back: a third round trip. From Bangalore to the US east
+          coast, about 200 ms each, that’s 600 ms before the server’s own work counts at all. A reused connection pays only
+          the last 200 ms.</li>
+          <li>Inside one datacenter the same handshakes cost about a millisecond, so there your code is the slow part.</li>
+        </ol>
+
+        <p>Pick a place, and compare a new connection with one that’s already open:</p>
+        <div class="widget" data-widget="connection-waterfall"></div>
+
+        <ol class="points">
+          <li><strong>Lost packets cost round trips too.</strong> TCP only finds out a packet is lost when its
+          acknowledgement doesn’t come back, then sends it again: at least one more round trip, and up to a timeout of a
+          few hundred milliseconds. Everything sent after it waits as well, because TCP hands over the data in order.</li>
+          <li>Packets get lost mostly at busy routers: when a router’s queue overflows, it drops what doesn’t fit. The same
+          queues are why one ping above took 283 ms and the next 440 ms.</li>
+        </ol>
+
         <aside class="note design">
           <h3>For system design</h3>
           <ol class="points">

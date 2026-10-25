@@ -311,16 +311,6 @@ Items already covered in section 1 aren't repeated here.
 Every calculation and terminal total was re-done and is correct, and the HTML is well formed. What's left is
 mostly precision and currency.
 
-- [ ] **1-5 · P2 · The network page promises what it doesn't deliver.**
-  - Its lede promises the cost of lost packets and of connection setup
-    ([ch1:921](zero-to-million/js/ch1-fundamentals.js#L921)), and the recap says the network "can fail in ways a
-    function call can't". Neither is shown.
-  - A ready-made `connection-waterfall` widget ([widgets.js:184](zero-to-million/js/widgets.js#L184)) is unused
-    anywhere in the book. Add it with two lines: a new HTTPS connection costs 2 round trips before the request
-    (TCP 1, TLS 1.3 1), which is 400 ms from India to the US. Align its 220 ms with the book's 200 ms.
-- [ ] **1-8 · P2 · Go and Java virtual threads don't fit the three patterns**
-  on 1.12 ([ch1:1136](zero-to-million/js/ch1-fundamentals.js#L1136)). (1.2's table now says "Go, with lightweight goroutines".) Add one point:
-  they let you write thread-per-request code over an event loop.
 - [ ] **1-16 · P3 · Structure.**
   - 1.11 has no lede, unlike every other page.
   - 1.10 is a widget and three bullets.
@@ -862,7 +852,7 @@ The code is in good shape for a static site with no build step.
   - `reduceMotion` is read once, at load.
   - **Fix:** pause off-screen animations with an IntersectionObserver, and listen for changes to the media query.
 - [ ] **K17 · P3 · Dead code and duplication.**
-  - 8 unused widgets, about 480 lines or 14% of `widgets.js` (R6).
+  - 7 unused widgets, about 14% of `widgets.js` (R6).
   - About 45 dead CSS rules:
     - `.g-*`, `.el-rows`, `.co-rows`, `.c9-left` and `.kc-*`
     - `.sm-*`, `.c12-*` and `.c13-*`
@@ -906,8 +896,7 @@ The code is in good shape for a static site with no build step.
   only for planned chapters, so it's dead data that misleads whoever edits next. Update or delete them.
 - [ ] **R5 · P3 · No link previews.** There are no Open Graph or Twitter tags, so links shared in Slack, LinkedIn or
   WhatsApp show no preview card. Add `og:title`, `og:description` and an `og:image`.
-- [ ] **R6 · P3 · Eight finished widgets are on no page:**
-  - `connection-waterfall` (1-5)
+- [ ] **R6 · P3 · Seven finished widgets are on no page:**
   - `edge-latency` (S12)
   - `k8s-cluster` (10-3)
   - `ttfb-budget` (11-4)
@@ -916,5 +905,5 @@ The code is in good shape for a static site with no build step.
   - `fan-out` ([widgets.js:2704](zero-to-million/js/widgets.js#L2704))
   - `slow-start` ([widgets.js:3083](zero-to-million/js/widgets.js#L3083))
 
-  The first six fit pages that exist today. Use them, or delete them, so `widgets.js` (234 KB, loaded on every
+  The first five fit pages that exist today. Use them, or delete them, so `widgets.js` (234 KB, loaded on every
   page) carries only what's shown.

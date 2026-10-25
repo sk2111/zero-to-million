@@ -170,7 +170,7 @@ window.ZTM = window.ZTM || {};
     { value: 'dc', label: 'Same datacenter', rtt: 0.5 },
     { value: 'mum', label: 'Bangalore to Mumbai', rtt: 20 },
     { value: 'sg', label: 'Bangalore to Singapore', rtt: 50 },
-    { value: 'us', label: 'Bangalore to US east', rtt: 220 }
+    { value: 'us', label: 'Bangalore to US east', rtt: 200 }
   ];
   function placeBy(v) { return PLACES.filter(function (x) { return x.value === v; })[0]; }
 
@@ -184,7 +184,7 @@ window.ZTM = window.ZTM || {};
   W['connection-waterfall'] = function (el) {
     var places = PLACES;
     var SERVER = 20;
-    var place = 'mum';
+    var place = 'us';
 
     el.innerHTML = '<div class="w-controls"></div>' +
       legend([['net', 'Network round trip'], ['cpu', 'Server doing the work (20 ms)']]) +

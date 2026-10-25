@@ -593,6 +593,7 @@ ol.term-note > li::marker { color: var(--term-prompt); }
 .b-app { background: var(--c-cpu); }
 .b-ng { background: var(--c-net); }
 .b-free { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.budget .b-os, .budget .b-free { color: var(--ink); }   /* grey and empty fills: the page's own text colour reads in both themes */
 .budget-legend { max-width: 50rem; }
 .over-wrap { position: relative; max-width: 50rem; padding-top: 2.8rem; }
 .over-wrap .budget { margin-top: 0; }

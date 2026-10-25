@@ -262,7 +262,7 @@ ZTM.cheatsheet = (function () {
         fig('≈ 12 a second', 'is a million requests a day. A billion a day is about 12,000 a second.', '1.13') +
         fig('2–5×', 'the average traffic, in the busiest hour. Size for that hour, not the day.', '1.13') +
         fig('1,000×', 'faster: RAM, compared with a read from an SSD.', '1.10') +
-        fig('~0.5 ms', 'a round trip to a server nearby. Twenty small queries add 10–20 ms.', '3.3') +
+        fig('~0.5 ms', 'a round trip to a server nearby. Twenty small queries add up to 10 ms.', '3.3') +
         fig('÷ 8', 'Networks count bits, disks count bytes: 1 Gbps is 125 MB/s.', '1.8') +
         fig('5 µs a km', 'for light in fibre: 1,000 km is at least 10 ms there and back.', '1.8') +
         fig('~100 IOPS', 'random reads a second from a hard disk. An SSD does tens of thousands; NVMe 500,000 or more.', '1.7') +

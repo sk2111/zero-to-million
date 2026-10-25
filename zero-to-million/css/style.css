@@ -1389,9 +1389,9 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
 .cs-patterns { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; counter-reset: pat; }
 .cs-patterns > li { position: relative; padding: 1.2rem 1.35rem 1.25rem; border: 1px solid var(--rule); border-radius: 16px; counter-increment: pat; }
 .cs-patterns > li::before { content: ""; position: absolute; top: -1px; left: 1.35rem; width: 3rem; height: 3px; border-radius: 0 0 3px 3px; background: var(--k); }
-.cp-head { display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 0.65rem; }
-.cp-head::before { content: counter(pat, decimal-leading-zero); font-family: var(--mono); font-size: var(--fs-sm); font-weight: 600; color: var(--k); }
-.page .cp-head h3 { flex: 1; margin: 0; font-size: 1.125rem; }
+.cs-patterns .cp-head { display: flex; align-items: baseline; gap: 0.7rem; margin-bottom: 0.65rem; }
+.cs-patterns .cp-head::before { content: counter(pat, decimal-leading-zero); font-family: var(--mono); font-size: var(--fs-sm); font-weight: 600; color: var(--k); }
+.cs-patterns .cp-head h3 { flex: 1; margin: 0; font-size: 1.125rem; }
 .cp-line { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.6rem; margin-top: 0.45rem; font-size: var(--fs-md); line-height: 1.5; color: var(--ink-2); }
 .cp-line em { padding-top: 0.15rem; font-style: normal; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; }
 .cp-when em { color: var(--amber); }

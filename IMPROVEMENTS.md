@@ -54,7 +54,6 @@ total and found them all correct. Chapter 7 is the strongest chapter.
 | 5 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
 | 6 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
 | 7 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
-| 8 | [R1](#r1) Kubernetes link behind Soliton's sign-in | Public readers hit a Microsoft login page |
 
 ### Decisions for you
 
@@ -862,9 +861,6 @@ The code is in good shape for a static site with no build step.
   - At 1366×768, 12.1 scales to 0.55. The step text, which sits inside the scaled element, renders at 7.4 px.
   - **Fix:** clamp the whole scale to at least 0.6, scroll sideways below that, and keep the step panel
     (`.pt-dock`) outside the scaled element. This is the code side of UX2.
-- [ ] **K5 · P2 · The disk picker's arithmetic looks wrong.** It stores "1 MB" as 1,024 KB but divides MB/s by 1,000
-  ([widgets.js:3134](zero-to-million/js/widgets.js#L3134), :3158, :3190). It prints "3,000 operations a second ×
-  1 MB = 3,072 MB/s". Use 1,000.
 - [ ] **K6 · P2 · The load-balancer simulator goes stale with reduced motion** ([widgets.js:842](zero-to-million/js/widgets.js#L842), :891).
   - With reduced motion on, switching the algorithm updates the tiles but not the server cards.
   - Fix: call `advance(30); render()` in that case.
@@ -944,11 +940,6 @@ The code is in good shape for a static site with no build step.
 
 ## 6. README, repo and publishing
 
-<a id="r1"></a>
-- [ ] **R1 · P2 · The Kubernetes link sends public readers to a sign-in page.** The "learn more" link
-  ([ch10:69](zero-to-million/js/ch10-run-many-services.js#L69)) goes to an Azure AD sign-in for
-  ventures.solitontech.in. Readers outside Soliton hit a Microsoft login. Mark it "for Soliton staff", or link a
-  public resource such as the tutorials on kubernetes.io.
 - [ ] **R2 · P3 · Removed pages fall back to home silently** ([app.js:29–32](zero-to-million/js/app.js#L29)).
   - An unknown address renders the home page while the URL stays wrong, and the visit is logged as `home`.
   - The same happens with a trailing slash or capitals: `#/1/`, `#/1/cpu/`, `#/1/CPU`.

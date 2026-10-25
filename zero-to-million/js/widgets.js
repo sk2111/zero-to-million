@@ -3131,7 +3131,7 @@ window.ZTM = window.ZTM || {};
       { id: 'nvme', name: 'Local NVMe (instance store)', short: 'Local NVMe', what: 'The fastest there is. Its data is lost if the server stops, so only for data copied to other servers.' }
     ];
     var SIZES = [{ value: '4', label: '4 KB' }, { value: '8', label: '8 KB' }, { value: '16', label: '16 KB' },
-                 { value: '64', label: '64 KB' }, { value: '256', label: '256 KB' }, { value: '1024', label: '1 MB' }];
+                 { value: '64', label: '64 KB' }, { value: '256', label: '256 KB' }, { value: '1000', label: '1 MB' }];
     var st = { r: 2400, w: 600, kb: '8' };
     el.innerHTML =
       '<div class="calc">' +

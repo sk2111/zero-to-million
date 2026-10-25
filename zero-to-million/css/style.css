@@ -31,7 +31,7 @@
   --st0: #86b6ef; --st1: #3987e5; --st2: #1c5cab; --st3: #0d366b;
   --st-t0: #0f1522; --st-t1: #0f1522; --st-t2: #ffffff; --st-t3: #ffffff;
   --c-cpu: #eb6834;
-  --c-disk: #2a78d6;
+  --c-disk: #2975d2;
   --c-net: #1baf7a;
   --on-fill: #0f1522;
   --term-bg: #141c2b;
@@ -324,7 +324,7 @@ dl.terms dd { margin: 0; color: var(--ink-2); }
 /* ---------- callouts ---------- */
 
 .note { margin-block: 2.25rem; padding: 1.15rem 1.4rem 1.2rem; border-left: 3px solid; border-radius: 0 10px 10px 0; font-size: var(--fs-ui); line-height: 1.6; }
-.page .note h3 { margin: 0 0 0.45rem; font-size: var(--fs-ui); font-weight: 600; letter-spacing: 0; }
+.page .note h2, .page .note h3 { margin: 0 0 0.45rem; font-size: var(--fs-ui); font-weight: 600; letter-spacing: 0; }
 .note p { margin: 0; }
 .note ul { margin: 0; padding-left: 1.1rem; }
 .note li { margin: 0.5rem 0; }
@@ -343,7 +343,7 @@ dl.terms dd { margin: 0; color: var(--ink-2); }
 .note.tip table.data td, .note.tip table.data th { background: transparent; }
 .note.tip ol.points + .compile, .note.tip .table-wrap + ol.points { margin-top: 1rem; }
 .note.runs-out, .note.important { border-color: var(--amber); background: var(--amber-soft); }
-.note.runs-out h3, .note.important h3 { color: var(--amber); }
+.note.runs-out h3, .note.important h2, .note.important h3 { color: var(--amber); }
 .note.runs-out li::marker, .note.important li::marker { color: var(--amber); }
 
 /* ---------- tables ---------- */
@@ -1452,7 +1452,7 @@ input[type="range"] { width: 100%; margin: 0.35rem 0; accent-color: var(--accent
   :root[data-theme] {
     --sheet: #ffffff; --paper: #f3f5f7; --ink: #182030; --ink-2: #424d63; --muted: #626d84; --rule: #e1e5eb; --rule-2: #c9d0db;
     --accent: #0d6e6a; --accent-soft: #e3f1f0; --amber: #9a5600; --amber-mark: #d4870a; --tip: #3d55c9; --chip-ink: #ffffff;
-    --c-cpu: #eb6834; --c-disk: #2a78d6; --c-net: #1baf7a; --term-bg: #141c2b; --code-bg: #eef1f5;
+    --c-cpu: #eb6834; --c-disk: #2975d2; --c-net: #1baf7a; --term-bg: #141c2b; --code-bg: #eef1f5;
   }
   .side, .bar, .scrim, .page-nav, .cs-actions, .cs-index { display: none !important; }
   .shell, .shell.side-hidden { display: block; }

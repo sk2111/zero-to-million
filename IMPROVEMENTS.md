@@ -300,15 +300,6 @@ mostly precision and currency.
 The arithmetic is right throughout, and so are the t4g.nano's specs (5% baseline per vCPU, 32 Mbps, 250 IOPS,
 5.4 MB/s, unlimited mode by default).
 
-- [ ] **2-1 · P2 · Port 80 is missing.** "Port 443 open to everyone" plus a Let's Encrypt certificate
-  ([ch2:321](zero-to-million/js/ch2-one-server.js#L321), and the pilot-arch widget). Certbot's HTTP-01 challenge
-  and the HTTP-to-HTTPS redirect both need port 80. Say "80 (redirect only) and 443", or use DNS-01 with Route 53.
-- [ ] **2-2 · P2 · Two figures in 2.2 have no breakdown.**
-  - "About 400 MB" and "About 670 MB" ([ch2:126](zero-to-million/js/ch2-one-server.js#L126)) aren't explained;
-    the 670 MB only appears in 3.1.
-  - The growth to 10,000 products at 1,000 shoppers isn't among the stated assumptions.
-- [ ] **2-3 · P3 · Payment gateways.** "Razorpay or Stripe" ([ch2:190](zero-to-million/js/ch2-one-server.js#L190)):
-  Stripe India has been invite-only for new businesses since 2024 (medium confidence). Consider "Razorpay or Cashfree".
 
 <a id="ch3"></a>
 ### Chapter 3: Scale up, split out
@@ -337,7 +328,6 @@ The arithmetic is right throughout, and so are the t4g.nano's specs (5% baseline
   - By 2.2's own numbers, CPU (5× the baseline) and network (2.5×) run out before memory (1.3×).
   - 3.1 shows only memory, never the CPU credits 2.6 told you to watch.
   - `free` shows 612 MB swapped, while the bar says 158 MB too much.
-  - [ch3:124](zero-to-million/js/ch3-scale-up.js#L124) cites load and credit alarms that 2.6 never set.
 - [ ] **3-7 · P2 · Own PostgreSQL or RDS?** The book never says which Tomazon picks
   ([ch3:367](zero-to-million/js/ch3-scale-up.js#L367)). Chapter 4 depends on it: it runs `iostat` on the server and
   installs PgBouncer there, which RDS doesn't allow. State the choice and the reason.
@@ -373,6 +363,7 @@ The scale-up versus scale-out maths, the per-vCPU pricing and the PgBouncer move
   - Sessions are already in the database (the `sessions` table in 3.3); say so in 4.4.
   - "Deploying… a short outage" overstates it: Gunicorn reloads gracefully on HUP.
   - "it moves to a small server" ([ch4:169](zero-to-million/js/ch4-scale-out.js#L169)) has an unclear "it".
+  - From 4.4 on, the load balancer's security group says "443 open". Open port 80 too, for the HTTPS redirect and certificate renewal, as 2.5 now does.
 
 <a id="ch5"></a>
 ### Chapter 5: Make it fast
@@ -719,10 +710,9 @@ The cheat sheet is otherwise a faithful summary: all 81 links resolve, and its n
   "In this chapter" (S13).
 - [ ] **UX10 · P3 · Accessibility** (axe-core, 15 pages, both themes). Nothing critical. Each of these is one line
   to fix:
-  - An empty first `<th>` in comparison tables on 8.2, 8.4 and 12.1: add visually hidden text (done on 1.1 and 1.2).
+  - An empty first `<th>` in comparison tables on 8.2, 8.4 and 12.1: add visually hidden text (done on 1.1, 1.2 and 2.4).
   - Every note is an unlabelled `<aside>` landmark: add `aria-label`, or use `<div>`.
-  - Two near-miss contrasts in light mode: `.b-db` labels at 4.41:1, and the cheat sheet's `small` at 4.48:1.
-  - The chapter 2 cover jumps from h1 to h3.
+  - A near-miss contrast in light mode: the cheat sheet's `small` at 4.48:1.
 
 ---
 

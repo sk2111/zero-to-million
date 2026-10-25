@@ -13,7 +13,7 @@ ZTM.content[2] = {
       <li>Then start small: a pilot that real shoppers can use, built as one app on one server. In this phase the goal is speed: build, ship, watch how people use it, and change it, as fast as possible.</li>
     </ol>
     <aside class="note important">
-      <h3>Important: we build it from the parts</h3>
+      <h2>Important: we build it from the parts</h2>
       <ol class="points">
         <li>AWS can hide most of this behind serverless and managed services: Lambda or Fargate instead of a server you run, DynamoDB or Aurora Serverless instead of your own PostgreSQL.</li>
         <li>We mention them where they fit, but we don’t build Tomazon with them. Doing that would skip exactly what this workshop is here to teach.</li>
@@ -116,7 +116,7 @@ ZTM.content[2] = {
 
         <h2>Tomazon, in numbers</h2>
         <p>Assume about 1 in 10 regular shoppers is online at the busiest hour, and each makes a request every 2 seconds while
-        browsing. About 1 request in 5 opens a product page, with 5 photos of about 200 KB each. Each shopper orders about once a week.</p>
+        browsing. About 1 request in 5 opens a product page, with 5 photos of about 200 KB each. Each shopper orders about once a week. By 1,000 shoppers, the catalogue grows to about 10,000 products.</p>
         <table class="data">
           <thead><tr><th>Estimate</th><th>How</th><th>The pilot: 100 shoppers</th><th>At 1,000 shoppers</th></tr></thead>
           <tbody>
@@ -125,7 +125,7 @@ ZTM.content[2] = {
             <tr><td>CPU</td><td>Requests a second × about 10 ms of CPU each</td><td>5 × 10 ms = <strong>5% of one core</strong></td><td>50 × 10 ms = <strong>half a core</strong></td></tr>
             <tr><td>Database</td><td>Products at about 5 KB each, orders at about 2 KB each</td><td>2,000 products = 10 MB, plus <strong>about 10 MB of orders a year</strong></td><td>10,000 products = 50 MB, plus <strong>about 100 MB of orders a year</strong></td></tr>
             <tr><td>Photos</td><td>Products × 5 photos × 200 KB</td><td>2,000 × 1 MB = <strong>2 GB</strong></td><td>10,000 × 1 MB = <strong>10 GB</strong></td></tr>
-            <tr><td>Memory</td><td>The app’s workers, the database and its cache, and the OS (page 2.5)</td><td><strong>About 400 MB</strong>: fits in 512 MB</td><td><strong>About 670 MB</strong>: more than 512 MB</td></tr>
+            <tr><td>Memory</td><td>The app’s workers, the database and its cache, and the OS (page 2.5). More shoppers need more workers, connections and cache</td><td>OS 150 + PostgreSQL 110 + app 140 + Nginx 10 MB: <strong>about 400 MB</strong>, fits in 512 MB</td><td>OS 150 + PostgreSQL 220 + app 280 + Nginx 20 MB: <strong>about 670 MB</strong>, more than 512 MB</td></tr>
             <tr><td>Network</td><td>About 4 KB per request, plus 1 MB of photos per product page (page 1.8)</td><td>5 × 4 KB + 1 page a second × 1 MB = <strong>about 1 MB/s</strong> (8 Mbps)</td><td>50 × 4 KB + 10 pages a second × 1 MB = <strong>about 10 MB/s</strong> (80 Mbps)</td></tr>
           </tbody>
         </table>
@@ -187,7 +187,7 @@ ZTM.content[2] = {
         <h2>What a pilot does need</h2>
         <ol class="points">
           <li><strong>HTTPS</strong> from day one: shoppers type in passwords and addresses.</li>
-          <li><strong>Payments through a payment gateway</strong> such as Razorpay or Stripe. Card details go straight to the gateway and never touch your server, which keeps most of the card-security rules (PCI DSS) off your plate.</li>
+          <li><strong>Payments through a payment gateway</strong> such as Razorpay. Card details go straight to the gateway and never touch your server, which keeps most of the card-security rules (PCI DSS) off your plate.</li>
           <li><strong>Backups</strong> of the database, and one test that you can actually restore them.</li>
           <li><strong>Basic monitoring:</strong> is it up, how fast is it, is it running out of anything. Chapter 1’s tools cover this.</li>
           <li><strong>A way to see usage and collect feedback</strong>, covered on page 2.6.</li>
@@ -235,7 +235,7 @@ ZTM.content[2] = {
         </ol>
 
         <table class="data">
-          <thead><tr><th></th><th>Monolith</th><th>Microservices</th></tr></thead>
+          <thead><tr><th><span class="sr">Aspect</span></th><th>Monolith</th><th>Microservices</th></tr></thead>
           <tbody>
             <tr><td>Codebases and deploys</td><td>One</td><td>One per service</td></tr>
             <tr><td>A call between two features</td><td>A function call: nanoseconds</td><td>A network call: milliseconds, and it can fail</td></tr>
@@ -318,7 +318,7 @@ ZTM.content[2] = {
             <tr><td>FastAPI under Gunicorn</td><td>Your application, as 2 worker processes, one per vCPU</td><td>With <code>async</code> endpoints, each worker can hold many waiting requests at once (page 1.12).</td></tr>
             <tr><td>PostgreSQL</td><td>The database, reached over <code>localhost</code></td><td>A query has no network round trip. Its data lives on the gp3 disk.</td></tr>
             <tr><td>Elastic IP and Route 53</td><td>A fixed public IP address, and DNS that points your domain at it</td><td>Without an Elastic IP, the address changes when the server is stopped and started.</td></tr>
-            <tr><td>Security group</td><td>The firewall: port 443 open to everyone, port 22 (SSH) only from your office</td><td>PostgreSQL’s port stays closed to the internet.</td></tr>
+            <tr><td>Security group</td><td>The firewall: ports 80 and 443 open to everyone (80 only redirects to HTTPS and renews the certificate), port 22 (SSH) only from your office</td><td>PostgreSQL’s port stays closed to the internet.</td></tr>
             <tr><td>EBS snapshots</td><td>A daily copy of the disk, stored by AWS</td><td>Your backup. Restore one to a test server once, to be sure it works.</td></tr>
           </tbody>
         </table>
@@ -431,7 +431,7 @@ ZTM.content[2] = {
             in the first month, and a third of buyers ordering again. Then the data can actually answer the question.</li>
             <li><strong>Watch p95, not just the average.</strong> The slow requests are the ones users remember (page 1.11).</li>
             <li><strong>Set a few alarms, not many.</strong> Server down, errors rising, disk over 80% full, available memory
-            under 20%. Alarms that nobody acts on soon get ignored.</li>
+            under 20%, CPU credits running low. Alarms that nobody acts on soon get ignored.</li>
           </ol>
         </aside>
 

@@ -121,7 +121,7 @@ Swap:          1.0Gi       612Mi       412Mi</span>
           <ol class="points">
             <li><strong>Measure before you change anything.</strong> Chapter 1’s tools turn “the app is slow” into “the server
             is out of memory and swapping”, and that tells you what to fix first.</li>
-            <li><strong>Scale before it explodes.</strong> The alarms from page 2.6 (available memory, load, CPU credits) warn
+            <li><strong>Scale before it explodes.</strong> The alarms from page 2.6 (available memory, CPU credits) warn
             you weeks ahead. Plan the next step when they trend up, not when the server falls over.</li>
             <li><strong>Expect the architecture to change.</strong> Each stage of growth needs a different design. The one that
             was right for 100 users is now the bottleneck, and that’s normal.</li>

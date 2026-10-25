@@ -544,7 +544,7 @@ window.ZTM = window.ZTM || {};
             '<div class="ar2-row">' +
               '<div class="ar2-edge">' +
                 node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
-                node('sg', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
+                node('sg', 'shield', 'c-sec', 'Security group', '80 and 443 open, 22 from the office') +
               '</div>' +
               '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'EC2 t4g.nano: 2 vCPUs, 512 MB of RAM, 32 Mbps of network (bursts to 5 Gbps). Inside, everything talks over localhost.</p>' +
                 '<div class="ar2-sw">' +
@@ -603,7 +603,7 @@ window.ZTM = window.ZTM || {};
               '<div class="ar2-row">' +
                 '<div class="ar2-edge ar3-edge">' +
                   node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
-                  node('sga', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
+                  node('sga', 'shield', 'c-sec', 'Security group', '80 and 443 open, 22 from the office') +
                 '</div>' +
                 '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'App server: EC2 c7g.large, 2 vCPUs, 4 GB</p>' +
                   '<div class="ar3-two">' +
@@ -673,7 +673,7 @@ window.ZTM = window.ZTM || {};
               '<div class="ar2-row">' +
                 '<div class="ar2-edge ar3-edge">' +
                   node('eip', 'ip', 'c-net', 'Elastic IP', 'fixed public address') +
-                  node('sga', 'shield', 'c-sec', 'Security group', '443 open, 22 from the office') +
+                  node('sga', 'shield', 'c-sec', 'Security group', '80 and 443 open, 22 from the office') +
                 '</div>' +
                 '<div class="ar2-ec2"><p class="ar2-k">' + icon('chip', 'c-cpu') + 'App server: EC2 c7g.large, 2 vCPUs, 4 GB</p>' +
                   '<div class="ar2-sw">' +

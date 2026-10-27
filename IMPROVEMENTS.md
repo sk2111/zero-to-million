@@ -51,8 +51,7 @@ total and found them all correct. Chapter 7 is the strongest chapter.
 | 3 | [6-1](#ch6) Cache stampede | Chapter 6's headline numbers are wrong under its own assumptions |
 | 4 | [7-1](#ch7) Diagrams break 7.3's contract | Every diagram from 8.4 on shows the shortcut that 7.3 rejects |
 | 5 | [S1](#s1) One consistent set of numbers | The book's promise is "each time, we look at the numbers" |
-| 6 | [S8](#s8) Indexes | Promised in 3.3 and claimed in 12.1, never taught |
-| 7 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
+| 6 | [C1](#c1) Cheat sheet rules with no source | Links open pages that don't contain the rule |
 
 ### Decisions for you
 
@@ -100,7 +99,8 @@ Some items change the scope of the book, so they're yours to call before anyone 
     - Update the diagram labels to match.
     - Alternatively, say once that from chapter 5 on "users" means registered accounts, with a stated share
       active at the peak.
-    - Either way, show the primary being scaled up (see S9).
+    - Either way, show the primary being scaled up before 12.1.
+  - Chapter 5 keeps its numbers (your call, 27 October): no more is added to it.
 
 <a id="s3"></a>
 - [ ] **S3 · P1 · The flash sale in chapter 12 isn't solved by what the chapter adds.**
@@ -150,22 +150,12 @@ Some items change the scope of the book, so they're yours to call before anyone 
 
 
 <a id="s8"></a>
-- [ ] **S8 · P1 · Indexes are promised and claimed, but never taught.**
-  - 3.3 says "Make sure each query uses an index… Chapter 5 goes deeper"
-    ([ch3:246](zero-to-million/js/ch3-scale-up.js#L246)). Chapter 5 has no index or `EXPLAIN`.
-  - 12.1's table then says indexes are "Done (pages 3.3 and 5.1)"
-    ([ch12:58](zero-to-million/js/ch12-split-the-data.js#L58)).
-  - 5.1's top query, catalogue search at 77% of database time, is exactly the case for one.
-  - **Fix:** add a short section to 5.1: `EXPLAIN ANALYZE` on the search query, a sequential scan, an index (or a
-    trigram or full-text index), then measure again. What's left justifies the replicas.
-
-<a id="s9"></a>
-- [ ] **S9 · P2 · Chapter 5 skips the book's own "scale up first" rule.**
-  - 4.2 says "Scale up first while it's cheap and simple".
-  - At 100K users the database is still a 2-vCPU r7g.large, and 5.1 goes straight to replicas: "a bigger
-    database server only buys time" ([ch5:120](zero-to-million/js/ch5-make-it-fast.js#L120)).
-  - **Fix:** one step. Scale the primary up and measure, then add replicas because reads keep growing and a
-    replica doubles as a spare. This also explains the r7g.8xlarge in 12.1 (S1).
+- [ ] **S8 · P2 · 12.1 says indexes were covered on 5.1.**
+  - 12.1's table says indexes are "Done (pages 3.3 and 5.1)"
+    ([ch12:58](zero-to-million/js/ch12-split-the-data.js#L58)). Only 3.3 mentions them ("Make sure each query uses
+    an index"); 3.3's "Chapter 5 goes deeper" is gone (S17).
+  - Chapter 5 gets no index section (your call, 27 October).
+  - **Fix:** "Done (page 3.3)". Do it with chapter 12.
 
 <a id="s10"></a>
 - [ ] **S10 · P2 · Parts appear without being introduced.**
@@ -183,7 +173,8 @@ Some items change the scope of the book, so they're yours to call before anyone 
     - 5.1 says "the app tier adds servers when it's busy" ([ch5:35](zero-to-million/js/ch5-make-it-fast.js#L35)).
     - But chapter 4 has a fixed Nginx upstream, and 10.1 says sales need servers "added by hand"
       ([ch10:39](zero-to-million/js/ch10-run-many-services.js#L39)).
-  - **Fix:** a sentence or two where each one arrives. Remove the auto-scaling claim from 5.1 or introduce it.
+  - **Fix:** a sentence or two where each one arrives. 5.1 stays as it is (your call, 27 October), so settle auto
+    scaling in chapter 10.
 
 <a id="s11"></a>
 - [ ] **S11 · P2 · Two threads are opened and never closed.**
@@ -311,8 +302,6 @@ The scale-up versus scale-out maths, the per-vCPU pricing and the PgBouncer move
 The query statistics check out (77%, 95%, the visit ratios), and so do streaming replication,
 read-your-own-writes and the LSN technique.
 
-- [ ] **5-5 · P2 · Page 5.3 is too dense**: the lag story, a widget, distributed systems, CAP, two tables, PACELC, a
-  second widget and four consistency models. Split it into "Replication lag" and "CAP and PACELC".
 
 <a id="ch6"></a>
 ### Chapter 6: Cache it

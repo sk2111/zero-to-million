@@ -23,7 +23,6 @@ console errors, no broken internal links, no empty widgets and no `NaN` or `unde
 every slider, button and select was worked. The arrow keys walk all 68 pages in order, and the simulators' maths
 matches the text. Section 5 lists what the code review found:
 - diagram pages that stay in memory (K2);
-- a "Copy commands" button that can empty the clipboard (K3);
 - gaps in keyboard and screen-reader support (K7–K11).
 
 **The design is consistent and polished.** Typography, the sidebar, the notes and the architecture diagrams
@@ -259,8 +258,8 @@ Some items change the scope of the book, so they're yours to call before anyone 
 - [ ] **S15 · P3 · Chapter openings don't follow one pattern.**
   - Chapters 3–5 and 10–14 title their first page "N users, and …". Chapters 6–9 don't.
   - Chapter 8 never states its user count. "Tomazon passes 2 million users" was removed in `068b0c3`.
-  - In chapters 3 and 5 the intro repeats the first page's lede almost word for word, for example "10,000 users was a
-    success…" in chapter 5.
+  - In chapter 3 the intro repeats the first page's lede almost word for word ("The pilot is a success" and "The
+    pilot worked"). Chapter 5's is fixed.
   - **Fix:** one pattern for every chapter. The intro says where Tomazon is. The first page says what broke,
     titled "N users, and …".
 
@@ -312,26 +311,8 @@ The scale-up versus scale-out maths, the per-vCPU pricing and the PgBouncer move
 The query statistics check out (77%, 95%, the visit ratios), and so do streaming replication,
 read-your-own-writes and the LSN technique.
 
-- [ ] **5-2 · P2 · The replicas have no pooling.** 3 servers × 8 workers × a pool of 10 is 240 connections per replica,
-  above PostgreSQL's default `max_connections` of 100 ([ch5:189–194](zero-to-million/js/ch5-make-it-fast.js#L189)).
-  Put PgBouncer on or in front of the replicas.
-- [ ] **5-3 · P2 · "Waits until a replica has saved the order… Always up to date" is wrong**
-  ([ch5:286](zero-to-million/js/ch5-make-it-fast.js#L286), and the cap-pacelc widget at
-  [widgets.js:1165](zero-to-million/js/widgets.js#L1165)). A synchronous commit only *flushes* the WAL; reads are
-  fresh only with `remote_apply`, and only from that replica.
-- [ ] **5-4 · P2 · Multi-AZ isn't a read replica.** "A replica can be promoted… RDS Multi-AZ does this automatically"
-  ([ch5:214](zero-to-million/js/ch5-make-it-fast.js#L214)). An RDS Multi-AZ standby is separate and can't serve
-  reads; read replicas are promoted by hand. Separate the two.
 - [ ] **5-5 · P2 · Page 5.3 is too dense**: the lag story, a widget, distributed systems, CAP, two tables, PACELC, a
   second widget and four consistency models. Split it into "Replication lag" and "CAP and PACELC".
-- [ ] **5-6 · P3 · Smaller points.**
-  - With 400 ms of lag, "Half a second later the first order appears" reads as if the shopper reorders within half
-    a second.
-  - "Two connections" should be "two connection pools".
-  - `pg_stat_replication` needs a privileged role.
-  - No step actually creates a replica (`pg_basebackup -R`).
-  - The code is sync, while the book recommends async.
-  - "10,000 users became/was a success" is awkward.
 
 <a id="ch6"></a>
 ### Chapter 6: Cache it
@@ -368,7 +349,6 @@ read-your-own-writes and the LSN technique.
   - "Deleting is simple and safe": say "safer".
   - The trigger must also go on `deals` and `banners`.
   - ElastiCache runs Redis OSS or Valkey, not current Redis.
-  - `async with primary.begin()` needs an async engine, but 5.2's engines are sync.
   - `create_task` without keeping a reference.
   - 6.3 is dense; consider splitting it.
 
@@ -687,15 +667,6 @@ The code is in good shape for a static site with no build step.
     19 listeners. A presenter paging back and forth keeps adding to that.
   - **Fix:** give pages an unmount hook. Before replacing `pageEl.innerHTML`, `app.js` aborts an `AbortController`;
     widgets pass its `signal` to `addEventListener`, and disconnect their observers.
-- [ ] **K3 · P2 · "Copy commands" appears on blocks that have no commands** ([app.js:159–181](zero-to-million/js/app.js#L159)).
-  - 13 of the 37 terminal blocks have no `$ ` line: config files, Python, SQL and the directory tree.
-  - Clicking the button there empties the reader's clipboard, still says "Copied", and logs `commands copied`.
-  - In psql sessions (3.3, 5.1), only the shell line is copied, not the SQL.
-  - If the clipboard fails, the reader gets no message, and "Copied" isn't announced to screen readers.
-  - **Fix:**
-    - Add the button only when there are commands to copy, or label it "Copy code" and copy the whole block.
-    - Show "Couldn't copy" when it fails.
-    - Announce the result in a polite live region.
 - [ ] **K4 · P2 · The diagram scale floor isn't enforced** ([widgets.js:489](zero-to-million/js/widgets.js#L489)).
   - The comment says diagrams never shrink below 60%, but the floor applies only to the height term.
   - At 1366×768, 12.1 scales to 0.55. The step text, which sits inside the scaled element, renders at 7.4 px.
@@ -720,8 +691,6 @@ The code is in good shape for a static site with no build step.
     - Skip when the target or one of its parents can scroll sideways.
     - Use PageUp and PageDown only at the top or bottom of the page.
     - Let readers turn `S` off, or require a modifier.
-- [ ] **K9 · P3 · The lag slider on 5.3 announces a bare number.** Set `aria-valuetext` with units, as chapter 1's
-  sliders now do ("16 threads", "1,000,000 users", "70% busy").
 - [ ] **K10 · P2 · Hard-coded colours fail contrast in dark mode:** the kafka-anatomy offsets on 8.2, at 2.0:1
   ([style.css:792–795](zero-to-million/css/style.css#L792)). Use `--chip-ink` for text on accent fills. (Chapter 3's
   red text now uses the new `--bad` token, and its "connect" label the page's ink.)

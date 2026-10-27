@@ -1103,6 +1103,7 @@ window.ZTM = window.ZTM || {};
     }
     function draw() {
       el.querySelector('#lgL + output').textContent = st.lag + ' ms';
+      el.querySelector('#lgL').setAttribute('aria-valuetext', st.lag + ' milliseconds of lag');
       el.querySelector('[data-t="p"]').innerHTML = bar(0);
       el.querySelector('[data-t="r"]').innerHTML = bar(st.lag);
       var from = st.ryw ? 'primary' : 'replica';
@@ -1133,7 +1134,7 @@ window.ZTM = window.ZTM || {};
     var VERDICT = {
       'cap-c': '<strong>Consistency while the link is down:</strong> nobody sees an out-of-date list, but some reads fail or wait for the primary. Right for stock at checkout and payments.',
       'cap-a': '<strong>Availability while the link is down:</strong> every read gets an answer, but replica 1’s answers are out of date until the link is back. Right for product pages and reviews.',
-      'pacelc-c': '<strong>Consistency while everything works:</strong> every read is up to date, but every write waits for the replica. Right when a stale read would cost money.',
+      'pacelc-c': '<strong>Consistency while everything works:</strong> reads from the replica are up to date, but every write waits for it. Right when a stale read would cost money.',
       'pacelc-l': '<strong>Low latency while everything works:</strong> writes are fast, and a read can be a few milliseconds behind. This is PostgreSQL’s default.'
     };
 
@@ -1166,7 +1167,7 @@ window.ZTM = window.ZTM || {};
           { on: ['shop', 'app', 'primary'], run: [['in', 0], ['w', 0]], t: 'the primary saves it',
             say: '<strong>A shopper places an order.</strong> The write reaches the primary, which saves it. The network is fine.' },
           { on: ['primary', 'rep'], run: [['repl', 0], ['repl', 1]], t: '+1 round trip, about 0.5 ms in one zone',
-            say: '<strong>Wait for the replica.</strong> Before answering, the primary sends the order to replica 1 and waits until replica 1 confirms it has saved it.' },
+            say: '<strong>Wait for the replica.</strong> Before answering, the primary sends the order to replica 1 and waits until replica 1 confirms it has applied it, so a read there will see it.' },
           { on: ['primary', 'app', 'shop'], run: [['w', 1], ['in', 1]], t: 'every write pays this',
             say: '<strong>Then answer.</strong> Only now does the shopper see “done”. Every write waits for that extra round trip, and longer if the replica is in another zone or busy.' },
           { on: ['shop', 'app', 'rep'], run: READ, t: 'always up to date',

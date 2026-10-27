@@ -156,27 +156,48 @@
       '<p class="sec-sub">' + esc(p.sec.sub) + '</p></header>' + p.sec.html;
   }
 
+  /* Lines that start with "$ ", plus continuation lines after a trailing backslash,
+     and SQL typed at a psql prompt ("tomazon=> ") up to its closing semicolon. */
+  function commandsIn(t) {
+    var lines = [], cont = false, sql = false;
+    t.querySelector('pre').innerText.split('\n').forEach(function (l) {
+      if (sql || /^\w+=> /.test(l)) {
+        lines.push(l.replace(/^\w+=> /, ''));
+        sql = !/;\s*$/.test(l);
+        return;
+      }
+      if (!cont && !/^\$ /.test(l)) return;
+      lines.push(cont ? l : l.replace(/^\$ /, '').replace(/\s+#.*$/, ''));
+      cont = /\\$/.test(l);
+    });
+    return lines.join('\n');
+  }
+
+  /* Config files, code and output have nothing to run, so they get no button. */
   function addCopyButtons(root) {
     root.querySelectorAll('.term').forEach(function (t) {
-      var b = document.createElement('button');
+      var text = commandsIn(t);
+      if (!text) return;
+      var b = document.createElement('button'), said = document.createElement('span');
       b.type = 'button';
       b.className = 'copy';
       b.textContent = 'Copy commands';
+      said.className = 'sr';
+      said.setAttribute('role', 'status');
+      var show = function (msg) {
+        b.textContent = msg; said.textContent = msg;
+        setTimeout(function () { b.textContent = 'Copy commands'; said.textContent = ''; }, 1600);
+      };
+      var failed = function () { show('Couldn’t copy'); };
       b.addEventListener('click', function () {
-        /* Lines that start with "$ ", plus continuation lines after a trailing backslash. */
-        var lines = [], cont = false;
-        t.querySelector('pre').innerText.split('\n').forEach(function (l) {
-          if (!cont && !/^\$ /.test(l)) return;
-          lines.push(cont ? l : l.replace(/^\$ /, '').replace(/\s+#.*$/, ''));
-          cont = /\\$/.test(l);
-        });
-        var done = function () {
+        if (!navigator.clipboard) return failed();
+        navigator.clipboard.writeText(text).then(function () {
           track('commands copied', where(pages[current()]));
-          b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy commands'; }, 1600);
-        };
-        if (navigator.clipboard) navigator.clipboard.writeText(lines.join('\n')).then(done, function () {});
+          show('Copied');
+        }, failed);
       });
       t.appendChild(b);
+      t.appendChild(said);
     });
   }
 

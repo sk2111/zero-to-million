@@ -7,7 +7,7 @@ ZTM.content = ZTM.content || {};
 ZTM.content[5] = {
   intro: `
     <ol class="points lede">
-      <li>10,000 users became a success, and over the next year the product grows towards 100,000.</li>
+      <li>Tomazon grows from ten thousand users towards a hundred thousand.</li>
     </ol>
     <div class="outcomes">
       <h2>By the end of this chapter you can</h2>
@@ -31,7 +31,7 @@ ZTM.content[5] = {
       sub: 'This time the app servers are fine. The database is doing too much reading.',
       html: `
         <ol class="points lede">
-          <li>10,000 users was a success. Over the next year, the product grows towards 100,000.</li>
+          <li>Shoppers keep coming back and bring their friends. Over the next year, Tomazon heads towards 100,000 users.</li>
           <li>The app keeps up. The load balancer spreads the traffic, and the app tier adds servers when it’s busy and removes them when it’s quiet. Nothing crashes.</li>
           <li>Then, past a certain point, shoppers start to feel it again: product pages are sluggish, and search takes seconds to answer.</li>
         </ol>
@@ -158,6 +158,7 @@ ZTM.content[5] = {
         <h2>How PostgreSQL keeps the replicas up to date</h2>
         <ol class="steps">
           <li><strong>The primary logs every change.</strong> Before changing any data, PostgreSQL appends a record of the change to its <strong>write-ahead log</strong> (WAL): an ordered list of everything that has happened to the database.</li>
+          <li><strong>Each replica starts as a copy.</strong> On the new server, <code>pg_basebackup</code> copies all of the primary’s data over the network into an empty data directory. Its <code>-R</code> option also writes the settings that make PostgreSQL follow the primary, so it starts up as a replica.</li>
           <li><strong>Each replica subscribes to that log.</strong> It connects to the primary over the private network and asks for the WAL, starting from wherever it left off.</li>
           <li><strong>The primary streams it.</strong> New records are sent on as soon as they’re written. This is <strong>streaming replication</strong>, and it’s built into PostgreSQL.</li>
           <li><strong>The replica replays it.</strong> It applies the records in exactly the same order, so its copy of the data matches the primary’s, a few milliseconds later.</li>
@@ -166,42 +167,45 @@ ZTM.content[5] = {
 
         <figure class="term">
           <figcaption>Try it: checking replication from both sides</figcaption>
-<pre><span class="p">$</span> psql -d tomazon -c "SELECT client_addr, state, replay_lag FROM pg_stat_replication;"      <span class="c"># on the primary</span>
+<pre><span class="c"># on the primary</span>
+<span class="p">$</span> sudo -u postgres psql -c "SELECT client_addr, state, replay_lag FROM pg_stat_replication;"
 <span class="o"> client_addr |   state   |   replay_lag
 -------------+-----------+-----------------
  10.0.3.21   | streaming | 00:00:00.012314
  10.0.3.22   | streaming | 00:00:00.018902
 (2 rows)</span>
-<span class="p">$</span> psql -h 10.0.3.21 -d tomazon -c "SELECT pg_is_in_recovery();"                           <span class="c"># on a replica</span>
+<span class="c"># on a replica</span>
+<span class="p">$</span> psql -h 10.0.3.21 -d tomazon -c "SELECT pg_is_in_recovery();"
 <span class="o"> pg_is_in_recovery
 -------------------
  t
 (1 row)</span></pre>
           <ol class="points term-note">
-            <li>On the primary, <code>pg_stat_replication</code> lists every replica. Both are <code>streaming</code>, and each is about 12–19 ms behind (<code>replay_lag</code>).</li>
+            <li>On the primary, <code>pg_stat_replication</code> lists every replica. Both are <code>streaming</code>, and each is about 12–19 ms behind (<code>replay_lag</code>). Only a privileged role sees these details, so run it as <code>postgres</code>: for other roles the columns come back empty.</li>
             <li>On a replica, <code>pg_is_in_recovery()</code> returns <code>t</code> (true): it’s a copy, replaying the primary’s log, and it won’t accept writes.</li>
           </ol>
         </figure>
 
         <h2>Sending each query to the right server</h2>
         <ol class="points">
-          <li>The app now needs two connections: one to the primary for writes, and one to the replicas for reads.</li>
+          <li>The app now needs two connection pools: one to the primary for writes, and one to the replicas for reads.</li>
           <li>With several replicas, put them behind a single address, so the app doesn’t need to know how many there are: a DNS name, PgBouncer or HAProxy in front of them, or Amazon Aurora’s reader endpoint.</li>
+          <li>Pool the replicas’ connections too. Three app servers × 8 workers × a pool of 10 is 240 connections, more than PostgreSQL’s default limit of 100 even when two replicas share them. So each replica runs PgBouncer on port 6432, as the primary does (page 4.4), and its PostgreSQL sees one pool of 20.</li>
         </ol>
         <figure class="term">
           <figcaption>Two engines in SQLAlchemy: one for writes, one for reads</figcaption>
-<pre><span class="o">primary = create_engine("postgresql+psycopg://app@10.0.2.14:6432/tomazon")
-replica = create_engine("postgresql+psycopg://app@db-read.internal/tomazon")    </span><span class="c"># both replicas behind one name</span><span class="o">
+<pre><span class="o">primary = create_async_engine("postgresql+psycopg://app@10.0.2.14:6432/tomazon")
+replica = create_async_engine("postgresql+psycopg://app@db-read.internal:6432/tomazon")
 
-def search_products(term):
-    with replica.connect() as db:                  </span><span class="c"># a read: any replica will do</span><span class="o">
-        return db.execute(SEARCH_SQL, {"q": term}).all()
+async def search_products(term):
+    async with replica.connect() as db:            </span><span class="c"># a read: any replica will do</span><span class="o">
+        return (await db.execute(SEARCH_SQL, {"q": term})).all()
 
-def add_to_cart(cart_id, product_id, quantity):
-    with primary.begin() as db:                    </span><span class="c"># a write: always the primary</span><span class="o">
-        db.execute(ADD_SQL, {"cart": cart_id, "product": product_id, "qty": quantity})</span></pre>
+async def add_to_cart(cart_id, product_id, quantity):
+    async with primary.begin() as db:              </span><span class="c"># a write: always the primary</span><span class="o">
+        await db.execute(ADD_SQL, {"cart": cart_id, "product": product_id, "qty": quantity})</span></pre>
           <ol class="points term-note">
-            <li>Every function decides where it goes: reads use <code>replica</code>, writes use <code>primary</code>.</li>
+            <li>Every function decides where it goes: reads use <code>replica</code>, whose one name, <code>db-read.internal</code>, reaches both replicas; writes use <code>primary</code>.</li>
             <li>With two replicas sharing the reads, the 95% of the database’s time spent reading is now split across two servers, and the primary is left with the writes. Need more read capacity? Add a replica.</li>
           </ol>
         </figure>
@@ -211,8 +215,9 @@ def add_to_cart(cart_id, product_id, quantity):
           <ol class="points">
             <li><strong>Replicas scale reads, not writes.</strong> Every replica still has to replay every write. If writes are
             the bottleneck, more replicas won’t help.</li>
-            <li><strong>A replica is also a spare.</strong> If the primary fails, a replica can be promoted to take its place.
-            Amazon RDS Multi-AZ does this automatically.</li>
+            <li><strong>A replica is also a spare.</strong> If the primary fails, a replica can be promoted to take its place:
+            by hand with <code>pg_promote()</code>, or automatically by a tool that watches the primary, such as Patroni. On
+            Amazon RDS, read replicas are promoted by hand; automatic failover comes from a separate Multi-AZ standby.</li>
             <li><strong>Keep replicas as big as the primary.</strong> A smaller replica can fall behind just replaying a busy
             primary’s writes.</li>
           </ol>
@@ -241,7 +246,7 @@ def add_to_cart(cart_id, product_id, quantity):
           <li>A shopper places an order. The app saves it: a write, so it goes to the primary.</li>
           <li>The app sends them straight to “My orders”, which loads their order list: a read, so it goes to a replica.</li>
           <li>The replica is 400 ms behind, so the new order isn’t there yet. The list shows every order except the one they’ve just placed.</li>
-          <li>Worried that it didn’t go through, the shopper orders again. Half a second later the first order appears, and now they’ve bought everything twice.</li>
+          <li>Worried that it didn’t go through, the shopper places the order again. By the time the page reloads, the first order is there too, and now they’ve bought everything twice.</li>
         </ol>
         <p>Nothing is broken: every part did exactly what it was built to do. This is how a system with copies behaves. Try it:</p>
         <div class="widget" data-widget="lag-sim"></div>
@@ -283,13 +288,14 @@ def add_to_cart(cart_id, product_id, quantity):
         <table class="data">
           <thead><tr><th>The primary</th><th>Each write</th><th>Reads from a replica</th></tr></thead>
           <tbody>
-            <tr><td>Waits until a replica has saved the order too</td><td>Slower: it adds at least one round trip to the replica</td><td>Always up to date</td></tr>
+            <tr><td>Waits until a replica has applied the order too</td><td>Slower: it adds at least one round trip to the replica</td><td>Up to date, from that replica</td></tr>
             <tr><td>Answers at once, and sends the order to the replicas a moment later</td><td>Fast</td><td>Can miss the newest order for a few milliseconds</td></tr>
           </tbody>
         </table>
         <ol class="points" start="6">
           <li>This extension of CAP is called <strong>PACELC</strong>. Read it as two choices: if there’s a <strong>P</strong>artition, choose <strong>A</strong>vailability or <strong>C</strong>onsistency (that’s CAP); <strong>E</strong>lse, when everything works, choose low <strong>L</strong>atency or <strong>C</strong>onsistency.</li>
           <li>PostgreSQL’s default, asynchronous replication, doesn’t wait: it chooses low latency, and accepts the lag you saw above.</li>
+          <li>Its synchronous mode, as usually set up, waits only until a replica has written the order to disk. The order survives if the primary fails, but a read from the replica can still miss it for a moment. Fresh reads need the replica to have applied it (page 5.4).</li>
         </ol>
         <p>All four choices on one diagram. Pick when, then what to keep, and step through one order and one read:</p>
         <div class="widget" data-widget="cap-pacelc"></div>
@@ -346,7 +352,7 @@ def add_to_cart(cart_id, product_id, quantity):
           <li><strong>Wait for the exact position.</strong> A more precise version: after the write, note the primary’s position in its log (<code>pg_current_wal_lsn()</code>). Send the user’s reads to a replica only once it has replayed past that position (<code>pg_last_wal_replay_lsn()</code>), and to the primary until then.</li>
           <li><strong>Keep the critical reads on the primary.</strong> Stock at checkout, payments, permissions, and anything a decision depends on. They’re a small share of the reads, so the replicas still take most of the load.</li>
           <li><strong>Watch the lag, and drop lagging replicas.</strong> Alert when <code>replay_lag</code> passes a second or two, and take a replica out of the read pool when it falls far behind, so a struggling replica can’t serve very old data.</li>
-          <li><strong>Need no lag at all? Use synchronous replication.</strong> With <code>synchronous_commit = remote_apply</code>, each commit waits until a replica has applied it. Reads are always fresh, but every write is slower, and if that replica goes down, writes stop. That’s CAP, choosing consistency.</li>
+          <li><strong>Need no lag at all? Use synchronous replication.</strong> With <code>synchronous_commit = remote_apply</code>, each commit waits until a replica has applied it. Reads from that replica are always fresh, but every write is slower, and if that replica goes down, writes stop. That’s CAP, choosing consistency.</li>
         </ol>
 
         <figure class="term">
